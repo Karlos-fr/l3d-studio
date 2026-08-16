@@ -300,18 +300,29 @@ SETAUXSWITCH:1,0;
 
 ### Taches
 
-- Ajouter le support complet de `FnRouter`.
-- Ajouter la gestion des interrupteurs auxiliaires.
-- Ajouter le mode texte.
-- Etudier `CubePainter`.
-- Decider si `CubePainter` doit etre expose dans le MVP ou dans une version ulterieure.
-- Ajouter une page "Device Info" utilisant `deviceInfo`, `wifi`, `debug`, etc.
+- [x] Ajouter le support complet de `FnRouter`.
+- [x] Ajouter la gestion des interrupteurs auxiliaires.
+- [x] Ajouter le mode texte.
+- [x] Etudier `CubePainter`.
+- [x] Decider si `CubePainter` doit etre expose dans le MVP ou dans une version ulterieure.
+- [x] Ajouter une page "Device Info" utilisant `deviceInfo`, `wifi`, `debug`, etc.
+
+### Etat de validation
+
+- `src/sparkpixels/protocol.ts` construit les commandes `GETSWITCHSTATE`, `GETCOLOR`, `SETTIMEZONE`, `SETAUXSWITCH` et `REBOOT`.
+- `src/sparkpixels/parsers.ts` parse `auxSwtchList` et `deviceInfo`.
+- `src/ui/render.ts` affiche les switches globaux, `SetText`, les commandes FnRouter et le panneau `Device Info`.
+- `src/ui/events.ts` appelle la fonction Particle `Function` pour FnRouter et `SetText` pour le texte persistant.
+- `CubePainter` reste hors MVP : la fonction ne repond que si le mode courant est `CubePainter`, manipule un buffer 8x8x8 et demande une UI 3D dediee pour eviter des commandes voxel accidentelles.
+- `npx tsc --noEmit` passe dans l'environnement courant.
+- `npm audit --audit-level=moderate` passe avec `0 vulnerabilities`.
+- `npm run test` reste non executable dans cet environnement a cause de la limite memoire WebAssembly deja documentee.
 
 ### Livrables
 
-- Controle des switches globaux.
-- Controle du mode texte.
-- Documentation des limites restantes.
+- [x] Controle des switches globaux.
+- [x] Controle du mode texte.
+- [x] Documentation des limites restantes.
 
 ## Phase 9 - Packaging et deploiement
 

@@ -13,14 +13,21 @@ import {
   saveParticleSession,
   type ParticleSessionStorage,
 } from "../particle/session";
-import { parseModeDefinitions } from "../sparkpixels/parsers";
+import { parseAuxSwitchList, parseDeviceInfo, parseModeDefinitions } from "../sparkpixels/parsers";
 import {
+  buildGetColorCommand,
+  buildGetSwitchStateCommand,
+  buildRebootCommand,
+  buildSetAuxSwitchCommand,
   buildSetModeCommand,
+  buildSetTimezoneCommand,
   convertFirmwareBrightnessToAppPercent,
   normalizeHexColor,
+  validateSetText,
 } from "../sparkpixels/protocol";
 import { saveAppPreferences } from "./preferences";
 import {
+  canCallAdvancedFunction,
   canSendSetModeCommand,
   getSelectedDevice,
   getSelectedModeDefinition,
@@ -54,6 +61,21 @@ const LOAD_FIRMWARE_STATE_ACTION = "load-firmware-state";
 
 // Nom de l'action qui envoie la commande SetMode.
 const SEND_SET_MODE_ACTION = "send-set-mode";
+
+// Nom de l'action qui envoie le texte persistant du firmware.
+const SEND_SET_TEXT_ACTION = "send-set-text";
+
+// Nom de l'action qui applique le fuseau horaire via FnRouter.
+const SET_TIMEZONE_ACTION = "set-timezone";
+
+// Nom de l'action qui lit une couleur courante via FnRouter.
+const GET_COLOR_ACTION = "get-color";
+
+// Nom de l'action qui lit un switch local courant via FnRouter.
+const GET_SWITCH_STATE_ACTION = "get-switch-state";
+
+// Nom de l'action qui demande le redemarrage du Photon via FnRouter.
+const REBOOT_DEVICE_ACTION = "reboot-device";
 
 // Selecteur des champs de formulaire controles par l'etat applicatif.
 const STATE_FIELD_SELECTOR = "[data-field]";
@@ -155,6 +177,10 @@ function attachStateFields(context: UiEventContext): void {
 
   fieldElements.forEach((fieldElement) => {
     fieldElement.addEventListener("input", () => {
+      if (fieldElement.dataset.field === "aux-switch") {
+        return;
+      }
+
       handleFieldChange(context, fieldElement);
     });
 
@@ -229,6 +255,31 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
 
   if (action === SEND_SET_MODE_ACTION) {
     await sendSetMode(context);
+    return;
+  }
+
+  if (action === SEND_SET_TEXT_ACTION) {
+    await sendSetText(context);
+    return;
+  }
+
+  if (action === SET_TIMEZONE_ACTION) {
+    await setTimezone(context);
+    return;
+  }
+
+  if (action === GET_COLOR_ACTION) {
+    await getFirmwareColor(context);
+    return;
+  }
+
+  if (action === GET_SWITCH_STATE_ACTION) {
+    await getFirmwareSwitchState(context);
+    return;
+  }
+
+  if (action === REBOOT_DEVICE_ACTION && confirm("Redemarrer le Photon selectionne ?")) {
+    await callFnRouter(context, buildRebootCommand());
   }
 }
 
@@ -308,8 +359,19 @@ function handleFieldChange(
     updateColorValue(context.state, fieldElement);
   } else if (fieldName === "switch" && fieldElement instanceof HTMLInputElement) {
     updateSwitchValue(context.state, fieldElement);
+  } else if (fieldName === "aux-switch" && fieldElement instanceof HTMLInputElement) {
+    void updateAuxSwitch(context, fieldElement);
+    return;
   } else if (fieldName === "text") {
     context.state.textValue = fieldElement.value;
+  } else if (fieldName === "persistent-text") {
+    context.state.persistentTextValue = fieldElement.value;
+  } else if (fieldName === "timezone-offset") {
+    context.state.timezoneOffset = Number.parseInt(fieldElement.value, 10);
+  } else if (fieldName === "color-query-index") {
+    context.state.colorQueryIndex = Number.parseInt(fieldElement.value, 10);
+  } else if (fieldName === "switch-query-index") {
+    context.state.switchQueryIndex = Number.parseInt(fieldElement.value, 10);
   }
 
   saveAppPreferences(context.storage, context.state);
@@ -365,18 +427,36 @@ async function loadFirmwareState(context: UiEventContext): Promise<void> {
   const deviceId = requireSelectedDevice(context.state);
 
   await runBusyTask(context, "Lecture du firmware SparkPixelsMega...", async () => {
-    const [modeName, brightness, speedIndex, modeList, modeParamList] = await Promise.all([
+    const [
+      modeName,
+      brightness,
+      speedIndex,
+      modeList,
+      modeParamList,
+      auxSwitchList,
+      deviceInfo,
+      wifiRssi,
+      debugMessage,
+    ] = await Promise.all([
       context.particleClient.getVariable<string>(deviceId, "mode"),
       context.particleClient.getVariable<number>(deviceId, "brightness"),
       context.particleClient.getVariable<number>(deviceId, "speed"),
       context.particleClient.getVariable<string>(deviceId, "modeList"),
       context.particleClient.getVariable<string>(deviceId, "modeParmList"),
+      context.particleClient.getVariable<string>(deviceId, "auxSwtchList"),
+      context.particleClient.getVariable<string>(deviceId, "deviceInfo"),
+      context.particleClient.getVariable<number>(deviceId, "wifi"),
+      context.particleClient.getVariable<string>(deviceId, "debug"),
     ]);
 
     context.state.currentModeName = modeName;
     context.state.currentBrightnessPercent = convertFirmwareBrightnessToAppPercent(brightness);
     context.state.currentSpeedIndex = speedIndex;
     context.state.modes = parseModeDefinitions(modeList, modeParamList);
+    context.state.auxSwitches = parseAuxSwitchList(auxSwitchList);
+    context.state.deviceInfoEntries = parseDeviceInfo(deviceInfo);
+    context.state.wifiRssi = wifiRssi;
+    context.state.debugMessage = debugMessage.length === 0 ? null : debugMessage;
     context.state.selectedModeName =
       context.state.modes.find((mode) => mode.name === modeName)?.name ??
       context.state.selectedModeName ??
@@ -385,6 +465,135 @@ async function loadFirmwareState(context: UiEventContext): Promise<void> {
     context.state.statusMessage = "Etat du cube charge.";
     saveAppPreferences(context.storage, context.state);
   });
+}
+
+// ----------------------------------------------------------------------------
+// Envoie le texte persistant via la fonction Particle `SetText`.
+//
+// Parametres :
+// - context : dependances necessaires a l'appel Particle.
+//
+// Effet de bord :
+// - appelle Particle Cloud et peut ecrire le texte en EEPROM cote firmware.
+// ----------------------------------------------------------------------------
+async function sendSetText(context: UiEventContext): Promise<void> {
+  if (!canCallAdvancedFunction(context.state)) {
+    context.state.statusMessage = "Selectionne un Photon online avant d'envoyer SetText.";
+    context.rerender();
+    return;
+  }
+
+  const deviceId = requireSelectedDevice(context.state);
+  const text = validateOrShowMessage(context, () => validateSetText(context.state.persistentTextValue));
+
+  if (text === null) {
+    return;
+  }
+
+  await runBusyTask(context, "Envoi du texte persistant...", async () => {
+    const response = await context.particleClient.callFunction(deviceId, "SetText", text);
+
+    context.state.lastResponse = JSON.stringify({ functionName: "SetText", text, response }, null, 2);
+    context.state.statusMessage = "Texte persistant envoye.";
+    saveAppPreferences(context.storage, context.state);
+  });
+}
+
+// ----------------------------------------------------------------------------
+// Applique un fuseau horaire via `SETTIMEZONE`.
+//
+// Parametres :
+// - context : dependances necessaires a l'appel Particle.
+//
+// Effet de bord :
+// - appelle FnRouter et affiche la reponse Particle.
+// ----------------------------------------------------------------------------
+async function setTimezone(context: UiEventContext): Promise<void> {
+  const command = validateOrShowMessage(context, () =>
+    buildSetTimezoneCommand(context.state.timezoneOffset),
+  );
+
+  if (command === null) {
+    return;
+  }
+
+  await callFnRouter(context, command);
+}
+
+// ----------------------------------------------------------------------------
+// Appelle `FnRouter` avec une commande deja construite.
+//
+// Parametres :
+// - context : dependances necessaires a l'appel Particle.
+// - command : commande FnRouter prete a envoyer.
+//
+// Effet de bord :
+// - appelle la fonction Particle `Function` et affiche sa reponse.
+// ----------------------------------------------------------------------------
+async function callFnRouter(context: UiEventContext, command: string): Promise<void> {
+  if (!canCallAdvancedFunction(context.state)) {
+    context.state.statusMessage = "Selectionne un Photon online avant d'appeler FnRouter.";
+    context.rerender();
+    return;
+  }
+
+  const deviceId = requireSelectedDevice(context.state);
+
+  await runBusyTask(context, "Appel FnRouter...", async () => {
+    const response = await context.particleClient.callFunction(deviceId, "Function", command);
+
+    context.state.lastResponse = JSON.stringify({ functionName: "Function", command, response }, null, 2);
+    context.state.statusMessage = "Commande FnRouter envoyee.";
+
+    if (command.startsWith("SETAUXSWITCH:")) {
+      const auxSwitchList = await context.particleClient.getVariable<string>(deviceId, "auxSwtchList");
+      context.state.auxSwitches = parseAuxSwitchList(auxSwitchList);
+    }
+
+    saveAppPreferences(context.storage, context.state);
+  });
+}
+
+// ----------------------------------------------------------------------------
+// Lit une couleur courante via `GETCOLOR`.
+//
+// Parametres :
+// - context : dependances necessaires a l'appel Particle.
+//
+// Effet de bord :
+// - appelle FnRouter et affiche la couleur retournee.
+// ----------------------------------------------------------------------------
+async function getFirmwareColor(context: UiEventContext): Promise<void> {
+  const command = validateOrShowMessage(context, () =>
+    buildGetColorCommand(context.state.colorQueryIndex),
+  );
+
+  if (command === null) {
+    return;
+  }
+
+  await callFnRouter(context, command);
+}
+
+// ----------------------------------------------------------------------------
+// Lit l'etat d'un switch local courant via `GETSWITCHSTATE`.
+//
+// Parametres :
+// - context : dependances necessaires a l'appel Particle.
+//
+// Effet de bord :
+// - appelle FnRouter et affiche la reponse Particle.
+// ----------------------------------------------------------------------------
+async function getFirmwareSwitchState(context: UiEventContext): Promise<void> {
+  const command = validateOrShowMessage(context, () =>
+    buildGetSwitchStateCommand(context.state.switchQueryIndex),
+  );
+
+  if (command === null) {
+    return;
+  }
+
+  await callFnRouter(context, command);
 }
 
 // ----------------------------------------------------------------------------
@@ -561,6 +770,59 @@ function updateColorValue(state: AppState, fieldElement: HTMLInputElement): void
 function updateSwitchValue(state: AppState, fieldElement: HTMLInputElement): void {
   const index = Number.parseInt(fieldElement.dataset.index ?? "0", 10);
   state.switchValues[index] = fieldElement.checked;
+}
+
+// ----------------------------------------------------------------------------
+// Met a jour un interrupteur auxiliaire global via FnRouter.
+//
+// Parametres :
+// - context : dependances necessaires a l'appel Particle.
+// - fieldElement : case a cocher modifiee par l'utilisateur.
+//
+// Effet de bord :
+// - appelle Particle Cloud et recharge la liste des interrupteurs globaux.
+// ----------------------------------------------------------------------------
+async function updateAuxSwitch(
+  context: UiEventContext,
+  fieldElement: HTMLInputElement,
+): Promise<void> {
+  const id = Number.parseInt(fieldElement.dataset.index ?? "0", 10);
+  const command = validateOrShowMessage(context, () =>
+    buildSetAuxSwitchCommand(id, fieldElement.checked),
+  );
+
+  if (command === null) {
+    fieldElement.checked = !fieldElement.checked;
+    return;
+  }
+
+  await callFnRouter(context, command);
+}
+
+// ----------------------------------------------------------------------------
+// Execute une validation locale et affiche l'erreur sans appel reseau.
+//
+// Parametres :
+// - context : dependances necessaires au rendu.
+// - validator : validation locale a executer.
+//
+// Retour :
+// - valeur validee, ou `null` si la validation echoue.
+//
+// Effet de bord :
+// - met a jour le message de statut en cas d'erreur locale.
+// ----------------------------------------------------------------------------
+function validateOrShowMessage<TValue>(
+  context: UiEventContext,
+  validator: () => TValue,
+): TValue | null {
+  try {
+    return validator();
+  } catch (error) {
+    context.state.statusMessage = getErrorMessage(error);
+    context.rerender();
+    return null;
+  }
 }
 
 // ----------------------------------------------------------------------------

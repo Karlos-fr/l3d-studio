@@ -7,11 +7,16 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  buildGetColorCommand,
+  buildGetSwitchStateCommand,
+  buildRebootCommand,
   buildSetAuxSwitchCommand,
   buildSetModeCommand,
+  buildSetTimezoneCommand,
   convertAppBrightnessToFirmwareValue,
   convertFirmwareBrightnessToAppPercent,
   normalizeHexColor,
+  validateSetText,
   validateSpeedIndex,
 } from "./protocol";
 
@@ -54,6 +59,18 @@ function runSparkPixelsProtocolTests(): void {
 
   it("construit une commande d'interrupteur auxiliaire", () => {
     expect(buildSetAuxSwitchCommand(1, false)).toBe("SETAUXSWITCH:1,0;");
+  });
+
+  it("construit les commandes FnRouter avancees", () => {
+    expect(buildGetSwitchStateCommand(4)).toBe("GETSWITCHSTATE:4");
+    expect(buildGetColorCommand(6)).toBe("GETCOLOR:6");
+    expect(buildSetTimezoneCommand(2)).toBe("SETTIMEZONE:2");
+    expect(buildRebootCommand()).toBe("REBOOT:");
+  });
+
+  it("valide le texte persistant SetText", () => {
+    expect(validateSetText("BONJOUR")).toBe("BONJOUR");
+    expect(() => validateSetText("")).toThrow();
   });
 
   it("normalise les couleurs RGB", () => {

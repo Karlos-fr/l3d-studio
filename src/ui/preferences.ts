@@ -15,6 +15,8 @@ export interface AppPreferences {
   colorValues: string[];
   switchValues: boolean[];
   textValue: string;
+  persistentTextValue?: string;
+  timezoneOffset?: number;
 }
 
 // Cle localStorage utilisee pour les preferences UI de L3D Studio.
@@ -62,6 +64,8 @@ export function saveAppPreferences(storage: ParticleSessionStorage, state: AppSt
     colorValues: state.colorValues,
     switchValues: state.switchValues,
     textValue: state.textValue,
+    persistentTextValue: state.persistentTextValue,
+    timezoneOffset: state.timezoneOffset,
   };
 
   storage.setItem(UI_PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));

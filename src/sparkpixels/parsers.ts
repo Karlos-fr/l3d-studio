@@ -7,6 +7,7 @@
 
 import type {
   SparkPixelsAuxSwitch,
+  SparkPixelsDeviceInfoEntry,
   SparkPixelsModeDefinition,
   SparkPixelsModeParameters,
   SparkPixelsModeSummary,
@@ -20,6 +21,9 @@ const COLOR_COUNT_PATTERN = /(?:^|,)C:(\d+)/;
 
 // Expression reguliere du nombre de switches declare par un mode.
 const SWITCH_COUNT_PATTERN = /(?:^|,)S:(\d+)/;
+
+// Expression reguliere des entrees `Libelle:"Valeur",` de `deviceInfo`.
+const DEVICE_INFO_ENTRY_PATTERN = /([^:,]+):"([^"]*)",?/g;
 
 // ----------------------------------------------------------------------------
 // Parse une liste de modes separee par des points-virgules.
@@ -97,6 +101,22 @@ export function parseAuxSwitchList(auxSwitchList: string): SparkPixelsAuxSwitch[
     .filter((rawEntry) => rawEntry.length > 0)
     .map(parseAuxSwitchEntry)
     .filter((auxSwitch): auxSwitch is SparkPixelsAuxSwitch => auxSwitch !== null);
+}
+
+// ----------------------------------------------------------------------------
+// Parse les informations device publiees par le firmware.
+//
+// Parametres :
+// - deviceInfo : chaine publiee par la variable Particle `deviceInfo`.
+//
+// Retour :
+// - liste d'entrees libellees dans l'ordre firmware.
+// ----------------------------------------------------------------------------
+export function parseDeviceInfo(deviceInfo: string): SparkPixelsDeviceInfoEntry[] {
+  return Array.from(deviceInfo.matchAll(DEVICE_INFO_ENTRY_PATTERN), (match) => ({
+    label: (match[1] ?? "").trim(),
+    value: match[2] ?? "",
+  })).filter((entry) => entry.label.length > 0);
 }
 
 // ----------------------------------------------------------------------------

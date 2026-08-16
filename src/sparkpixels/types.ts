@@ -30,6 +30,11 @@ export interface SparkPixelsAuxSwitch {
   raw: string;
 }
 
+export interface SparkPixelsDeviceInfoEntry {
+  label: string;
+  value: string;
+}
+
 export interface SparkPixelsSetModeOptions {
   modeName?: string;
   speedIndex?: number;

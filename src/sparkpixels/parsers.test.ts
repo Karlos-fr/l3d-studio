@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseAuxSwitchList,
+  parseDeviceInfo,
   parseModeDefinitions,
   parseModeList,
   parseModeParamList,
@@ -23,6 +24,10 @@ const SAMPLE_MODE_PARAM_LIST =
 // Liste d'interrupteurs auxiliaires issue des structures firmware.
 const SAMPLE_AUX_SWITCH_LIST =
   "2,Shuffle,ON,OFF,1;0,Auto Shut Off,ON,OFF,1;1,On Startup,Run Last Mode,Run Demo,0;";
+
+// Informations device assemblees par `makeDeviceInfo`.
+const SAMPLE_DEVICE_INFO =
+  'Local IP Address:"192.168.1.42",SSID:"L3D",WiFi Strength:"-55",Firmware Rev:"abc123",';
 
 // ----------------------------------------------------------------------------
 // Execute les tests des parseurs Spark Pixels.
@@ -89,6 +94,15 @@ function runSparkPixelsParserTests(): void {
         enabled: false,
         raw: "1,On Startup,Run Last Mode,Run Demo,0",
       },
+    ]);
+  });
+
+  it("parse les informations device publiees", () => {
+    expect(parseDeviceInfo(SAMPLE_DEVICE_INFO)).toEqual([
+      { label: "Local IP Address", value: "192.168.1.42" },
+      { label: "SSID", value: "L3D" },
+      { label: "WiFi Strength", value: "-55" },
+      { label: "Firmware Rev", value: "abc123" },
     ]);
   });
 }

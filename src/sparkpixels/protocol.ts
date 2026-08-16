@@ -34,6 +34,27 @@ export const MAX_FIRMWARE_BRIGHTNESS = 255;
 // Nombre maximal de caracteres texte transmis dans un segment `W:`.
 export const MAX_SET_MODE_TEXT_LENGTH = 63;
 
+// Nombre maximal de caracteres texte transmis par la fonction Particle `SetText`.
+export const MAX_SET_TEXT_LENGTH = 63;
+
+// Index minimal de couleur lu par `GETCOLOR`.
+export const MIN_COLOR_INDEX = 1;
+
+// Index maximal de couleur lu par `GETCOLOR`.
+export const MAX_COLOR_INDEX = 6;
+
+// Index minimal de switch local lu par `GETSWITCHSTATE`.
+export const MIN_LOCAL_SWITCH_INDEX = 1;
+
+// Index maximal de switch local lu par `GETSWITCHSTATE`.
+export const MAX_LOCAL_SWITCH_INDEX = 4;
+
+// Offset de fuseau horaire minimal accepte par Particle Time.zone.
+export const MIN_TIMEZONE_OFFSET = -12;
+
+// Offset de fuseau horaire maximal accepte par Particle Time.zone.
+export const MAX_TIMEZONE_OFFSET = 14;
+
 // Expression reguliere d'une couleur RGB en hexadecimal avec prefixe optionnel.
 const HEX_COLOR_PATTERN = /^#?[0-9a-fA-F]{6}$/;
 
@@ -96,6 +117,76 @@ export function buildSetAuxSwitchCommand(id: number, enabled: boolean): string {
   }
 
   return `SETAUXSWITCH:${id},${enabled ? 1 : 0};`;
+}
+
+// ----------------------------------------------------------------------------
+// Construit une commande `GETSWITCHSTATE` pour `FnRouter`.
+//
+// Parametres :
+// - index : index du switch local a lire, entre 1 et 4.
+//
+// Retour :
+// - commande prete pour la fonction Particle `Function`.
+// ----------------------------------------------------------------------------
+export function buildGetSwitchStateCommand(index: number): string {
+  return `GETSWITCHSTATE:${validateLocalSwitchIndex(index)}`;
+}
+
+// ----------------------------------------------------------------------------
+// Construit une commande `GETCOLOR` pour `FnRouter`.
+//
+// Parametres :
+// - index : index de couleur a lire, entre 1 et 6.
+//
+// Retour :
+// - commande prete pour la fonction Particle `Function`.
+// ----------------------------------------------------------------------------
+export function buildGetColorCommand(index: number): string {
+  return `GETCOLOR:${validateColorIndex(index)}`;
+}
+
+// ----------------------------------------------------------------------------
+// Construit une commande `SETTIMEZONE` pour `FnRouter`.
+//
+// Parametres :
+// - offset : decalage horaire Particle a appliquer.
+//
+// Retour :
+// - commande prete pour la fonction Particle `Function`.
+// ----------------------------------------------------------------------------
+export function buildSetTimezoneCommand(offset: number): string {
+  return `SETTIMEZONE:${validateTimezoneOffset(offset)}`;
+}
+
+// ----------------------------------------------------------------------------
+// Construit une commande `REBOOT` pour `FnRouter`.
+//
+// Retour :
+// - commande prete pour la fonction Particle `Function`.
+// ----------------------------------------------------------------------------
+export function buildRebootCommand(): string {
+  return "REBOOT:";
+}
+
+// ----------------------------------------------------------------------------
+// Valide le texte persistant envoye a la fonction Particle `SetText`.
+//
+// Parametres :
+// - text : texte a persister dans le firmware.
+//
+// Retour :
+// - texte valide.
+// ----------------------------------------------------------------------------
+export function validateSetText(text: string): string {
+  if (text.length === 0) {
+    throw new Error("Le texte SetText ne doit pas etre vide.");
+  }
+
+  if (text.length > MAX_SET_TEXT_LENGTH) {
+    throw new Error("Le texte SetText doit contenir au maximum 63 caracteres.");
+  }
+
+  return text;
 }
 
 // ----------------------------------------------------------------------------
@@ -230,6 +321,65 @@ function buildSwitchSegments(switches: boolean[]): string[] {
   }
 
   return switches.map((enabled, index) => `T${index + 1}:${enabled ? 1 : 0}`);
+}
+
+// ----------------------------------------------------------------------------
+// Valide un index de couleur lu via `FnRouter`.
+//
+// Parametres :
+// - index : index de couleur a valider.
+//
+// Retour :
+// - index de couleur valide.
+// ----------------------------------------------------------------------------
+function validateColorIndex(index: number): number {
+  if (!Number.isInteger(index) || index < MIN_COLOR_INDEX || index > MAX_COLOR_INDEX) {
+    throw new Error("L'index de couleur doit etre un entier entre 1 et 6.");
+  }
+
+  return index;
+}
+
+// ----------------------------------------------------------------------------
+// Valide un index de switch local lu via `FnRouter`.
+//
+// Parametres :
+// - index : index de switch a valider.
+//
+// Retour :
+// - index de switch valide.
+// ----------------------------------------------------------------------------
+function validateLocalSwitchIndex(index: number): number {
+  if (
+    !Number.isInteger(index) ||
+    index < MIN_LOCAL_SWITCH_INDEX ||
+    index > MAX_LOCAL_SWITCH_INDEX
+  ) {
+    throw new Error("L'index de switch local doit etre un entier entre 1 et 4.");
+  }
+
+  return index;
+}
+
+// ----------------------------------------------------------------------------
+// Valide un offset de fuseau horaire Particle.
+//
+// Parametres :
+// - offset : offset horaire a valider.
+//
+// Retour :
+// - offset horaire valide.
+// ----------------------------------------------------------------------------
+function validateTimezoneOffset(offset: number): number {
+  if (
+    !Number.isInteger(offset) ||
+    offset < MIN_TIMEZONE_OFFSET ||
+    offset > MAX_TIMEZONE_OFFSET
+  ) {
+    throw new Error("Le fuseau horaire doit etre un entier entre -12 et 14.");
+  }
+
+  return offset;
 }
 
 // ----------------------------------------------------------------------------

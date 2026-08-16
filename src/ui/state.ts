@@ -6,7 +6,11 @@
 // ============================================================================
 
 import type { ParticleDeviceSummary, ParticleStoredSession } from "../particle/types";
-import type { SparkPixelsModeDefinition } from "../sparkpixels/types";
+import type {
+  SparkPixelsAuxSwitch,
+  SparkPixelsDeviceInfoEntry,
+  SparkPixelsModeDefinition,
+} from "../sparkpixels/types";
 import type { AppPreferences } from "./preferences";
 
 export interface AppState {
@@ -19,10 +23,18 @@ export interface AppState {
   currentBrightnessPercent: number;
   currentSpeedIndex: number;
   modes: SparkPixelsModeDefinition[];
+  auxSwitches: SparkPixelsAuxSwitch[];
+  deviceInfoEntries: SparkPixelsDeviceInfoEntry[];
   selectedModeName: string | null;
   colorValues: string[];
   switchValues: boolean[];
   textValue: string;
+  persistentTextValue: string;
+  timezoneOffset: number;
+  colorQueryIndex: number;
+  switchQueryIndex: number;
+  wifiRssi: number | null;
+  debugMessage: string | null;
   isBusy: boolean;
   statusMessage: string;
   lastResponse: string | null;
@@ -39,6 +51,15 @@ const INITIAL_BRIGHTNESS_PERCENT = 50;
 
 // Index de vitesse initial affiche tant que le firmware n'a pas ete lu.
 const INITIAL_SPEED_INDEX = 4;
+
+// Fuseau horaire initial propose aux commandes FnRouter.
+const INITIAL_TIMEZONE_OFFSET = 0;
+
+// Index initial de couleur interrogee via FnRouter.
+const INITIAL_COLOR_QUERY_INDEX = 1;
+
+// Index initial de switch local interroge via FnRouter.
+const INITIAL_SWITCH_QUERY_INDEX = 1;
 
 // Couleurs par defaut proposees aux modes qui attendent plusieurs couleurs.
 const DEFAULT_MODE_COLORS = ["FFFFFF", "FF0000", "00FF00", "0000FF", "FFFF00", "00FFFF"];
@@ -67,10 +88,18 @@ export function createInitialState(
     currentBrightnessPercent: preferences?.brightnessPercent ?? INITIAL_BRIGHTNESS_PERCENT,
     currentSpeedIndex: preferences?.speedIndex ?? INITIAL_SPEED_INDEX,
     modes: [],
+    auxSwitches: [],
+    deviceInfoEntries: [],
     selectedModeName: preferences?.selectedModeName ?? null,
     colorValues: preferences?.colorValues ?? [...DEFAULT_MODE_COLORS],
     switchValues: preferences?.switchValues ?? [false, false, false, false],
     textValue: preferences?.textValue ?? "",
+    persistentTextValue: preferences?.persistentTextValue ?? preferences?.textValue ?? "",
+    timezoneOffset: preferences?.timezoneOffset ?? INITIAL_TIMEZONE_OFFSET,
+    colorQueryIndex: INITIAL_COLOR_QUERY_INDEX,
+    switchQueryIndex: INITIAL_SWITCH_QUERY_INDEX,
+    wifiRssi: null,
+    debugMessage: null,
     isBusy: false,
     statusMessage: session === null ? "Connecte-toi a Particle pour charger les devices." : "Session chargee.",
     lastResponse: null,
@@ -145,6 +174,19 @@ export function canSendSetModeCommand(state: AppState): boolean {
 }
 
 // ----------------------------------------------------------------------------
+// Indique si une fonction firmware avancee peut etre appelee.
+//
+// Parametres :
+// - state : etat applicatif courant.
+//
+// Retour :
+// - `true` si un device Particle online est selectionne et aucune action ne tourne.
+// ----------------------------------------------------------------------------
+export function canCallAdvancedFunction(state: AppState): boolean {
+  return state.isBusy === false && state.selectedDeviceId !== null && isSelectedDeviceOnline(state);
+}
+
+// ----------------------------------------------------------------------------
 // Reinitialise l'etat dependant du firmware apres un changement de device.
 //
 // Parametres :
@@ -158,9 +200,13 @@ export function resetFirmwareState(state: AppState): void {
   state.currentBrightnessPercent = INITIAL_BRIGHTNESS_PERCENT;
   state.currentSpeedIndex = INITIAL_SPEED_INDEX;
   state.modes = [];
+  state.auxSwitches = [];
+  state.deviceInfoEntries = [];
   state.selectedModeName = null;
   state.colorValues = [...DEFAULT_MODE_COLORS];
   state.switchValues = [false, false, false, false];
   state.textValue = "";
+  state.wifiRssi = null;
+  state.debugMessage = null;
   state.lastResponse = null;
 }

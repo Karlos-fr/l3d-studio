@@ -6,6 +6,7 @@
 // ============================================================================
 
 import {
+  canCallAdvancedFunction,
   canSendSetModeCommand,
   getSelectedDevice,
   getSelectedModeDefinition,
@@ -110,6 +111,8 @@ function renderWorkspace(state: AppState): string {
     ${renderDevicePanel(state)}
     ${renderFirmwareStatePanel(state)}
     ${renderModePanel(state)}
+    ${renderAdvancedPanel(state)}
+    ${renderDeviceInfoPanel(state)}
     ${renderResponsePanel(state)}
   `;
 }
@@ -204,7 +207,16 @@ function renderFirmwareStatePanel(state: AppState): string {
           <dt>Vitesse</dt>
           <dd>${state.currentSpeedIndex}</dd>
         </div>
+        <div>
+          <dt>Wi-Fi RSSI</dt>
+          <dd>${state.wifiRssi === null ? EMPTY_VALUE_LABEL : `${state.wifiRssi} dBm`}</dd>
+        </div>
       </dl>
+      ${
+        state.debugMessage === null
+          ? ""
+          : `<p class="status-message">${escapeHtml(state.debugMessage)}</p>`
+      }
     </section>
   `;
 }
@@ -378,6 +390,161 @@ function renderTextControl(state: AppState): string {
       Texte
       <input data-field="text" maxlength="63" type="text" value="${escapeHtml(state.textValue)}" />
     </label>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend le panneau de fonctions avancees du firmware.
+//
+// Parametres :
+// - state : etat applicatif a afficher.
+//
+// Retour :
+// - fragment HTML du panneau avance.
+// ----------------------------------------------------------------------------
+function renderAdvancedPanel(state: AppState): string {
+  return `
+    <section class="panel">
+      <h2>Fonctions firmware</h2>
+      ${renderAuxSwitchControls(state)}
+      ${renderPersistentTextControls(state)}
+      ${renderFnRouterControls(state)}
+    </section>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend les interrupteurs auxiliaires globaux.
+//
+// Parametres :
+// - state : etat applicatif a afficher.
+//
+// Retour :
+// - fragment HTML des interrupteurs auxiliaires.
+// ----------------------------------------------------------------------------
+function renderAuxSwitchControls(state: AppState): string {
+  if (state.auxSwitches.length === 0) {
+    return "<p>Lis le cube pour charger les interrupteurs globaux.</p>";
+  }
+
+  const controls = state.auxSwitches
+    .map((auxSwitch) => {
+      const checked = auxSwitch.enabled ? "checked" : "";
+      const currentLabel = auxSwitch.enabled ? auxSwitch.onName : auxSwitch.offName;
+
+      return `
+        <label class="inline-control">
+          <input data-field="aux-switch" data-index="${auxSwitch.id}" type="checkbox" ${checked} ${canCallAdvancedFunction(state) ? "" : "disabled"} />
+          <span>${escapeHtml(auxSwitch.title)} : ${escapeHtml(currentLabel)}</span>
+        </label>
+      `;
+    })
+    .join("");
+
+  return `<fieldset><legend>Switches globaux</legend><div class="control-grid">${controls}</div></fieldset>`;
+}
+
+// ----------------------------------------------------------------------------
+// Rend le controle du texte persistant firmware.
+//
+// Parametres :
+// - state : etat applicatif a afficher.
+//
+// Retour :
+// - fragment HTML du controle SetText.
+// ----------------------------------------------------------------------------
+function renderPersistentTextControls(state: AppState): string {
+  return `
+    <fieldset>
+      <legend>Texte persistant</legend>
+      <div class="form-grid">
+        <label>
+          Message
+          <input data-field="persistent-text" maxlength="63" type="text" value="${escapeHtml(state.persistentTextValue)}" />
+        </label>
+        <button class="secondary-action" type="button" data-action="send-set-text" ${canCallAdvancedFunction(state) ? "" : "disabled"}>
+          Envoyer SetText
+        </button>
+      </div>
+    </fieldset>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend les commandes generales routees par `FnRouter`.
+//
+// Parametres :
+// - state : etat applicatif a afficher.
+//
+// Retour :
+// - fragment HTML des commandes FnRouter.
+// ----------------------------------------------------------------------------
+function renderFnRouterControls(state: AppState): string {
+  const disabled = canCallAdvancedFunction(state) ? "" : "disabled";
+
+  return `
+    <fieldset>
+      <legend>FnRouter</legend>
+      <div class="form-grid">
+        <label>
+          Fuseau horaire
+          <input data-field="timezone-offset" max="14" min="-12" step="1" type="number" value="${state.timezoneOffset}" />
+        </label>
+        <button class="secondary-action" type="button" data-action="set-timezone" ${disabled}>
+          Appliquer
+        </button>
+        <label>
+          Couleur a lire
+          <input data-field="color-query-index" max="6" min="1" step="1" type="number" value="${state.colorQueryIndex}" />
+        </label>
+        <button class="secondary-action" type="button" data-action="get-color" ${disabled}>
+          Lire couleur
+        </button>
+        <label>
+          Switch local a lire
+          <input data-field="switch-query-index" max="4" min="1" step="1" type="number" value="${state.switchQueryIndex}" />
+        </label>
+        <button class="secondary-action" type="button" data-action="get-switch-state" ${disabled}>
+          Lire switch
+        </button>
+        <button class="secondary-action danger-action" type="button" data-action="reboot-device" ${disabled}>
+          Redemarrer
+        </button>
+      </div>
+    </fieldset>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend les informations detaillees exposees par le firmware.
+//
+// Parametres :
+// - state : etat applicatif a afficher.
+//
+// Retour :
+// - fragment HTML des informations device.
+// ----------------------------------------------------------------------------
+function renderDeviceInfoPanel(state: AppState): string {
+  if (state.deviceInfoEntries.length === 0) {
+    return "";
+  }
+
+  const entries = state.deviceInfoEntries
+    .map((entry) => {
+      return `
+        <div>
+          <dt>${escapeHtml(entry.label)}</dt>
+          <dd>${escapeHtml(entry.value)}</dd>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+    <section class="panel metrics-panel">
+      <h2>Device Info</h2>
+      <dl class="metrics-grid">${entries}</dl>
+    </section>
   `;
 }
 
