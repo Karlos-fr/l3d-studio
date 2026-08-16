@@ -1,0 +1,17 @@
+{
+  "name": "l3d-studio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "test": "vitest run --passWithNoTests",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "5.9.2",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  }
+}

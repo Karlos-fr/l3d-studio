@@ -82,16 +82,27 @@ Objectif : creer une application TypeScript simple, sans React, pour remplacer l
 
 ### Taches
 
-- Creer un projet Vite TypeScript minimal.
-- Ajouter une structure de dossiers simple.
-- Ajouter un CSS global.
-- Ajouter Vitest pour les tests unitaires.
-- Ajouter des scripts npm :
+- [x] Creer un projet Vite TypeScript minimal.
+- [x] Ajouter une structure de dossiers simple.
+- [x] Ajouter un CSS global.
+- [x] Ajouter Vitest pour les tests unitaires.
+- [x] Ajouter des scripts npm :
   - `dev`
   - `build`
   - `test`
   - `preview`
-- Verifier que l'application demarre localement.
+- [ ] Verifier que l'application demarre localement.
+
+### Etat de validation
+
+- Initialisation Vite, TypeScript et Vitest terminee.
+- Les dependances sont gardees sur des versions modernes sans vulnerabilite connue par `npm audit` au moment de l'installation :
+  - `vite@8.2.1`
+  - `vitest@4.1.10`
+  - `typescript@5.9.2`
+- `npm install` fonctionne avec un Node portable local.
+- `npm run test` et `npm run build` ne peuvent pas etre valides dans cet environnement : Vite/Vitest declenchent une erreur WebAssembly `Out of memory`, connue comme une contrainte memoire environnementale.
+- Le demarrage local et le build devront etre revalides sur une machine Node standard.
 
 ### Structure cible
 
@@ -114,9 +125,10 @@ src/
 
 ### Livrables
 
-- Application Vite fonctionnelle.
-- Page vide ou minimale chargee dans le navigateur.
-- Build TypeScript valide.
+- [x] Application Vite initialisee.
+- [x] Page vide ou minimale definie dans le code source.
+- [ ] Page minimale chargee dans le navigateur.
+- [ ] Build TypeScript/Vite valide sur une machine Node standard.
 
 ## Phase 4 - Client Particle Cloud
 
