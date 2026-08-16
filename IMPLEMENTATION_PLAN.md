@@ -134,46 +134,66 @@ src/
 
 ### Taches
 
-- Implementer un client HTTP Particle minimal.
-- Centraliser la configuration :
+- [x] Implementer un client HTTP Particle minimal.
+- [x] Centraliser la configuration :
   - base URL `https://api.particle.io/v1`
   - token utilisateur obtenu apres login Particle
   - device selectionne
-- Implementer l'authentification :
+- [x] Implementer l'authentification :
   - `login(email, password)`
   - stockage local du token
   - lecture du token courant au demarrage
   - suppression du token a la deconnexion
-- Implementer :
+- [x] Implementer :
   - `listDevices()`
   - `getDevice(deviceId)`
   - `getVariable(deviceId, variableName)`
   - `callFunction(deviceId, functionName, command)`
-- Ajouter une gestion d'erreurs lisible.
-- Ajouter des tests avec fetch mocke.
+- [x] Ajouter une gestion d'erreurs lisible.
+- [x] Ajouter des tests avec fetch mocke.
+
+### Etat de validation
+
+- `src/particle/client.ts` implemente le transport Particle Cloud avec `arg=<commande>` pour les fonctions.
+- `src/particle/session.ts` gere le stockage local du token, du refresh token et du device selectionne sans stocker le mot de passe.
+- Les tests unitaires de contrat sont ajoutes dans `src/particle/client.test.ts` et `src/particle/session.test.ts`.
+- `npx tsc --noEmit` passe dans l'environnement courant.
+- `npm audit --audit-level=moderate` passe avec `0 vulnerabilities`.
+- `npm run test` reste non executable dans cet environnement a cause de la limite memoire WebAssembly deja documentee en phase 3.
 
 ### Livrables
 
-- `src/particle/client.ts`
-- `src/particle/types.ts`
-- Tests unitaires du client Particle.
+- [x] `src/particle/client.ts`
+- [x] `src/particle/types.ts`
+- [x] `src/particle/session.ts`
+- [x] Tests unitaires du client Particle.
 
 ## Phase 5 - Protocole Spark Pixels
 
 ### Taches
 
-- Implementer le generateur de commande `SetMode`.
-- Implementer le parsing de `modeList`.
-- Implementer le parsing de `modeParmList`.
-- Implementer le parsing de `auxSwtchList`.
-- Convertir la luminosite :
+- [x] Implementer le generateur de commande `SetMode`.
+- [x] Implementer le parsing de `modeList`.
+- [x] Implementer le parsing de `modeParmList`.
+- [x] Implementer le parsing de `auxSwtchList`.
+- [x] Convertir la luminosite :
   - app : `0..100`
   - firmware : conversion interne vers `1..255`
-- Convertir la vitesse :
+- [x] Convertir la vitesse :
   - app : index `0..8`
   - firmware : presets internes
-- Gerer les couleurs en hex RGB `RRGGBB`.
-- Ajouter des tests sur les cas reels issus du firmware.
+- [x] Gerer les couleurs en hex RGB `RRGGBB`.
+- [x] Ajouter des tests sur les cas reels issus du firmware.
+
+### Etat de validation
+
+- `src/sparkpixels/protocol.ts` construit les commandes `SetMode` et `SETAUXSWITCH`.
+- `src/sparkpixels/parsers.ts` parse `modeList`, `modeParmList`, `auxSwtchList` et fusionne les definitions de modes.
+- `src/sparkpixels/types.ts` decrit les modes, parametres, interrupteurs auxiliaires et options de commande.
+- Les tests unitaires de contrat sont ajoutes dans `src/sparkpixels/protocol.test.ts` et `src/sparkpixels/parsers.test.ts`.
+- `npx tsc --noEmit` passe dans l'environnement courant.
+- `npm audit --audit-level=moderate` passe avec `0 vulnerabilities`.
+- `npm run test` reste non executable dans cet environnement a cause de la limite memoire WebAssembly deja documentee.
 
 ### Exemples de commandes
 
@@ -186,44 +206,56 @@ SETAUXSWITCH:1,0;
 
 ### Livrables
 
-- `src/sparkpixels/protocol.ts`
-- `src/sparkpixels/parsers.ts`
-- Tests unitaires couvrant les commandes principales.
+- [x] `src/sparkpixels/protocol.ts`
+- [x] `src/sparkpixels/parsers.ts`
+- [x] `src/sparkpixels/types.ts`
+- [x] Tests unitaires couvrant les commandes principales.
 
 ## Phase 6 - Interface MVP
 
 ### Taches
 
-- Creer un ecran de connexion Particle :
+- [x] Creer un ecran de connexion Particle :
   - email/login
   - mot de passe
   - bouton connexion
   - message d'erreur explicite
-- Stocker le token obtenu localement apres connexion.
-- Ajouter une action de deconnexion qui supprime le token local.
-- Creer une liste des devices.
-- Permettre la selection du Photon associe au cube.
-- Lire l'etat initial :
+- [x] Stocker le token obtenu localement apres connexion.
+- [x] Ajouter une action de deconnexion qui supprime le token local.
+- [x] Creer une liste des devices.
+- [x] Permettre la selection du Photon associe au cube.
+- [x] Lire l'etat initial :
   - mode courant
   - luminosite
   - vitesse
   - liste des modes
   - parametres des modes
-- Afficher les modes disponibles.
-- Afficher les controles du mode selectionne :
+- [x] Afficher les modes disponibles.
+- [x] Afficher les controles du mode selectionne :
   - couleurs necessaires
   - switches si disponibles
   - texte si disponible
-- Ajouter les sliders :
+- [x] Ajouter les sliders :
   - luminosite
   - vitesse
-- Ajouter un bouton d'envoi de commande.
-- Afficher le dernier retour Particle.
+- [x] Ajouter un bouton d'envoi de commande.
+- [x] Afficher le dernier retour Particle.
+
+### Etat de validation
+
+- `src/ui/state.ts` porte l'etat applicatif du MVP.
+- `src/ui/render.ts` rend la connexion Particle, les devices, l'etat du cube et les controles de mode.
+- `src/ui/events.ts` branche login, deconnexion, rafraichissement devices, lecture firmware et envoi `SetMode`.
+- `src/ui/preferences.ts` sauvegarde les derniers reglages locaux dans `localStorage`.
+- `src/main.ts` charge la session locale et hydrate les devices quand un token existe.
+- `npx tsc --noEmit` passe dans l'environnement courant.
+- `npm audit --audit-level=moderate` passe avec `0 vulnerabilities`.
+- Le lancement navigateur avec Vite reste non valide dans cet environnement a cause de la limite memoire WebAssembly deja documentee.
 
 ### Livrables
 
-- Interface utilisable pour choisir un mode et l'envoyer au cube.
-- Etat sauvegarde en `localStorage` :
+- [x] Interface implementee pour choisir un mode et l'envoyer au cube.
+- [x] Etat sauvegarde en `localStorage` :
   - token obtenu apres authentification
   - device selectionne
   - derniers reglages locaux
@@ -232,25 +264,37 @@ SETAUXSWITCH:1,0;
 
 ### Taches
 
-- Ajouter des messages clairs pour :
-  - utilisateur non connecte
-  - identifiants invalides
-  - MFA requise ou non supportee
-  - token invalide
-  - token expire
-  - cube offline
-  - appel Particle echoue
-  - commande refusee par le firmware
-- Ajouter un bouton de rafraichissement de l'etat.
-- Ajouter un indicateur online/offline du device.
-- Eviter les appels API inutiles pendant le deplacement des sliders.
-- Envoyer luminosite/vitesse seulement au relachement du slider ou via bouton explicite.
-- Ajouter une protection contre les commandes incompletes.
+- [x] Ajouter des messages clairs pour :
+  - [x] utilisateur non connecte
+  - [x] identifiants invalides
+  - [x] MFA requise ou non supportee
+  - [x] token invalide
+  - [x] token expire
+  - [x] cube offline
+  - [x] appel Particle echoue
+  - [x] commande refusee par le firmware
+- [x] Ajouter un bouton de rafraichissement de l'etat.
+- [x] Ajouter un indicateur online/offline du device.
+- [x] Eviter les appels API inutiles pendant le deplacement des sliders.
+- [x] Envoyer luminosite/vitesse seulement via bouton explicite.
+- [x] Ajouter une protection contre les commandes incompletes.
+
+### Etat de validation
+
+- Les erreurs Particle courantes sont traduites en messages utilisateur dans `src/ui/events.ts`.
+- Les sessions expirees ou refusees par Particle sont supprimees localement et forcent une reconnexion.
+- Les boutons d'action sont bloques pendant une action asynchrone.
+- La lecture firmware et l'envoi `SetMode` sont bloques quand aucun Photon online n'est selectionne.
+- Le rendu affiche un indicateur online/offline et explique pourquoi une commande ne peut pas partir.
+- Les sliders et champs locaux ne declenchent aucun appel Particle ; seul le bouton d'envoi transmet la commande.
+- `npx tsc --noEmit` passe dans l'environnement courant.
+- `npm audit --audit-level=moderate` passe avec `0 vulnerabilities`.
+- `npm run test` reste non executable dans cet environnement a cause de la limite memoire WebAssembly deja documentee.
 
 ### Livrables
 
-- UX stable pour un usage quotidien.
-- Pas d'envoi accidentel en boucle vers Particle Cloud.
+- [x] UX stable pour un usage quotidien.
+- [x] Pas d'envoi accidentel en boucle vers Particle Cloud.
 
 ## Phase 8 - Fonctions avancees du firmware
 

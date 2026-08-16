@@ -6,8 +6,11 @@
 // ============================================================================
 
 import "./styles.css";
-import { attachShellEvents } from "./ui/events";
-import { renderShell } from "./ui/render";
+import { createParticleClient } from "./particle/client";
+import { loadParticleSession } from "./particle/session";
+import { attachAppEvents, hydrateAuthenticatedSession } from "./ui/events";
+import { loadAppPreferences } from "./ui/preferences";
+import { renderApp } from "./ui/render";
 import { createInitialState } from "./ui/state";
 
 // Identifiant du conteneur DOM racine fourni par index.html.
@@ -27,9 +30,38 @@ function bootstrapApplication(): void {
     throw new Error("Le conteneur principal de l'application est introuvable.");
   }
 
-  const state = createInitialState();
-  renderShell(rootElement, state);
-  attachShellEvents(rootElement, state);
+  const session = loadParticleSession(window.localStorage);
+  const preferences = loadAppPreferences(window.localStorage);
+  const particleClient = createParticleClient({
+    token: session?.accessToken,
+  });
+  const state = createInitialState(session, preferences);
+
+  // ----------------------------------------------------------------------------
+  // Relance le rendu et rebranche les evenements sur le DOM remplace.
+  //
+  // Effet de bord :
+  // - remplace l'interface courante et ajoute les gestionnaires d'evenements.
+  // ----------------------------------------------------------------------------
+  const rerender = (): void => {
+    renderApp(rootElement, state);
+    attachAppEvents({
+      rootElement,
+      state,
+      particleClient,
+      storage: window.localStorage,
+      rerender,
+    });
+  };
+
+  rerender();
+  void hydrateAuthenticatedSession({
+    rootElement,
+    state,
+    particleClient,
+    storage: window.localStorage,
+    rerender,
+  });
 }
 
 bootstrapApplication();
