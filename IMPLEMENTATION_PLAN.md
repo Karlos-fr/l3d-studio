@@ -42,18 +42,18 @@ Objectif : creer une application TypeScript simple, sans React, pour remplacer l
 
 ### Taches
 
-- Verifier les endpoints Particle Cloud actuels.
-- Tester manuellement la creation d'un token avec login et mot de passe Particle.
-- Verifier le comportement avec un compte Particle utilisant MFA.
-- Verifier si le client OAuth `particle:particle` est encore utilisable pour une app installee.
-- Identifier les limites de securite d'un flux login/mot de passe depuis une app navigateur sans backend.
-- Tester manuellement la lecture des devices avec le token obtenu.
-- Tester manuellement la lecture d'une variable, par exemple `mode`.
-- Tester manuellement l'appel de `SetMode`.
-- Confirmer le format attendu du body pour les fonctions Particle :
+- [x] Verifier les endpoints Particle Cloud actuels.
+- [x] Tester manuellement la creation d'un token avec login et mot de passe Particle.
+- [ ] Verifier le comportement avec un compte Particle utilisant MFA.
+- [x] Verifier si le client OAuth `particle:particle` est encore utilisable pour une app installee.
+- [x] Identifier les limites de securite d'un flux login/mot de passe depuis une app navigateur sans backend.
+- [x] Tester manuellement la lecture des devices avec le token obtenu.
+- [ ] Tester manuellement la lecture d'une variable, par exemple `mode`.
+- [ ] Tester manuellement l'appel de `SetMode`.
+- [x] Confirmer le format attendu du body pour les fonctions Particle :
   - `arg=<commande>` si requis par l'API actuelle
-  - ou `params=<commande>` si encore accepte
-- Verifier les erreurs possibles :
+  - `params=<commande>` est l'ancien nom utilise par l'app Android et ne doit pas etre repris pour le nouveau client
+- [x] Verifier les erreurs possibles :
   - identifiants invalides
   - MFA requise
   - token invalide
@@ -62,6 +62,14 @@ Objectif : creer une application TypeScript simple, sans React, pour remplacer l
   - variable inconnue
   - fonction inconnue
   - timeout Photon
+
+### Etat de validation
+
+- Validation documentaire terminee dans `docs/particle-cloud-api.md`.
+- Validation reseau non authentifiee terminee : Particle repond sur les endpoints actuels et retourne `invalid_request` sans token.
+- Validation authentifiee partielle terminee : login Particle, creation de token et liste des devices fonctionnent.
+- Le compte teste ne declenche pas MFA ; le comportement d'un compte avec MFA activee reste a valider.
+- Lecture de variable et appel `SetMode` testes mais non valides fonctionnellement : le Photon cible est actuellement offline et Particle retourne `Timed out`.
 
 ### Livrables
 
