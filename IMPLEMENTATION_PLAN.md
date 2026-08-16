@@ -8,19 +8,20 @@ Objectif : creer une application TypeScript simple, sans React, pour remplacer l
 - L'ancienne app Android n'est plus une reference API fiable : elle utilise l'ancien domaine `api.spark.io` et passe le token dans l'URL.
 - La cible moderne doit utiliser l'API Particle Cloud actuelle, avec le domaine `api.particle.io` et un header `Authorization: Bearer <token>`.
 - L'application doit rester minimale : Vite, TypeScript, HTML, CSS, tests Vitest.
-- Aucun backend au depart. Le token Particle est fourni par l'utilisateur et stocke localement dans le navigateur.
+- Aucun backend au depart. L'utilisateur s'authentifie avec son login et son mot de passe Particle, puis l'application recupere un token Particle.
+- L'authentification doit etre revalidee avec l'API Particle actuelle, notamment en cas de MFA active ou de changement des regles OAuth.
 
 ## Phase 1 - Analyse fonctionnelle et protocole firmware
 
 ### Taches
 
-- Lire et documenter les fonctions Particle declarees par `SparkPixelsMega`.
-- Lire et documenter les variables Particle declarees par `SparkPixelsMega`.
-- Identifier les commandes acceptees par `SetMode`.
-- Identifier les commandes acceptees par `Function` / `FnRouter`.
-- Identifier le role exact de `SetText` et `CubePainter`.
-- Comparer le comportement attendu par l'ancienne app Android avec le firmware L3D actuel.
-- Produire une table de compatibilite :
+- [x] Lire et documenter les fonctions Particle declarees par `SparkPixelsMega`.
+- [x] Lire et documenter les variables Particle declarees par `SparkPixelsMega`.
+- [x] Identifier les commandes acceptees par `SetMode`.
+- [x] Identifier les commandes acceptees par `Function` / `FnRouter`.
+- [x] Identifier le role exact de `SetText` et `CubePainter`.
+- [x] Comparer le comportement attendu par l'ancienne app Android avec le firmware L3D actuel.
+- [x] Produire une table de compatibilite :
   - nom de variable Particle
   - type de valeur retournee
   - usage dans l'interface
@@ -42,14 +43,21 @@ Objectif : creer une application TypeScript simple, sans React, pour remplacer l
 ### Taches
 
 - Verifier les endpoints Particle Cloud actuels.
-- Tester manuellement la lecture des devices avec un token Particle.
+- Tester manuellement la creation d'un token avec login et mot de passe Particle.
+- Verifier le comportement avec un compte Particle utilisant MFA.
+- Verifier si le client OAuth `particle:particle` est encore utilisable pour une app installee.
+- Identifier les limites de securite d'un flux login/mot de passe depuis une app navigateur sans backend.
+- Tester manuellement la lecture des devices avec le token obtenu.
 - Tester manuellement la lecture d'une variable, par exemple `mode`.
 - Tester manuellement l'appel de `SetMode`.
 - Confirmer le format attendu du body pour les fonctions Particle :
   - `arg=<commande>` si requis par l'API actuelle
   - ou `params=<commande>` si encore accepte
 - Verifier les erreurs possibles :
+  - identifiants invalides
+  - MFA requise
   - token invalide
+  - token expire
   - device offline
   - variable inconnue
   - fonction inconnue
@@ -58,6 +66,7 @@ Objectif : creer une application TypeScript simple, sans React, pour remplacer l
 ### Livrables
 
 - `docs/particle-cloud-api.md`
+- Flux d'authentification documente.
 - Commandes `curl` de reference validees.
 - Decision documentee sur le format exact des appels POST.
 
@@ -108,8 +117,13 @@ src/
 - Implementer un client HTTP Particle minimal.
 - Centraliser la configuration :
   - base URL `https://api.particle.io/v1`
-  - token utilisateur
+  - token utilisateur obtenu apres login Particle
   - device selectionne
+- Implementer l'authentification :
+  - `login(email, password)`
+  - stockage local du token
+  - lecture du token courant au demarrage
+  - suppression du token a la deconnexion
 - Implementer :
   - `listDevices()`
   - `getDevice(deviceId)`
@@ -160,7 +174,13 @@ SETAUXSWITCH:1,0;
 
 ### Taches
 
-- Creer un ecran de configuration du token Particle.
+- Creer un ecran de connexion Particle :
+  - email/login
+  - mot de passe
+  - bouton connexion
+  - message d'erreur explicite
+- Stocker le token obtenu localement apres connexion.
+- Ajouter une action de deconnexion qui supprime le token local.
 - Creer une liste des devices.
 - Permettre la selection du Photon associe au cube.
 - Lire l'etat initial :
@@ -184,7 +204,7 @@ SETAUXSWITCH:1,0;
 
 - Interface utilisable pour choisir un mode et l'envoyer au cube.
 - Etat sauvegarde en `localStorage` :
-  - token
+  - token obtenu apres authentification
   - device selectionne
   - derniers reglages locaux
 
@@ -193,8 +213,11 @@ SETAUXSWITCH:1,0;
 ### Taches
 
 - Ajouter des messages clairs pour :
-  - token manquant
+  - utilisateur non connecte
+  - identifiants invalides
+  - MFA requise ou non supportee
   - token invalide
+  - token expire
   - cube offline
   - appel Particle echoue
   - commande refusee par le firmware
@@ -232,12 +255,14 @@ SETAUXSWITCH:1,0;
 
 - Verifier le build statique.
 - Ajouter une documentation utilisateur courte.
-- Documenter comment obtenir un token Particle.
+- Documenter comment se connecter avec un compte Particle.
 - Documenter comment trouver le device ID du Photon.
 - Documenter les limites de securite :
+  - le mot de passe Particle ne doit jamais etre stocke
   - le token donne acces au compte Particle
   - ne pas publier le token
   - ne pas committer de token
+  - eviter d'utiliser l'application depuis une machine non fiable
 - Choisir le mode de distribution :
   - app locale lancee par `npm run dev`
   - build statique
@@ -270,7 +295,8 @@ SETAUXSWITCH:1,0;
 
 Le MVP est termine quand :
 
-- L'utilisateur peut renseigner son token Particle.
+- L'utilisateur peut se connecter avec son compte Particle.
+- L'application recupere et stocke localement un token Particle.
 - L'application liste les devices Particle accessibles.
 - L'utilisateur peut choisir le Photon du cube.
 - L'application lit le mode courant, la luminosite, la vitesse et la liste des modes.
