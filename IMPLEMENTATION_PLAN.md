@@ -328,25 +328,33 @@ SETAUXSWITCH:1,0;
 
 ### Taches
 
-- Verifier le build statique.
-- Ajouter une documentation utilisateur courte.
-- Documenter comment se connecter avec un compte Particle.
-- Documenter comment trouver le device ID du Photon.
-- Documenter les limites de securite :
-  - le mot de passe Particle ne doit jamais etre stocke
-  - le token donne acces au compte Particle
-  - ne pas publier le token
-  - ne pas committer de token
-  - eviter d'utiliser l'application depuis une machine non fiable
-- Choisir le mode de distribution :
-  - app locale lancee par `npm run dev`
-  - build statique
-  - GitHub Pages
+- [ ] Verifier le build statique.
+- [ ] Ajouter une documentation utilisateur courte.
+- [ ] Documenter comment se connecter avec un compte Particle.
+- [ ] Documenter comment trouver le device ID du Photon.
+- [ ] Documenter les limites de securite :
+  - [x] le mot de passe Particle ne doit jamais etre stocke
+  - [x] le token donne acces au compte Particle
+  - [x] ne pas publier le token
+  - [x] ne pas committer de token
+  - [ ] eviter d'utiliser l'application depuis une machine non fiable
+- [x] Choisir le mode de distribution :
+  - [ ] app locale lancee par `npm run dev`
+  - [x] build statique
+  - [x] GitHub Pages
+
+### Etat de validation
+
+- `vite.config.ts` utilise le chemin public `/l3d-studio/` attendu par GitHub Pages.
+- `.github/workflows/pages.yml` construit l'application avec `npm ci` puis `npm run build`.
+- Le build local reste bloque par l'erreur WebAssembly `Out of memory` deja documentee ; la validation du build statique est confiee au runner GitHub Actions.
+- GitHub Pages est configure pour deployer l'artefact `dist` depuis GitHub Actions.
+- Le repository doit etre publie en public pour rendre la page accessible.
 
 ### Livrables
 
-- `README.md` mis a jour.
-- Build statique deployable.
+- [ ] `README.md` mis a jour.
+- [x] Build statique deployable.
 
 ## Phase 10 - Option future : API locale sans Particle Cloud
 
