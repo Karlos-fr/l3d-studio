@@ -328,8 +328,8 @@ SETAUXSWITCH:1,0;
 
 ### Taches
 
-- [ ] Verifier le build statique.
-- [ ] Ajouter une documentation utilisateur courte.
+- [x] Verifier le build statique.
+- [x] Ajouter une documentation utilisateur courte.
 - [ ] Documenter comment se connecter avec un compte Particle.
 - [ ] Documenter comment trouver le device ID du Photon.
 - [ ] Documenter les limites de securite :
@@ -337,7 +337,7 @@ SETAUXSWITCH:1,0;
   - [x] le token donne acces au compte Particle
   - [x] ne pas publier le token
   - [x] ne pas committer de token
-  - [ ] eviter d'utiliser l'application depuis une machine non fiable
+  - [x] eviter d'utiliser l'application depuis une machine non fiable
 - [x] Choisir le mode de distribution :
   - [ ] app locale lancee par `npm run dev`
   - [x] build statique
@@ -348,12 +348,14 @@ SETAUXSWITCH:1,0;
 - `vite.config.ts` utilise le chemin public `/l3d-studio/` attendu par GitHub Pages.
 - `.github/workflows/pages.yml` construit l'application avec `npm ci` puis `npm run build`.
 - Le build local reste bloque par l'erreur WebAssembly `Out of memory` deja documentee ; la validation du build statique est confiee au runner GitHub Actions.
+- GitHub Actions a valide le build et le deploiement Pages.
 - GitHub Pages est configure pour deployer l'artefact `dist` depuis GitHub Actions.
-- Le repository doit etre publie en public pour rendre la page accessible.
+- Le repository est public pour rendre la page accessible.
+- URL de deploiement : `https://karlos-fr.github.io/l3d-studio/`.
 
 ### Livrables
 
-- [ ] `README.md` mis a jour.
+- [x] `README.md` mis a jour.
 - [x] Build statique deployable.
 
 ## Phase 10 - Option future : API locale sans Particle Cloud
