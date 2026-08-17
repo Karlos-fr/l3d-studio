@@ -1,21 +1,34 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// Zone - Implémentation des quatre zones physiques et de leurs chasers
+// ----------------------------------------------------------------------------
+// Ce fichier conserve le découpage historique de la bande. L'atténuation RGB
+// commune reste fournie par les primitives de rendu.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Colore successivement les quatre quarts physiques de la bande.
+//
+// Parametres :
+// - c1 : couleur de la première zone.
+// - c2 : couleur de la deuxième zone.
+// - c3 : couleur de la troisième zone.
+// - c4 : couleur de la quatrième zone.
+// - loop : état historique appliqué à la variable globale run.
+//
+// Retour :
+// - un après les quatre fondus, zéro en cas d'interruption.
+//
+// Effet de bord :
+// - modifie le framebuffer, la roue chromatique et l'état run.
+// ----------------------------------------------------------------------------
 int colorZone(uint32_t c1, uint32_t c2, uint32_t c3, uint32_t c4, bool loop) {
     uint32_t maxColorPixel, increment;
     colorWheel += 2;
     Color col1 = ((switch2 || switch3) ? getColorFromInteger(Wheel(colorWheel)) : getColorFromInteger(c1));
     Color c, col2, col3, col4;
     run = loop;
-	//ZONE mode Start and End Pixels
-	int zone1Start = 0;
-	int zone1End   = (PIXEL_CNT / 4) - 1;   //127
-	int zone2Start = zone1End + 1;          //128
-	int zone2End   = (zone2Start * 2) - 1;  //255
-	int zone3Start = PIXEL_CNT / 2;         //256
-	int zone3End   = zone3Start + zone1End; //383
-	int zone4Start = zone3End + 1;          //384
-	int zone4End   = PIXEL_CNT - 1;			//511
-	
     if(switch2) {
 		col2 = getColorFromInteger(Wheel(colorWheel+=8));
 		col3 = getColorFromInteger(Wheel(colorWheel+=16));
@@ -98,22 +111,27 @@ int colorZone(uint32_t c1, uint32_t c2, uint32_t c3, uint32_t c4, bool loop) {
     return 1;
 }
 
-//Creates 4 color zones, with each one having its own "chaser pixel"
+// ----------------------------------------------------------------------------
+// Fait rebondir un chaser dans chacun des quatre quarts physiques.
+//
+// Parametres :
+// - c1 : couleur du premier chaser.
+// - c2 : couleur du deuxième chaser.
+// - c3 : couleur du troisième chaser.
+// - c4 : couleur du quatrième chaser.
+//
+// Effet de bord :
+// - avance les huit états statiques, atténue les traînées et affiche la bande.
+// ----------------------------------------------------------------------------
 void colorZoneChaser(uint32_t c1, uint32_t c2, uint32_t c3, uint32_t c4) {
-	//ZONE mode Start and End Pixels
-	int zone1Start = 0;
-	int zone1End   = (PIXEL_CNT / 4) - 1;   //127
-	int zone2Start = zone1End + 1;          //128
-	int zone2End   = (zone2Start * 2) - 1;  //255
-	int zone3Start = PIXEL_CNT / 2;         //256
-	int zone3End   = zone3Start + zone1End; //383
-	int zone4Start = zone3End + 1;          //384
-	int zone4End   = PIXEL_CNT - 1;			//511
-    
-	static int idexZone1 = random(zone1Start, zone1End+1);  //zone1Start + (rand() % zone1End);
-    static int idexZone2 = random(zone2Start, zone2End+1);  //zone2Start + (rand() % zone2End);
-    static int idexZone3 = random(zone3Start, zone3End+1);  //zone3Start + (rand() % zone3End);
-    static int idexZone4 = random(zone4Start, zone4End+1);  //zone4Start + (rand() % zone4End);
+	// Index du premier chaser, borné au premier quart.
+	static uint16_t idexZone1 = random(zone1Start, zone1End+1);
+    // Index du deuxième chaser, borné au deuxième quart.
+    static uint16_t idexZone2 = random(zone2Start, zone2End+1);
+    // Index du troisième chaser, borné au troisième quart.
+    static uint16_t idexZone3 = random(zone3Start, zone3End+1);
+    // Index du quatrième chaser, borné au quatrième quart.
+    static uint16_t idexZone4 = random(zone4Start, zone4End+1);
     static bool bounce1 = false;
     static bool bounce2 = false;
     static bool bounce3 = false;
@@ -149,10 +167,8 @@ void colorZoneChaser(uint32_t c1, uint32_t c2, uint32_t c3, uint32_t c4) {
         //Then slowly fade out previously-lit pixels to black, leaving a nice "trailing" effect
         for(int j=0; j<PIXEL_CNT; j++) {
             if ((j != idexZone1) && (j != idexZone2) && (j != idexZone3) && (j != idexZone4)) {
-                Color pixelColor = getColorFromInteger(strip.getPixelColor(j));
-                if(pixelColor.red > 0) pixelColor.red-=pixelColor.red*.125;
-                if(pixelColor.green > 0) pixelColor.green-=pixelColor.green*.125;
-                if(pixelColor.blue > 0) pixelColor.blue-=pixelColor.blue*.125;
+                Color pixelColor = fadeColorSevenEighths(
+                    getColorFromInteger(strip.getPixelColor(j)));
                 strip.setPixelColor(j, strip.Color(pixelColor.red, pixelColor.green, pixelColor.blue));
             }
         }

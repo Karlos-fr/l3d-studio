@@ -1,7 +1,20 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// ModeRuntime - Orchestration des modes et des demonstrations
+// ----------------------------------------------------------------------------
+// Ce fichier pilote le mode actif, le shuffle et leurs reinitialisations. Les
+// animations et les primitives de rendu restent implementees dans leurs modules.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Conserve la graine pseudo-aleatoire existante pour compatibilite historique.
+//
+// Parametres :
+// - seed : graine Cloud volontairement ignoree.
+// ----------------------------------------------------------------------------
 void random_seed_from_cloud(unsigned int seed) {
-   // don't do anything with this. Continue with existing seed.
+   // Le firmware poursuit volontairement la sequence pseudo-aleatoire existante.
 }
 
 #include "../storage/eeprom.cpp"
@@ -102,6 +115,13 @@ void runDemo() {
 }
 
 
+// ----------------------------------------------------------------------------
+// Sélectionne le prochain mode admissible dans l'ordre mélangé.
+//
+// Effet de bord :
+// - tire quatre couleurs et quatre switches, avance l'index compact puis
+//   initialise le mode retenu.
+// ----------------------------------------------------------------------------
 void setRandomMode(void) {
 	color1 = Wheel(random(256));
     color2 = Wheel(random(256));
@@ -119,7 +139,7 @@ void setRandomMode(void) {
 		  * so let's replace it and use the modeShuffleOrder array - guaranteeing each 
 		  * mode gets played. 
 		  */
-		if(shuffleIdx >= (int)(sizeof modeShuffleOrder / sizeof modeShuffleOrder[0]))	
+		if(shuffleIdx >= sizeof modeShuffleOrder / sizeof modeShuffleOrder[0])
 			resetShuffleMode();
 		currentModeID = modeStruct[modeShuffleOrder[shuffleIdx]].modeId; 
 		shuffleIdx++;
@@ -140,13 +160,25 @@ void setRandomMode(void) {
 	setNewMode(getModeIndexFromID(currentModeID));
 }
 
-//Shuffle the deck
+// ----------------------------------------------------------------------------
+// Repart du premier index et mélange les 62 entrées actives du registre.
+//
+// Effet de bord :
+// - remet l'index global à zéro et consomme un tirage par entrée.
+// ----------------------------------------------------------------------------
 void resetShuffleMode(void) {
 	shuffleIdx = 0;
-	arrayShuffle(modeShuffleOrder,(int)(sizeof modeShuffleOrder / sizeof modeShuffleOrder[0]));
+	arrayShuffle(
+		modeShuffleOrder,
+		static_cast<uint8_t>(sizeof modeShuffleOrder / sizeof modeShuffleOrder[0]));
 }
 
-// Timer Callback to advance Demo/Shuffle Reel
+// ----------------------------------------------------------------------------
+// Demande au callback principal de faire avancer la demonstration ou le shuffle.
+//
+// Effet de bord :
+// - positionne `stopDemo`, lu ensuite hors du callback du timer.
+// ----------------------------------------------------------------------------
 void advanceDemo() {
     stopDemo = true;
 }
@@ -462,18 +494,17 @@ void resetVariables(int modeIndex) {
 			break;
 		}
 		case CHEERLIGHTS:
-			hostname = "api.thingspeak.com";
-			path = "/channels/1417/field/2/last.txt";
-			response = "";
-			pollTime = millis() + POLLING_INTERVAL;
+			resetCheerLightsResponse();
+			pollTime = millis() + CHEERLIGHTS_POLLING_INTERVAL;
 			lastCol = black;
-				client.stop();
-			connected = client.connect(hostname, 80);
+			client.stop();
+			connected = client.connect(CHEERLIGHTS_HOST, CHEERLIGHTS_HTTP_PORT);
 			break;
 			case FILLER:
 			lastCol = black;
 			transitionAll(lastCol,LINEAR);
 			break;
+		#if L3D_LISTENER_ENABLED
 		case LISTENER:
 		{
 			IPAddress myIp = WiFi.localIP();
@@ -486,6 +517,7 @@ void resetVariables(int modeIndex) {
             Udp.begin(65506);
 		    break;
 		}
+		#endif
 		case CUBEBOUNCE:
 		    transitionAll(black,LINEAR);
 			cubeBounce_setup();
@@ -554,17 +586,17 @@ void resetVariables(int modeIndex) {
 			transitionAll(black,LINEAR);	
 			break;
 		case WHIRLWIND:
+			// La transition doit libérer le scratch avant l'état Whirlwind.
+            transitionAll(black,LINEAR);
 			center = { 4.5, 4.5, 4.5 };
-			lastRand = lastLastRand = 0;
-			lastSwap = millis();
+            lastRand = lastLastRand = 0;
+            lastSwap = millis();
             for (int i=0; i<MAX_DOTS; i++) {
-                y[i] = random(SIDE);
-                radi[i] = random(MIN_RADI,MAX_RADI) + randomDecimal();
-                angle[i] = randomDecimal() * 2 * PI;
-                //clr[i] = Color(rand()%16, rand()%16, rand()%16);
-                randomColor(&clr[i]);
+                whirlwindHeights[i] = random(SIDE);
+                whirlwindRadii[i] = random(MIN_RADI,MAX_RADI) + randomDecimal();
+                whirlwindAngles[i] = randomDecimal() * 2 * PI;
+                randomPackedColor(&whirlwindColors[i]);
             }
-            transitionAll(black,LINEAR);	
 			break;
         case CUBE_PAINTER:
 		{

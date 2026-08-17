@@ -1,5 +1,18 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// Matrix - Implementation des quatre flux de pluie verte
+// ----------------------------------------------------------------------------
+// Ce fichier anime les coordonnées compactes déclarées dans l'état historique.
+// Il délègue le contrôle des bornes et le mapping aux primitives de rendu.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Initialise les huit positions X/Z de chacun des quatre flux Matrix.
+//
+// Effet de bord :
+// - consomme 64 tirages rand dans leur ordre historique et remplit les tableaux.
+// ----------------------------------------------------------------------------
 void matrix_setup() {
   for(int i=8;i>0;i--) {
       voxelXw1[i]=rand()%8;
@@ -13,6 +26,12 @@ void matrix_setup() {
     }
 }
 
+// ----------------------------------------------------------------------------
+// Dessine une frame des quatre flux Matrix et avance leur position verticale.
+//
+// Effet de bord :
+// - écrit dans le framebuffer, renouvelle les flux terminés et affiche la frame.
+// ----------------------------------------------------------------------------
 void matrix() {
 
   if (wave01>-10) {
@@ -117,7 +136,5 @@ void matrix() {
   delay(speed);
   run = TRUE;
 }
-
-/* ======================== Cube Bounce mode routines ========================= */
 
 #endif

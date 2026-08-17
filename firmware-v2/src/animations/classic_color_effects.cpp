@@ -1,15 +1,26 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// ClassicColorEffects - Implémentation des effets couleur historiques
+// ----------------------------------------------------------------------------
+// Ce fichier regroupe les effets parcourant la bande physique. Les primitives
+// de couleur et l'atténuation commune restent dans le module de rendu.
+// ============================================================================
 
-void color_fade() { //OK //-FADE ALL LEDS THROUGH HSV RAINBOW
-   static int ihue = -1;
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Affiche une frame de fondu sur la roue chromatique.
+//
+// Effet de bord :
+// - avance la teinte statique, remplit et affiche les LED puis applique le délai.
+// ----------------------------------------------------------------------------
+void color_fade() {
+   // Teinte courante ; 255 permet au premier incrément de produire zéro.
+   static uint8_t hue = 255;
    run = TRUE;
 
-   ihue++;
-   if (ihue > 255) {
-      ihue = 0;
-   }
+   hue++;
    for(int idex = 0 ; idex < PIXEL_CNT; idex++ ) {
-      strip.setPixelColor(idex, Wheel(ihue));
+      strip.setPixelColor(idex, Wheel(hue));
    }
    if(stop || stopDemo) {return;}
    showPixels();
@@ -39,11 +50,21 @@ void flicker(uint32_t c) {
     }
 }
 
-//Fade in/out a color using brightness/saturation
-void pulse_oneColorAll(uint32_t color1) { //-PULSE BRIGHTNESS ON ALL LEDS TO ONE COLOR 
-    static int ival = 0;
+// ----------------------------------------------------------------------------
+// Fait respirer une couleur entre zéro et la luminosité courante.
+//
+// Parametres :
+// - color1 : couleur fixe utilisée lorsque le switch aléatoire est désactivé.
+//
+// Effet de bord :
+// - modifie l'intensité et le sens statiques, puis affiche toutes les LED.
+// ----------------------------------------------------------------------------
+void pulse_oneColorAll(uint32_t color1) {
+    // Intensité courante, bornée autour de la luminosité 0 à 255.
+    static int16_t ival = 0;
     static uint32_t xhue = switch1 ? Wheel(random(256)) : color1;
-    static int bouncedirection = 0;
+    // Vrai pendant la phase descendante du cycle respiratoire.
+    static bool bouncedirection = false;
     float isteps = constrain(brightness*.03, .6, brightness*.25);
 	run = TRUE;
     
@@ -70,24 +91,31 @@ void pulse_oneColorAll(uint32_t color1) { //-PULSE BRIGHTNESS ON ALL LEDS TO ONE
     delay(speed);
 }
 
-//Police light - red/blue strobo on each half of stripe
+// ----------------------------------------------------------------------------
+// Alterne un stroboscope bleu et rouge sur les deux moitiés physiques.
+//
+// Effet de bord :
+// - avance les deux états statiques, écrit et affiche la bande puis attend.
+// ----------------------------------------------------------------------------
 void police_light_strobo() {
-	//ZONE mode Start and End Pixels
-	int zone1End   = (PIXEL_CNT / 4) - 1;   //127
-	int zone2Start = zone1End + 1;          //128
-	int zone2End   = (zone2Start * 2) - 1;  //255
-    int middle = zone2End;
-    static int color = 0;  
-    static int left_right = 0;
+	// Dernier index du premier quart physique.
+	const uint16_t zone1End = (PIXEL_CNT / 4) - 1;
+	// Premier index du deuxième quart physique.
+	const uint16_t zone2Start = zone1End + 1;
+	// Dernier index de la première moitié physique.
+	const uint16_t zone2End = (zone2Start * 2) - 1;
+    // Séparation historique entre les moitiés bleue et rouge.
+    const uint16_t middle = zone2End;
+    // État allumé ou éteint alterné à chaque frame.
+    static bool color = false;
+    // Compteur de côté, compris entre zéro et vingt.
+    static uint8_t left_right = 0;
 	run = TRUE;
     
     if (left_right > 19)
         left_right = 0;
     
-    if (color == 1)
-        color = 0;
-    else
-        color = 1;
+    color = !color;
     
     for (int i = 0; i < PIXEL_CNT; i++) {
         if (i <= middle && left_right < 10) {
@@ -111,10 +139,21 @@ void police_light_strobo() {
     left_right++;
 }
 
-//Dual color chaser
-void twoColorChaser(uint32_t color1, uint32_t color2) { //-COLOR CHASER (TWO COLOR SINGLE LED)
-    static int idex1 = random(zone1Start, zone2End+1);  //idex;
-    static int idex2 = random(zone3Start, zone4End+1);  //antipodal_index(idexR);
+// ----------------------------------------------------------------------------
+// Fait rebondir deux chasers colorés sur les deux moitiés physiques.
+//
+// Parametres :
+// - color1 : couleur du premier chaser.
+// - color2 : couleur du second chaser.
+//
+// Effet de bord :
+// - modifie les index et sens statiques, atténue puis affiche la traînée.
+// ----------------------------------------------------------------------------
+void twoColorChaser(uint32_t color1, uint32_t color2) {
+    // Index du premier chaser, borné à la première moitié physique.
+    static uint16_t idex1 = random(zone1Start, zone2End+1);
+    // Index du second chaser, borné à la deuxième moitié physique.
+    static uint16_t idex2 = random(zone3Start, zone4End+1);
     static bool bounce1 = false;
     static bool bounce2 = false;
     Color col1, c1 = getColorFromInteger(color1);
@@ -137,10 +176,8 @@ void twoColorChaser(uint32_t color1, uint32_t color2) { //-COLOR CHASER (TWO COL
         //Then slowly fade out previously-lit pixels to black, leaving a nice "trailing" effect
         for(int j=0; j<PIXEL_CNT; j++) {
             if ((j != idex1) && (j != idex2)) {
-                Color pixelColor = getColorFromInteger(strip.getPixelColor(j));
-                if(pixelColor.red > 0) pixelColor.red-=pixelColor.red*.125;
-                if(pixelColor.green > 0) pixelColor.green-=pixelColor.green*.125;
-                if(pixelColor.blue > 0) pixelColor.blue-=pixelColor.blue*.125;
+                Color pixelColor = fadeColorSevenEighths(
+                    getColorFromInteger(strip.getPixelColor(j)));
                 strip.setPixelColor(j, strip.Color(pixelColor.red, pixelColor.green, pixelColor.blue));
             }
         }
@@ -258,9 +295,16 @@ void rainbowCycle(void) {
     }
 }
 
-//Random burst - Random colors on each LED
-void random_burst() { //-RANDOM INDEX/COLOR
-    static int pixelCount = 0;
+// ----------------------------------------------------------------------------
+// Remplit puis efface progressivement des voxels de couleurs aléatoires.
+//
+// Effet de bord :
+// - modifie les compteurs statiques et globaux, consomme le générateur
+//   aléatoire et appelle les transitions d'un voxel.
+// ----------------------------------------------------------------------------
+void random_burst() {
+    // Nombre de voxels considérés remplis, compris entre zéro et 512.
+    static uint16_t pixelCount = 0;
     static bool isAllFilled = FALSE;
     Color c1;
     uint32_t c2;

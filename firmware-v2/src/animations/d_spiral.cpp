@@ -1,12 +1,32 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// LineSpiral - Implémentation de la spirale lumineuse
+// ----------------------------------------------------------------------------
+// Ce fichier déplace une cible entière sur quatre côtés du cube. Il conserve
+// les sentinelles et tirages historiques de la boucle de rendu.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Initialise la cible et la luminosité du mode LineSpiral.
+//
+// Effet de bord :
+// - avance la cible d'un pas, mémorise la luminosité et efface le framebuffer.
+// ----------------------------------------------------------------------------
 void dSpiral_setup() {
-    TARGET=TARGET+STEPS;
+    TARGET=TARGET+SPIRAL_STEP;
 	SPbrightness = brightness;
     //cube.background(black);
 	background(black);
 }
 
+// ----------------------------------------------------------------------------
+// Calcule, atténue et affiche une frame LineSpiral.
+//
+// Effet de bord :
+// - consomme le générateur aléatoire, modifie l'état de parcours, écrit et
+//   affiche le framebuffer puis applique le délai historique.
+// ----------------------------------------------------------------------------
 void dSpiral() {
     ColourRotatorState++;
   	if(ColourRotatorState>30){
@@ -165,9 +185,9 @@ void dSpiral() {
 	
     //Move the beam target in the direction which has been set
     if(INCREASE_TARGET){
-        TARGET=TARGET+STEPS;
+        TARGET=TARGET+SPIRAL_STEP;
     }else{
-        TARGET=TARGET-STEPS;
+        TARGET=TARGET-SPIRAL_STEP;
     }
 	
 	if(stop || stopDemo) {return;}

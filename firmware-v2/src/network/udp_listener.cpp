@@ -1,4 +1,11 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// UdpListener - Implémentation optionnelle du récepteur TPM2.net
+// ----------------------------------------------------------------------------
+// Ce fichier décode les datagrammes du mode Listener. Tout son état et son code
+// sont retirés du binaire tant que le mode reste absent du registre actif.
+// ============================================================================
+
+#if defined(L3D_UNITY_BUILD) && L3D_LISTENER_ENABLED
 
 // ----------------------------------------------------------------------------
 // Lit une frame TPM2.net bornee et la projette sur les voxels du cube.

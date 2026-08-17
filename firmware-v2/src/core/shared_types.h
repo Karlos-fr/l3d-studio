@@ -60,6 +60,13 @@ typedef struct PackedPoint {
   CubeCoordinate z;
 } PackedPoint;
 
+/** Couleur RGB triviale réservée aux états placés dans une union. */
+typedef struct PackedColor {
+  uint8_t red;
+  uint8_t green;
+  uint8_t blue;
+} PackedColor;
+
 /** A 3D RGB voxel. */
 typedef struct Voxel {
     Point coordinates;  // 12 Bytes
@@ -70,6 +77,7 @@ typedef struct Voxel {
 static_assert(sizeof(Color) == 3, "Color doit rester un triplet RGB compact");
 static_assert(sizeof(Point) == 12, "Point doit contenir trois float 32 bits");
 static_assert(sizeof(PackedPoint) == 3, "PackedPoint doit rester compact");
+static_assert(sizeof(PackedColor) == 3, "PackedColor doit rester un triplet RGB");
 static_assert(sizeof(Voxel) == 16, "Voxel ne doit pas gagner de padding supplementaire");
 
 /** Overloaded != operator. */

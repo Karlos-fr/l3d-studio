@@ -117,17 +117,24 @@ uint8_t clamp(unsigned value, unsigned lowClamp, unsigned highClamp) {
 	return ((value<lowClamp) ? lowClamp : (value>highClamp) ? highClamp : value);
 }
 
-void arrayShuffle(int arrayToShuffle[], int arraySize) {
-    uint16_t i; 
-    char cbuff[20];
-
-    for(i=0;i<arraySize;i++) {
-        int r = random(0,arraySize);  // generate a random position
-        int temp = arrayToShuffle[i]; 
-        arrayToShuffle[i] = arrayToShuffle[r]; 
-        arrayToShuffle[r] = temp;
-        //sprintf(cbuff,"%i %i %s ", arraySize,r,modeStruct[getModeIndexFromID(arrayToShuffle[i])].modeName);
-        //strcat(debug,cbuff);
+// ----------------------------------------------------------------------------
+// Mélange sur place un tableau d'index bornés à un octet.
+//
+// Parametres :
+// - arrayToShuffle : tableau mutable contenant les index.
+// - arraySize : nombre d'entrées accessibles, compris entre zéro et 255.
+//
+// Effet de bord :
+// - consomme exactement un tirage aléatoire par entrée et permute le tableau.
+// ----------------------------------------------------------------------------
+void arrayShuffle(uint8_t arrayToShuffle[], uint8_t arraySize) {
+    for(uint8_t index = 0; index < arraySize; index++) {
+        // Position aléatoire conservant la borne supérieure historique.
+        const uint8_t randomIndex = random(0, arraySize);
+        // Index temporaire échangé avec la position courante.
+        const uint8_t value = arrayToShuffle[index];
+        arrayToShuffle[index] = arrayToShuffle[randomIndex];
+        arrayToShuffle[randomIndex] = value;
     }
 }
 
@@ -206,6 +213,22 @@ Color getColorFromInteger(uint32_t col) {
     return retVal;
 }
 
+// ----------------------------------------------------------------------------
+// Atténue chaque canal d'une couleur à sept huitièmes.
+//
+// Parametres :
+// - color : couleur RGB à atténuer.
+//
+// Retour :
+// - couleur reproduisant exactement la troncature flottante historique.
+// ----------------------------------------------------------------------------
+Color fadeColorSevenEighths(Color color) {
+    color.red = static_cast<uint16_t>(color.red) * 7 / 8;
+    color.green = static_cast<uint16_t>(color.green) * 7 / 8;
+    color.blue = static_cast<uint16_t>(color.blue) * 7 / 8;
+    return color;
+}
+
 /** Convert a given hex color value (e.g., 'FF') to integer (e.g., 255)*/
 int hexToInt(char val) {
     int v = (val > '9')? (val &~ 0x20) - 'A' + 10: (val - '0');
@@ -273,29 +296,6 @@ void drawCube(int w, int h, int d, Point corner, Color voxelColor) {
     for (int i = 0; i < w; i++)
         for (int j = 0; j < h; j++)
             drawLine(Point(i+corner.x, corner.y-j, corner.z), Point(i+corner.x, corner.y-j, corner.z+d), voxelColor);
-}
-
-// http://www.cplusplus.com/reference/bitset/bitset/to_string/
-std::string integerToBinaryString(int number) {
-    return std::bitset<4>(number).to_string();
-}
-
-// http://www.cplusplus.com/reference/string/string/push_back/
-std::string strRev(std::string str) {
-    std::string tmp;
-    for(int i=str.size()-1;i>=0;i--)
-        tmp.push_back(str.at(i));
-    if(tmp.size() == str.size())
-        return tmp;
-    else
-        return str;
-}
-
-// http://www.cplusplus.com/reference/string/string/insert/
-std::string padTo(std::string str, const size_t num, const char paddingChar) {
-    if(num > str.size())
-        str.insert(0, num - str.size(), paddingChar);
-    return str;
 }
 
 #endif

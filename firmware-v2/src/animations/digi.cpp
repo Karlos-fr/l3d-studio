@@ -1,54 +1,79 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// Digi - Implémentation du remplissage aléatoire du cube
+// ----------------------------------------------------------------------------
+// Ce fichier remplit puis efface les voxels dans un ordre mélangé. L'ordre
+// temporaire utilise le scratch partagé et le mapping reste dans le pilote LED.
+// ============================================================================
 
-void digi(uint32_t col) {
-    uint16_t i; 
-    uint32_t nextCol;
-    
-    nextCol = switch1? colorWheel+=8 : col;
-    
-    if(0 == randomPixelFill(nextCol)) { return; }	//Populate the cube
-	delay(400);
-    if(0 == randomPixelFill(0x0)) { return; }		//Kill off the voxels
-	
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Remplit puis efface le cube selon les switches Digi.
+//
+// Parametres :
+// - color : couleur fixe utilisée lorsque le balayage est désactivé.
+//
+// Effet de bord :
+// - consomme le générateur aléatoire, affiche les voxels et attend 400 ms entre
+//   le remplissage et l'effacement.
+// ----------------------------------------------------------------------------
+void digi(uint32_t color) {
+    // Couleur de départ, éventuellement avancée sur la roue historique.
+    const uint32_t nextColor = switch1 ? colorWheel += 8 : color;
+
+    if (randomPixelFill(nextColor) == 0) {
+        return;
+    }
+    delay(400);
+    if (randomPixelFill(0x0) == 0) {
+        return;
+    }
+
     run = TRUE;
 }
 
 // ----------------------------------------------------------------------------
-// Remplit les pixels dans un ordre aleatoire avec une couleur donnee.
+// Remplit les pixels dans un ordre aléatoire avec une couleur donnée.
 //
 // Parametres :
-// - c : couleur entiere appliquee, sauf si le mode aleatoire est actif.
+// - color : couleur entière appliquée, sauf si le mode aléatoire est actif.
 //
 // Retour :
-// - un lorsque le remplissage se termine, zero lorsqu'il est interrompu.
+// - un lorsque le remplissage se termine, zéro lorsqu'il est interrompu.
 //
 // Effet de bord :
-// - reutilise l'ordre de pixels du scratch partage et actualise les LED.
+// - réutilise l'ordre de pixels du scratch partagé et actualise les LED.
 // ----------------------------------------------------------------------------
-int randomPixelFill(uint32_t c) {
-    uint16_t i; 
-    uint32_t pulseRate;
+int randomPixelFill(uint32_t color) {
+    // Ordre des 512 pixels, valide uniquement pendant l'appel Digi.
     uint16_t* pixelFillOrder = sharedAnimationScratch.pixelOrder;
-    
-    for(i=0; i<strip.numPixels(); i++) {
-        pixelFillOrder[i]=i;
+
+    for (uint16_t index = 0; index < strip.numPixels(); index++) {
+        pixelFillOrder[index] = index;
     }
-    
-    for(i = strip.numPixels() - 1; i > 0; i--) {
-        uint16_t other = random(0, i + 1);
-        uint16_t value = pixelFillOrder[i];
-        pixelFillOrder[i] = pixelFillOrder[other];
-        pixelFillOrder[other] = value;
+
+    for (uint16_t index = strip.numPixels() - 1; index > 0; index--) {
+        // Position échangée dans la partie encore non mélangée.
+        const uint16_t otherIndex = random(0, index + 1);
+        // Valeur conservée pendant l'échange en place.
+        const uint16_t pixelIndex = pixelFillOrder[index];
+        pixelFillOrder[index] = pixelFillOrder[otherIndex];
+        pixelFillOrder[otherIndex] = pixelIndex;
     }
-    
-    for(i=0; i<strip.numPixels(); i++) {
-        if(stop || stopDemo) {return 0;}
-        if(switch2 && c != 0x0) {c = Wheel(random(256));}
-        if(switch3) {
-            fadeInToColor(pixelFillOrder[i], getColorFromInteger(c));    //transitionOne(getColorFromInteger(c),pixelFillOrder[i],POLAR);
+
+    for (uint16_t index = 0; index < strip.numPixels(); index++) {
+        if (stop || stopDemo) {
+            return 0;
         }
-        else {
-            strip.setPixelColor(pixelFillOrder[i], c);
+        if (switch2 && color != 0x0) {
+            color = Wheel(random(256));
+        }
+        if (switch3) {
+            fadeInToColor(
+                pixelFillOrder[index],
+                getColorFromInteger(color));
+        } else {
+            strip.setPixelColor(pixelFillOrder[index], color);
             showPixels();
             delay(speed);
         }

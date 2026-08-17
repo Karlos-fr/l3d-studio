@@ -1,4 +1,11 @@
-﻿#pragma once
+// ============================================================================
+// BuildConfig - Déclaration des options de compilation du firmware
+// ----------------------------------------------------------------------------
+// Ce fichier centralise les capacités matérielles et les drapeaux de build. Il
+// ne contient ni état runtime ni logique propre aux animations.
+// ============================================================================
+
+#pragma once
 
 //NEOPIXEL Defines
 #define PIXEL_CNT               512
@@ -28,6 +35,11 @@
 // Active ou retire entierement les diagnostics runtime a la compilation.
 #ifndef L3D_DIAGNOSTICS_ENABLED
 #define L3D_DIAGNOSTICS_ENABLED 1
+#endif
+
+// Active le récepteur TPM2.net, absent du registre historique actuel.
+#ifndef L3D_LISTENER_ENABLED
+#define L3D_LISTENER_ENABLED 0
 #endif
 
 // Taille maximale de la reponse compacte des diagnostics.

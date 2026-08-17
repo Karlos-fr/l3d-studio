@@ -7,8 +7,14 @@
 
 #ifdef L3D_UNITY_BUILD
 
+// ----------------------------------------------------------------------------
+// Parcourt les 256 niveaux du fondu chaud dans les deux sens.
+//
+// Effet de bord :
+// - remplit et affiche le framebuffer puis applique le délai à chaque niveau.
+// ----------------------------------------------------------------------------
 void warmFade(void) {
-    float i; 
+    uint16_t i;
     Color col;
     run = TRUE;
     

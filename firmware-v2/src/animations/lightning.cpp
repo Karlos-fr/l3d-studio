@@ -1,5 +1,19 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// Lightning - Implémentation des éclairs utilisés par Rain
+// ----------------------------------------------------------------------------
+// Ce fichier dessine un éclair ponctuel avec les primitives bornées. Le choix
+// de sa fréquence et son activation par switch restent dans Rain.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Dessine puis efface un éclair ramifié avec quatre intensités.
+//
+// Effet de bord :
+// - consomme des tirages aléatoires, affiche directement quatre éclats, attend
+//   leurs délais historiques puis efface les segments.
+// ----------------------------------------------------------------------------
 void lightning() {
     Point p1 = { rand()%SIDE, SIDE-1, rand()%SIDE };
     Point p2 = { rand()%SIDE, rand()%3, rand()%SIDE };

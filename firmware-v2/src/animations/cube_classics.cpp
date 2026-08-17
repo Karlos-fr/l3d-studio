@@ -1,11 +1,28 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// CubeClassics - Implémentation des animations géométriques historiques
+// ----------------------------------------------------------------------------
+// Ce fichier conserve les séquences CubeClassics et leurs calculs géométriques.
+// Le mapping des voxels et le framebuffer restent gérés par le rendu commun.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Exécute un effet CubeClassics ou la liste complète mélangée.
+//
+// Parametres :
+// - c : couleur entière transmise aux effets.
+// - mode : zéro pour toute la famille, sinon mode historique déjà sélectionné.
+//
+// Effet de bord :
+// - mélange éventuellement l'ordre, efface le cube et affiche les effets.
+// ----------------------------------------------------------------------------
 void runCubeClassics(uint32_t c, uint8_t mode) {
-    int i, loop, numModes2Run, cubeMode;
+    uint8_t i, loop, numModes2Run, cubeMode;
 	uint16_t iterations;
     colorWheel = random(256);
 	
-	int effectOrder[] = { UPNDOWN,			
+	uint8_t effectOrder[] = { UPNDOWN,
 						  ROPECOIL,		
 						  WORMS,			
 						  MOREPLANES,		
@@ -184,7 +201,9 @@ void runCubeClassics(uint32_t c, uint8_t mode) {
 			{
 				for(int8_t mode=0;mode<=1;mode++) {
 					for(int8_t cubeEdge=0;cubeEdge<sizeof cubeEdgeVertices / sizeof cubeEdgeVertices[0];cubeEdge++) {
-						setCubeVertices(cubeEdge);
+						Point cubeVerticesA;
+						Point cubeVerticesB;
+						setCubeVertices(cubeEdge, cubeVerticesA, cubeVerticesB);
 						//char tempBuf1[60];
 						//sprintf(tempBuf1,"%i A(%1.0f,%1.0f,%1.0f) B(%1.0f,%1.0f,%1.0f)",cubeEdge, cubeVerticesA.x,cubeVerticesA.y,cubeVerticesA.z,cubeVerticesB.x,cubeVerticesB.y,cubeVerticesB.z);
 						//Particle.publish(tempBuf1);y
@@ -723,13 +742,24 @@ int diagonal_planes(Point pA, Point pB, int8_t mode, Color col) {
 }
 
 
-void setCubeVertices(int8_t index) {
-	cubeVerticesB.z = (1 == ((cubeEdgeVertices[index] >> 0) & 1)) ? 7.0 : 0.0; 
-	cubeVerticesB.y = (1 == ((cubeEdgeVertices[index] >> 1) & 1)) ? 7.0 : 0.0; 
-	cubeVerticesB.x = (1 == ((cubeEdgeVertices[index] >> 2) & 1)) ? 7.0 : 0.0; 
-	cubeVerticesA.z = (1 == ((cubeEdgeVertices[index] >> 3) & 1)) ? 7.0 : 0.0; 
-	cubeVerticesA.y = (1 == ((cubeEdgeVertices[index] >> 4) & 1)) ? 7.0 : 0.0; 
-	cubeVerticesA.x = (1 == ((cubeEdgeVertices[index] >> 5) & 1)) ? 7.0 : 0.0; 
+// ----------------------------------------------------------------------------
+// Décode en deux points les sommets d'une arête stockée en Flash.
+//
+// Parametres :
+// - index : index de l'arête, prévalidé par l'appelant entre zéro et onze.
+// - vertexA : premier sommet rempli par la fonction.
+// - vertexB : second sommet rempli par la fonction.
+//
+// Effet de bord :
+// - modifie uniquement les deux points fournis par l'appelant.
+// ----------------------------------------------------------------------------
+void setCubeVertices(int8_t index, Point& vertexA, Point& vertexB) {
+	vertexB.z = (1 == ((cubeEdgeVertices[index] >> 0) & 1)) ? 7.0 : 0.0;
+	vertexB.y = (1 == ((cubeEdgeVertices[index] >> 1) & 1)) ? 7.0 : 0.0;
+	vertexB.x = (1 == ((cubeEdgeVertices[index] >> 2) & 1)) ? 7.0 : 0.0;
+	vertexA.z = (1 == ((cubeEdgeVertices[index] >> 3) & 1)) ? 7.0 : 0.0;
+	vertexA.y = (1 == ((cubeEdgeVertices[index] >> 4) & 1)) ? 7.0 : 0.0;
+	vertexA.x = (1 == ((cubeEdgeVertices[index] >> 5) & 1)) ? 7.0 : 0.0;
 }
 
 int folder(uint8_t sideStart, uint8_t sideEnd, Color col) {
@@ -1141,7 +1171,21 @@ int effect_boxside_randsend_parallel (char axis, int origin, int mode, Color col
 	return 1;
 }
 
-// Big ugly function :p but it looks pretty
+// ----------------------------------------------------------------------------
+// Anime un voxel rebondissant, basculé ou suivi d'une traînée de huit voxels.
+//
+// Parametres :
+// - iterations : nombre de déplacements à exécuter.
+// - mode : masque historique contrôlant les réactions aux collisions.
+// - drawmode : rendu ponctuel, bascule ou traînée.
+// - col : couleur de base du voxel.
+//
+// Retour :
+// - un après le cycle, zéro en cas d'interruption.
+//
+// Effet de bord :
+// - consomme le générateur aléatoire et modifie le framebuffer.
+// ----------------------------------------------------------------------------
 int boingboing(uint16_t iterations, unsigned char mode, unsigned char drawmode, Color col) {
     int speedFactor = 4;
 	int x, y, z;		// Current coordinates for the point
@@ -1155,8 +1199,8 @@ int boingboing(uint16_t iterations, unsigned char mode, unsigned char drawmode, 
 	x = rand()%SIDE;
 	z = rand()%SIDE;
 
-	// Coordinate array for the snake.
-	int snake[8][3];
+	// Traînée compacte ; ses coordonnées restent toujours entre zéro et sept.
+	CubeAxisIndex snake[SIDE][3];
 	for (i=0;i<SIDE;i++) {
 		snake[i][0] = x;
 		snake[i][1] = y;
@@ -1339,7 +1383,7 @@ int boingboing(uint16_t iterations, unsigned char mode, unsigned char drawmode, 
 			delay(speed*speedFactor);
 		} 
 		if (drawmode == 0x03) {// draw a snake
-			for (i=SIDE-1;i>=0;i--) {
+			for (i=SIDE-1;i>0;i--) {
 				snake[i][0] = snake[i-1][0];
 				snake[i][1] = snake[i-1][1];
 				snake[i][2] = snake[i-1][2];
@@ -1454,6 +1498,20 @@ float distance2d (float x1, float y1, float x2, float y2) {
 	return dist;
 }
 
+// ----------------------------------------------------------------------------
+// Fait tourner une ligne autour de l'axe demandé.
+//
+// Parametres :
+// - iterations : nombre de frames à afficher.
+// - axis : axe logique autour duquel orienter les lignes.
+// - col : couleur de base.
+//
+// Retour :
+// - un après le cycle, zéro en cas d'interruption.
+//
+// Effet de bord :
+// - modifie le framebuffer et applique le délai historique à chaque frame.
+// ----------------------------------------------------------------------------
 int linespin (int iterations, char axis, Color col) {
 	float top_x, top_y, top_z, bot_x, bot_y, bot_z, sin_base;
 	float center_x, center_y;
@@ -1469,10 +1527,12 @@ int linespin (int iterations, char axis, Color col) {
 		//printf("Sin base %f \n",sin_base);
         if(switch1) col = getColorFromInteger(Wheel(colorWheel+=2));
         //else if(switch2) col = cheerLightsColor;
+        // Diviseur commun aux huit lignes de la frame.
+        const double zDivisor = 10 + (7 * sin((float)i / 200));
         
 		for (z = 0; z < SIDE; z++)	{
 
-    		sin_base = (float)i/50 + (float)z/(10+(7*sin((float)i/200)));
+			sin_base = (float)i/50 + (float)z/zDivisor;
     
     		top_x = center_x + sin(sin_base)*5;
     		top_y = center_x + cos(sin_base)*5;
@@ -1524,6 +1584,20 @@ int linespin (int iterations, char axis, Color col) {
 	return 1;
 }
 
+// ----------------------------------------------------------------------------
+// Dessine huit lignes suivant une onde sinusoïdale animée.
+//
+// Parametres :
+// - iterations : nombre de frames à afficher.
+// - axis : axe logique utilisé pour orienter les lignes.
+// - col : couleur de base.
+//
+// Retour :
+// - un après le cycle, zéro en cas d'interruption.
+//
+// Effet de bord :
+// - modifie le framebuffer et applique le délai historique à chaque frame.
+// ----------------------------------------------------------------------------
 int sinelines (int iterations, char axis, Color col) {
 	float left, right, sine_base, x_dividor,ripple_height;
 	int i,x;
@@ -1533,14 +1607,14 @@ int sinelines (int iterations, char axis, Color col) {
 	for (i=0; i<iterations; i++) {
 	    if(switch1) col = getColorFromInteger(Wheel(colorWheel+=2));
         //else if(switch2) col = cheerLightsColor;
+		// Diviseur commun aux huit lignes de la frame.
+		x_dividor = 2 + sin((float)i/100)+1;
+		// Amplitude commune aux huit lignes de la frame.
+		ripple_height = 3 + (sin((float)i/200)+1)*6;
 		for (x=0; x<SIDE ;x++)	{
-			x_dividor = 2 + sin((float)i/100)+1;
-			ripple_height = 3 + (sin((float)i/200)+1)*6;
-
 			sine_base = (float) i/40 + (float) x/x_dividor;
 
 			left = 4 + sin(sine_base)*ripple_height;
-			right = 4 + cos(sine_base)*ripple_height;
 			right = 7-left;
 
 			//printf("%i %i \n", (int) left, (int) right);
@@ -1584,8 +1658,21 @@ int sinelines (int iterations, char axis, Color col) {
 	return 1;
 }
 
+// ----------------------------------------------------------------------------
+// Déplace la coquille d'une sphère dans le cube.
+//
+// Parametres :
+// - iterations : nombre de frames à afficher.
+// - col : couleur de base de la coquille.
+//
+// Retour :
+// - un après le cycle, zéro en cas d'interruption.
+//
+// Effet de bord :
+// - modifie le framebuffer et applique le délai historique à chaque frame.
+// ----------------------------------------------------------------------------
 int spheremove (int iterations, Color col) {
-	float origin_x, origin_y, origin_z, distance, diameter;
+    float origin_x, origin_y, origin_z, distanceSquared, diameter;
 
     //background(black);
 
@@ -1605,14 +1692,22 @@ int spheremove (int iterations, Color col) {
 		origin_z = 3.5+cos((float)i/30)*2;
 
 		diameter = 2+sin((float)i/150);
+		// Borne interne au carré, commune aux 512 voxels de la frame.
+		const float innerDiameterSquared = diameter * diameter;
+		// Diamètre externe historique avant sa mise au carré.
+		const float outerDiameter = diameter + 1;
+		// Borne externe au carré, commune aux 512 voxels de la frame.
+		const float outerDiameterSquared = outerDiameter * outerDiameter;
 
 		for (x=0; x<SIDE; x++)	{
 			for (y=0; y<SIDE; y++)	{
 				for (z=0; z<SIDE; z++)	{
-					distance = distance3d(x,y,z, origin_x, origin_y, origin_z);
+					distanceSquared = distance3dSquared(
+						x, y, z, origin_x, origin_y, origin_z);
 					//printf("Distance: %f \n", distance);
 
-					if (distance>diameter && distance<diameter+1) {
+					if (distanceSquared > innerDiameterSquared &&
+						distanceSquared < outerDiameterSquared) {
 						setPixelColor(x,z,y,col);
 					}
 				}
@@ -1629,11 +1724,30 @@ int spheremove (int iterations, Color col) {
 	return 1;
 }
 
-float distance3d (float x1, float y1, float z1, float x2, float y2, float z2) {	
-	float dist;
-	dist = sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2) + (z1-z2)*(z1-z2));
-
-	return dist;
+// ----------------------------------------------------------------------------
+// Calcule une distance tridimensionnelle au carré sans racine carrée.
+//
+// Parametres :
+// - x1 : abscisse du premier point.
+// - y1 : ordonnée du premier point.
+// - z1 : profondeur du premier point.
+// - x2 : abscisse du second point.
+// - y2 : ordonnée du second point.
+// - z2 : profondeur du second point.
+//
+// Retour :
+// - distance au carré, suffisante pour comparer les rayons positifs.
+// ----------------------------------------------------------------------------
+float distance3dSquared(
+    float x1,
+    float y1,
+    float z1,
+    float x2,
+    float y2,
+    float z2) {
+	return (x1-x2)*(x1-x2) +
+		(y1-y2)*(y1-y2) +
+		(z1-z2)*(z1-z2);
 }
 
 // ----------------------------------------------------------------------------
@@ -1702,9 +1816,10 @@ int fireworks (int iterations, int n, Color col) {
 		for (e=0; e<25; e++) {
 		    if(switch1) col = getColorFromInteger(Wheel(colorWheel+=2));
             //else if(switch2) col = cheerLightsColor;
-			slowrate = 1+tan((e+0.1)/20)*10;
-			
-			gravity = tan((e+0.1)/20)/2;
+			// Tangente commune aux deux coefficients de la frame d'explosion.
+			const double trajectoryTangent = tan((e + 0.1) / 20);
+			slowrate = 1 + trajectoryTangent * 10;
+			gravity = trajectoryTangent / 2;
 
 			for (f=0; f<n; f++) {
 				particles[f][0] += particles[f][3]/slowrate;

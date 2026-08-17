@@ -160,15 +160,18 @@ bool isFirstLap;
 bool shuffleMode;
 volatile bool stopDemo;		//Set to TRUE when the Interrupt Timer demoTimer gets triggered
 
-/**
-  * Shuffle Mode Helpers
-  * Use the array below to prevent shuffled modes from playing more than once without cycling through all the 
-  * modes first. The array will get populated with values 0 through (the number of modes - 1). Then we'll shuffle
-  * the array up and step through the array during the Shuffle mode. the shuffleIdx will keep track of our position 
-  * in the modeShuffleOrder array.
-  */
-int shuffleIdx;
-int modeShuffleOrder[(int)(sizeof modeStruct / sizeof modeStruct[0])];
+// Le registre actif doit conserver les 62 modes publiés par le protocole.
+static_assert(sizeof modeStruct / sizeof modeStruct[0] == 62,
+    "Le registre actif doit contenir exactement 62 modes");
+
+// Position du prochain mode dans l'ordre mélangé, comprise entre zéro et 62.
+uint8_t shuffleIdx;
+
+// Index compacts des 62 entrées actives du registre de modes.
+uint8_t modeShuffleOrder[sizeof modeStruct / sizeof modeStruct[0]];
+
+static_assert(sizeof modeShuffleOrder < 256,
+    "L'ordre des modes doit rester adressable sur un octet");
 
 //Misc variables
 unsigned long previousMillis = 0;
@@ -218,7 +221,6 @@ const uint16_t zone4End   = PIXEL_CNT - 1;		//511
 
 
 /* ========================= FROZEN mode Definitions ========================= */
-uint16_t randomFlakes[(int)(PIXEL_CNT*0.1)]; // holds the snowflake positions no more than 10% of total number of pixels
 Color snowFlakeColor;
 
 /* ====================== EEPROM Addressing Definitions ====================== */
@@ -236,6 +238,7 @@ Color snowFlakeColor;
 #define AUXSW_START_ADDR		BRIGHT_START_ADDR + sizeof(int) + 1                 // offset for the auxSwitchStruct switch store
 
 /* ========================= LISTENER mode Definitions ======================= */
+#if L3D_LISTENER_ENABLED
 // Package size we expect. The footer byte is included here!
 #define TPM2NET_HEADER_SIZE     6
 #define CUBE_PACKET_SIZE     (PIXELS_PER_PANEL * SIDE * BPP + TPM2NET_HEADER_SIZE) + 1 // 1536 Data bytes + footer byte
@@ -253,6 +256,7 @@ uint8_t countdown;	// Keep a watchdog count to 100 max failed UDP buffer read at
 char data[CUBE_PACKET_SIZE];
 long maximum_received_packet = 0; // we haven't seen a packet yet
 void listen(void);
+#endif
 
 /* ====================== AUDIO SPECTRUM mode Definitions ==================== */
 #define MICROPHONE              12
@@ -264,8 +268,6 @@ void listen(void);
 #define ARRAY_SIZE              16  // to be changed to reflect the result of the formula: pow(2,M)
 #define INPUTLEVEL              63  // This sets the sensitivity for the onboard AGC circuit (0-255); the higher, the more sensitive
 //bool smooth, dotMode;
-float real[ARRAY_SIZE];             //[(int)pow(2,M)]
-float imaginary[ARRAY_SIZE];        //[(int)pow(2,M)]
 float maxVal=1000;
 void FFTJoy(void);
 short FFT(short int dir,int m,float *x,float *y);
@@ -279,13 +281,13 @@ uint8_t whichTextMode = 0;
 float pos=0;
 bool isNewText = FALSE;
 void showChar(char a, Point p, Color col);
-void marquee(String text, float pos, Color col);
+void marquee(const char* text, float pos, Color col);
 void showText(uint32_t color1, uint32_t color2);
 void showMarqueeChar(char a, int pos, Color col);
 void textScroll(uint32_t color1, uint32_t color2);
 void textMarquee(uint32_t color1, uint32_t color2);
 void showChar(char a, Point origin, Point angle, Color col);
-void scrollText(String text, Point initialPosition, Color col);
+void scrollText(const char* text, Point initialPosition, Color col);
 void showChar(char a, Point origin, Point pivot, Point angle, Color col);
 
 /*static const unsigned char PROGMEM fontTable[]  =
@@ -555,19 +557,54 @@ static const unsigned char PROGMEM fontTable[2048]  =
 
 
 /* ====================== RAINBOW BURST mode Definitions ====================== */
-int idex, ihue; //We define these here as they serve to flag if we need
-				//to blank the cube every time the mode is called
+// Index de voxel Rainbow Burst, compris entre zéro et 511.
+uint16_t idex;
+
+// Teinte Rainbow Burst, comprise entre zéro et 255.
+uint8_t ihue;
+
 void random_burst(void);
 
 
 /* ======================== SQUARRAL mode Definitions ========================= */
-#define	TRAIL_LENGTH	50
-int frame, bound, boundInc, squarral_zInc;
+// Nombre historique de positions dessinées dans la traînée Squarrel.
+const uint8_t SQUARREL_TRAIL_LENGTH = 50;
+
+// Position Squarrel compacte dont chaque axe reste entre 0 et 7.
+typedef struct SquarrelPosition {
+    CubeAxisIndex x;
+    CubeAxisIndex y;
+    CubeAxisIndex z;
+} SquarrelPosition;
+
+// Incrément Squarrel signé dont chaque axe reste entre -1 et 1.
+typedef struct SquarrelIncrement {
+    int8_t x;
+    int8_t y;
+    int8_t z;
+} SquarrelIncrement;
+
+static_assert(sizeof(SquarrelPosition) == 3,
+    "Une position Squarrel doit tenir sur trois octets");
+static_assert(sizeof(SquarrelIncrement) == 3,
+    "Un incrément Squarrel doit tenir sur trois octets");
+
+int frame;
+uint8_t bound;
+int8_t boundInc;
+int8_t squarral_zInc;
 bool rainbowColor;
-unsigned char axis;
-Point trailPoints[TRAIL_LENGTH];
-Point position, increment, pixel;
+uint8_t axis;
+SquarrelPosition trailPoints[SQUARREL_TRAIL_LENGTH];
+SquarrelPosition position;
+SquarrelIncrement increment;
+SquarrelPosition pixel;
+
+static_assert(sizeof(trailPoints) == 150,
+    "La traînée Squarrel doit occuper exactement 150 octets");
+
 void squarral(void);
+void add(SquarrelPosition& position, const SquarrelIncrement& increment);
 
 
 /* ========================== PLASMA mode Definitions ========================= */
@@ -578,10 +615,24 @@ void zPlasma(void);
 /* ========================== PuckDude mode defines ========================== */
 #define PDSPEED 10
 int PDframe=0;
-Color voxelColor;
 void puckDude(void);
-void rotate_x(Point& a, int b);
 void rotate_x(PackedPoint& a, int b);
+
+// Nombre d'entrées incluant la sentinelle zéro pour PacMan et les fantômes.
+const uint8_t PUCK_DUDE_MAIN_POINT_COUNT = 38;
+
+// Nombre d'entrées incluant la sentinelle zéro pour les yeux des fantômes.
+const uint8_t PUCK_DUDE_EYE_POINT_COUNT = 5;
+
+// Sprites temporaires PacMan limités aux indices réellement dessinés.
+struct PuckDudeScratch {
+    PackedPoint puckDude[PUCK_DUDE_MAIN_POINT_COUNT];
+    PackedPoint ghost[PUCK_DUDE_MAIN_POINT_COUNT];
+    PackedPoint ghostEye[PUCK_DUDE_EYE_POINT_COUNT];
+};
+
+static_assert(sizeof(PuckDudeScratch) == 243,
+    "Les sprites utiles PacMan doivent occuper exactement 243 octets");
 
 
 /* ========================= Transition Definitions ========================= */
@@ -593,8 +644,23 @@ void rotate_x(PackedPoint& a, int b);
 uint8_t clamp(unsigned value, unsigned lowClamp, unsigned highClamp);
 void transitionAll(Color endColor, uint16_t method);
 void transitionOne(Color endColor, uint16_t index, uint16_t method);
-void transitionHelper(Color startColor, Color endColor, uint16_t index, uint16_t method, int16_t numSteps, int16_t step);
-int16_t getTransitionStep(Color startColor, Color endColor, uint16_t method, int16_t numSteps, int16_t step, uint8_t whichColor);
+void transitionHelper(
+    Color startColor,
+    Color endColor,
+    uint16_t index,
+    uint16_t method,
+    uint8_t numSteps,
+    uint8_t step,
+    double polarDecreaseFactor,
+    float polarIncreaseFactor);
+int16_t getTransitionStep(
+    uint8_t startChannel,
+    uint8_t endChannel,
+    uint16_t method,
+    uint8_t numSteps,
+    uint8_t step,
+    double polarDecreaseFactor,
+    float polarIncreaseFactor);
 
 
 /* ======================== Whirlwind mode Definitions ======================== */
@@ -602,75 +668,55 @@ int16_t getTransitionStep(Color startColor, Color endColor, uint16_t method, int
 #define MAX_DOTS                19
 #define                         MIN_RADI 1
 #define                         MAX_RADI 5
-Color clr[MAX_DOTS];
-float angle[MAX_DOTS];
-float radi[MAX_DOTS];
-float y[MAX_DOTS];
+
+// État temporaire Whirlwind regroupé pour rejoindre le scratch partagé.
+struct WhirlwindScratch {
+    PackedColor colors[MAX_DOTS];
+    float angles[MAX_DOTS];
+    float radii[MAX_DOTS];
+    float heights[MAX_DOTS];
+};
+
+static_assert(sizeof(WhirlwindScratch) == 288,
+    "L'état temporaire Whirlwind doit occuper exactement 288 octets");
+
 int lastRand, lastLastRand;
 unsigned long lastSwap;
 Point center;
 void whirlWind(void);
-void randomColor(struct Color *clr);
+void randomColor(struct Color* color);
+void randomPackedColor(PackedColor* color);
 float randomDecimal(void);
 //float radius(float x, float y, float z);
 
 
 /* ============================ Snake 3D mode defines ========================= */
-int deathFrame;
-int SNframeCount;
-int initialSnakeLength;
+// Nombre maximal de segments, égal au nombre de positions du cube.
+const uint16_t SNAKE_CAPACITY = PIXEL_CNT;
 
+// Longueur atteinte automatiquement avant de dépendre des cibles mangées.
+const uint8_t SNAKE_INITIAL_LENGTH = 10;
+
+// Nombre de directions orthogonales possibles dans un espace à trois axes.
+const uint8_t SNAKE_DIRECTION_COUNT = 6;
+
+// Nombre maximal de tirages aléatoires avant le parcours déterministe de repli.
+const uint16_t SNAKE_TREAT_RANDOM_ATTEMPTS = PIXEL_CNT;
+
+// Borne exclusive historique de random(0, 7) pour chaque axe d'une cible.
+const uint8_t SNAKE_TREAT_SIDE = SIDE - 1;
+
+// Position discrète compacte utilisée par le corps et la cible de Snake.
 struct voxel {
   CubeCoordinate j;
   CubeCoordinate k;
   CubeCoordinate l;
-  
-  voxel(int j=0, int k=0, int l=0) 
-    : j(j), k(k), l(l)
-	{
-  };
-
-  bool operator==(const voxel& v) const
-  {
-      return (v.j == j && v.k == k && v.l == l);
-  };
-
-  bool operator!=(const voxel& v) const
-  {
-      return (v.j != j || v.k != k || v.l != l);
-  };
-
-  // --------------------------------------------------------------------------
-  // Calcule la distance euclidienne au carre vers un autre voxel.
-  //
-  // Parametres :
-  // - v : voxel cible dont les coordonnees restent dans la plage du cube.
-  //
-  // Retour :
-  // - somme entiere des carres, suffisante pour classer les directions.
-  // --------------------------------------------------------------------------
-  int16_t distanceSquared(const voxel& v) const {
-    // Ecart signe sur l'axe j, conserve sur 16 bits avant multiplication.
-    const int16_t deltaJ = static_cast<int16_t>(v.j) - j;
-    // Ecart signe sur l'axe k, conserve sur 16 bits avant multiplication.
-    const int16_t deltaK = static_cast<int16_t>(v.k) - k;
-    // Ecart signe sur l'axe l, conserve sur 16 bits avant multiplication.
-    const int16_t deltaL = static_cast<int16_t>(v.l) - l;
-    return deltaJ * deltaJ + deltaK * deltaK + deltaL * deltaL;
-  };
 };
 
 static_assert(sizeof(voxel) == 3, "Un voxel Snake doit tenir sur trois octets signes");
-    
-voxel operator+(const voxel& v1, const voxel& v2) {
-  return voxel(v1.j + v2.j, v1.k + v2.k, v1.l + v2.l);    
-}
 
-std::vector<voxel> SNsnake;
-std::vector<voxel> treats;
-voxel* snakeDirection;
-
-std::vector<voxel> possibleDirections = {
+// Six déplacements orthogonaux conservés dans l'ordre de priorité historique.
+const voxel possibleDirections[SNAKE_DIRECTION_COUNT] = {
   { 1,  0,  0},
   {-1,  0,  0},
   { 0,  1,  0},
@@ -678,28 +724,70 @@ std::vector<voxel> possibleDirections = {
   { 0,  0,  1},
   { 0,  0, -1}
 };
+
+// Nombre de segments actuellement valides dans le scratch partagé.
+uint16_t snakeLength;
+
+// Cible unique actuellement affichée par Snake.
+voxel snakeTreat;
+
+// Indique si snakeTreat contient une cible à afficher et poursuivre.
+bool snakeTreatActive;
+
+// Index signé dans possibleDirections ; -1 indique que le serpent est bloqué.
+int8_t snakeDirectionIndex;
+
+// Numéro de frame courant depuis la dernière réinitialisation de Snake.
+uint32_t snakeFrameCount;
+
+// Frame de collision ; zéro indique que le serpent est encore vivant.
+uint32_t snakeDeathFrame;
 void snakeResetCube(void);
 void snake(void);
 
 
 /* ========================== clasic planes mode defines ======================= */
-int CPinc=1;  
-int CPpos=0;  
-int CPframe=0;
+// Incrément signé de SlidingPlanes, limité à moins un ou un.
+int8_t CPinc = 1;
+
+// Position de plan SlidingPlanes, comprise entre zéro et huit.
+int8_t CPpos = 0;
+
+// Compteur de frames SlidingPlanes utilisé par les cycles de couleur.
+uint32_t CPframe = 0;
 void classicPlanes();
 
 
 /* =========================== 3D spiral mode defines ========================== */
-bool INCREASE_LOOP=true;
+// Sens de variation du niveau intérieur de LineSpiral.
+bool INCREASE_LOOP = true;
+
+// Sens de déplacement de la cible LineSpiral.
 bool INCREASE_TARGET = true;
-float TARGET = 0;
-int SPbrightness;
-int fade_factor = 2;
-int LOOP_NO=0;
-int STEPS = 1;
-int PAUSE = 0;
-int DSSIDE=1;
-int ColourRotatorState=0;
+
+// Position entière de la cible, toujours comprise entre zéro et sept.
+int8_t TARGET = 0;
+
+// Luminosité brute mémorisée à l'entrée de LineSpiral.
+uint8_t SPbrightness;
+
+// Niveau intérieur de la spirale, compris entre zéro et trois.
+uint8_t LOOP_NO = 0;
+
+// Pas entier historique de la cible LineSpiral.
+const uint8_t SPIRAL_STEP = 1;
+
+// Côté courant de la spirale, compris entre un et quatre.
+uint8_t DSSIDE = 1;
+
+// Phase de rotation des couleurs, comprise entre zéro et trente.
+uint8_t ColourRotatorState = 0;
+
+static_assert(sizeof(CPinc) + sizeof(CPpos) == 2,
+    "La position et l'incrément SlidingPlanes doivent occuper deux octets");
+static_assert(sizeof(TARGET) + sizeof(SPbrightness) + sizeof(LOOP_NO) +
+    sizeof(DSSIDE) + sizeof(ColourRotatorState) == 5,
+    "L'état numérique LineSpiral doit occuper cinq octets");
 void dSpiral(void);
 void dSpiral_setup(void);
 
@@ -725,20 +813,43 @@ float HCtoFloat(int x);
 */
 
 /* =========================== Matrix mode defines ========================== */
-#define VOX_POINTS 64
-int voxelXw1[VOX_POINTS];
-int voxelZw1[VOX_POINTS];
-int voxelXw2[VOX_POINTS];
-int voxelZw2[VOX_POINTS];
-int voxelXw3[VOX_POINTS];
-int voxelZw3[VOX_POINTS];
-int voxelXw4[VOX_POINTS];
-int voxelZw4[VOX_POINTS];
-int voxDelay(150);
-int wave01(7);
-int wave02(10);
-int wave03(15);
-int wave04(19);
+// Nombre de cases conservant les index historiques 1 à 8 de chaque flux.
+const uint8_t MATRIX_COORDINATE_SLOTS = SIDE + 1;
+
+// Coordonnées du premier flux Matrix, bornées à un axe logique.
+CubeAxisIndex voxelXw1[MATRIX_COORDINATE_SLOTS];
+CubeAxisIndex voxelZw1[MATRIX_COORDINATE_SLOTS];
+
+// Coordonnées du deuxième flux Matrix, bornées à un axe logique.
+CubeAxisIndex voxelXw2[MATRIX_COORDINATE_SLOTS];
+CubeAxisIndex voxelZw2[MATRIX_COORDINATE_SLOTS];
+
+// Coordonnées du troisième flux Matrix, bornées à un axe logique.
+CubeAxisIndex voxelXw3[MATRIX_COORDINATE_SLOTS];
+CubeAxisIndex voxelZw3[MATRIX_COORDINATE_SLOTS];
+
+// Coordonnées du quatrième flux Matrix, bornées à un axe logique.
+CubeAxisIndex voxelXw4[MATRIX_COORDINATE_SLOTS];
+CubeAxisIndex voxelZw4[MATRIX_COORDINATE_SLOTS];
+
+static_assert(
+    sizeof(voxelXw1) + sizeof(voxelZw1) +
+    sizeof(voxelXw2) + sizeof(voxelZw2) +
+    sizeof(voxelXw3) + sizeof(voxelZw3) +
+    sizeof(voxelXw4) + sizeof(voxelZw4) == 72,
+    "Les coordonnées Matrix doivent occuper exactement 72 octets");
+
+// Position verticale du premier flux, comprise entre -10 et 7 après amorçage.
+int8_t wave01(7);
+
+// Position verticale du deuxième flux, comprise entre -10 et 10.
+int8_t wave02(10);
+
+// Position verticale du troisième flux, comprise entre -10 et 15.
+int8_t wave03(15);
+
+// Position verticale du quatrième flux, comprise entre -10 et 19.
+int8_t wave04(19);
 Color brightLine01 = Color(244, 241, 250);
 Color brightLine02 = Color(98, 193, 97);
 Color brightLine03 = Color(30, 131, 30);
@@ -760,12 +871,21 @@ void matrix(void);
 
 
 /* =========================== Cube Bounce mode defines ========================== */
-bool collided;
-int topLeftVoxel[3];
-int CBframe;
-int delayTime;
-int CBdirection[3] = { 1, 1, 1};
-int bounds[3] = { 2, 2, 2};
+// Longueur constante du cube BouncyCube sur chacun des trois axes.
+const uint8_t CUBE_BOUNCE_SIDE = 2;
+
+// Coin du cube, borné entre zéro et six après chaque collision.
+int8_t topLeftVoxel[3];
+
+// Compteur de frames utilisé pour le changement de direction périodique.
+uint32_t CBframe;
+
+// Direction de chaque axe, bornée entre moins un et un.
+int8_t CBdirection[3] = { 1, 1, 1};
+
+static_assert(sizeof(topLeftVoxel) + sizeof(CBdirection) == 6,
+    "Les positions et directions BouncyCube doivent occuper six octets");
+
 Color cubeColor;
 void cubeBounce_setup(void);
 void cubeBounce(void);
@@ -777,13 +897,33 @@ void lightning(void);
 
 
 /* ============================ Collide mode defines ============================ */
-#define COMAX_DOTS 72
-Point COdots[COMAX_DOTS];
-Point COdir[COMAX_DOTS];
-Color COclr[COMAX_DOTS];
+// Nombre historique de points animés simultanément par Collide2.
+const uint8_t COLLIDE_DOT_COUNT = 72;
+
+// Point Collide2 compact : position 0 à 7, direction -1 à 1 et couleur RGB.
+typedef struct CompactCollideDot {
+    CubeAxisIndex x;
+    CubeAxisIndex y;
+    CubeAxisIndex z;
+    int8_t directionX;
+    int8_t directionY;
+    int8_t directionZ;
+    Color color;
+} CompactCollideDot;
+
+static_assert(sizeof(CompactCollideDot) == 9,
+    "Un point Collide2 compact doit tenir sur neuf octets");
+
+CompactCollideDot collideDots[COLLIDE_DOT_COUNT];
+
+static_assert(sizeof(collideDots) == 648,
+    "Les 72 points Collide2 doivent occuper 648 octets");
+
 void initCollide(void);
 void collide2();
-void sphere(Point center, float radius, Color col);
+CubeAxisIndex wrapCollideCoordinate(int16_t coordinate);
+void randomizeCollideDirection(CompactCollideDot& dot);
+void sphere(Point center, float radius, Color color);
 
 
 /* ========================== Cubes mode Definitions ========================= */
@@ -797,18 +937,50 @@ void drawCube(Point topLeft, int side, Color col);
 
 
 /* ======================= Cheerlights mode Definitions ====================== */
-#define POLLING_INTERVAL        3000    // how often the photon polls the cheerlights API
-#define RESPONSE_TIMEOUT        500     // the timeout (in ms) to wait for a response from the cheerlights API
-TCPClient client;       // a TCP instance to let us query the cheerlights API over TCP
-String hostname, path;  // the URL and path to cheerlights' thingspeak directory
-String response;        // the response read from querying cheerlights' thingspeak directory
-bool connected;         // flag if we have a solid TCP connection
-bool cheerLightsEnabled;
-//Color cheerLightsColor;
-int requestTime, pollTime;
-//Thread* cheerlightsThread;  //https://community.particle.io/t/particle-photon-multi-blink-sample-using-threads/16214/3
-//https://github.com/pipprojects/WM/blob/master/water-meter-2.ino
+// Intervalle historique entre deux requêtes CheerLights, en millisecondes.
+const uint32_t CHEERLIGHTS_POLLING_INTERVAL = 3000;
+
+// Durée maximale d'attente du début de réponse HTTP, en millisecondes.
+const uint32_t CHEERLIGHTS_RESPONSE_TIMEOUT = 500;
+
+// Port HTTP historique du service ThingSpeak.
+const uint16_t CHEERLIGHTS_HTTP_PORT = 80;
+
+// Taille exacte d'une réponse #RRGGBB avec son terminateur nul.
+const uint8_t CHEERLIGHTS_RESPONSE_CAPACITY = 8;
+
+// Hôte historique du canal CheerLights sur ThingSpeak.
+const char CHEERLIGHTS_HOST[] = "api.thingspeak.com";
+
+// Chemin historique du dernier champ couleur CheerLights.
+const char CHEERLIGHTS_PATH[] = "/channels/1417/field/2/last.txt";
+
+// Client TCP unique utilisé uniquement par CheerLights.
+TCPClient client;
+
+// Réponse bornée à sept caractères utiles et un terminateur nul.
+char cheerLightsResponse[CHEERLIGHTS_RESPONSE_CAPACITY];
+
+// Longueur saturée à huit ; huit représente toute réponse trop longue.
+uint8_t cheerLightsResponseLength;
+
+// État de la dernière connexion TCP tentée.
+bool connected;
+
+// Horodatage du début de l'attente HTTP courante.
+uint32_t requestTime;
+
+// Horodatage de la dernière interrogation CheerLights.
+uint32_t pollTime;
+
+static_assert(sizeof(cheerLightsResponse) == 8,
+    "La réponse CheerLights doit occuper exactement huit octets");
+
 void cheerlights(void);
+void resetCheerLightsResponse(void);
+void appendCheerLightsResponse(char character);
+bool hasValidCheerLightsResponse(void);
+bool connectCheerLightsClient(void);
 
 
 /* ======================= CUBE PAINTER mode Definitions ===================== */
@@ -818,12 +990,49 @@ union SharedAnimationScratch {
     unsigned char bytes[PIXEL_CNT * BPP];
     uint16_t pixelOrder[PIXEL_CNT];
     float particles[50][6];
-    PackedPoint puckSprites[4][65];
+    PuckDudeScratch puckDude;
+    voxel snakeVoxels[SNAKE_CAPACITY];
+    uint8_t crumbleRemaining[SIDE * SIDE];
+    float spectrumSamples[2][ARRAY_SIZE];
+    WhirlwindScratch whirlwind;
 };
 SharedAnimationScratch sharedAnimationScratch;
-#define drawingBuffer sharedAnimationScratch.bytes
+static_assert(sizeof(uint16_t) * (int)(PIXEL_CNT * 0.1) <=
+    sizeof(sharedAnimationScratch.pixelOrder),
+    "Les positions Frozen doivent tenir dans l'ordre de pixels partagé");
+static_assert(sizeof(sharedAnimationScratch.bytes) == 1536,
+    "Le buffer CubePainter doit occuper exactement 1 536 octets");
+static_assert(sizeof(sharedAnimationScratch.pixelOrder) == 1024,
+    "L'ordre complet des pixels doit occuper exactement 1 024 octets");
+static_assert(sizeof(sharedAnimationScratch.particles) == 1200,
+    "Les particules Fireworks doivent occuper exactement 1 200 octets");
+static_assert(sizeof(sharedAnimationScratch.puckDude) == 243,
+    "Les sprites PacMan doivent occuper exactement 243 octets du scratch");
+static_assert(sizeof(sharedAnimationScratch.snakeVoxels) == 1536,
+    "Le corps Snake complet doit occuper exactement 1 536 octets");
+static_assert(sizeof(sharedAnimationScratch.crumbleRemaining) == 64,
+    "L'ordre CrumblingPlane doit occuper exactement 64 octets");
+static_assert(sizeof(sharedAnimationScratch.spectrumSamples) == 128,
+    "Les deux tableaux FFT Spectrum doivent occuper 128 octets du scratch");
+static_assert(sizeof(sharedAnimationScratch.whirlwind) == 288,
+    "L'état Whirlwind doit occuper exactement 288 octets du scratch");
 static_assert(sizeof(SharedAnimationScratch) == PIXEL_CNT * BPP,
     "Le scratch partage ne doit pas ajouter un second framebuffer");
+#define drawingBuffer sharedAnimationScratch.bytes
+#define snakeVoxels sharedAnimationScratch.snakeVoxels
+#define crumbleRemaining sharedAnimationScratch.crumbleRemaining
+#define spectrumReal sharedAnimationScratch.spectrumSamples[0]
+#define spectrumImaginary sharedAnimationScratch.spectrumSamples[1]
+// Alias des positions de flocons Frozen dans l'ordre de pixels partagé.
+#define randomFlakes sharedAnimationScratch.pixelOrder
+// Alias des couleurs Whirlwind dans son état partagé.
+#define whirlwindColors sharedAnimationScratch.whirlwind.colors
+// Alias des angles Whirlwind dans son état partagé.
+#define whirlwindAngles sharedAnimationScratch.whirlwind.angles
+// Alias des rayons Whirlwind dans son état partagé.
+#define whirlwindRadii sharedAnimationScratch.whirlwind.radii
+// Alias des hauteurs Whirlwind dans son état partagé.
+#define whirlwindHeights sharedAnimationScratch.whirlwind.heights
 int CubePainter(String command);
 
 
@@ -840,9 +1049,6 @@ void textClock(void);
 void threeDClock(void);
 void drawCube(int w, int h, int d, Point corner, Color voxelColor);
 void display_digits(int number, int drow, int dplane, Color numcolor);
-std::string strRev(std::string str);
-std::string integerToBinaryString(int number);
-std::string padTo(std::string str, const size_t num, const char paddingChar);
 
 
 /* ====================== Roman Candle mode Definitions =================== */
@@ -874,17 +1080,36 @@ int countNeighbors(int x, int y, int z);
 */
 
 /* ====================== CRUMBLE mode Definitions =================== */
-bool Cmirror = true; 
-const int NUM_FLIPS = 1;
-int CRaxis = 1;
-int pick, Coffset, flips;
-std::vector< int > remaining;
+// Nombre de positions distinctes dans un plan 8 x 8.
+const uint8_t CRUMBLE_POSITION_COUNT = SIDE * SIDE;
+
+// Nombre de retournements avant de sélectionner l'axe suivant.
+const uint8_t NUM_FLIPS = 1;
+
+// Indique si la profondeur logique est reflétée pendant le cycle courant.
+bool Cmirror = true;
+
+// Axe courant, compris entre zéro et deux.
+uint8_t CRaxis = 1;
+
+// Position linéaire courante dans le plan, comprise entre zéro et 63.
+uint8_t pick;
+
+// Profondeur courante du voxel déplacé, comprise entre zéro et huit.
+uint8_t Coffset;
+
+// Nombre de retournements effectués sur l'axe courant.
+uint8_t flips;
+
+// Nombre d'éléments valides dans crumbleRemaining.
+uint8_t crumbleRemainingCount;
+
 Color clearColor = Color( 0, 0, 0 );
 Color mainColor = Color( 0, 31, 0 );
 void crumble();
 void setVoxel( int x, int y, int z, bool clear );
 bool shift();
-int draw();
+uint8_t draw();
 void resetCycle();
 
 /* ====================== CUBE CLASSICS mode Definitions ===================== */
@@ -897,7 +1122,6 @@ const unsigned char PROGMEM paths[44] = {0x07,0x06,0x05,0x04,0x03,0x02,0x01,0x00
 										 0x72,0x73,0x74,0x75,0x76,0x77,0x67,0x57,0x47,0x37,0x27,0x17,0x04,0x03,0x12,0x21,
 										 0x30,0x40,0x51,0x62,0x73,0x74,0x65,0x56,0x47,0x37,0x26,0x15}; // circle, len 16, offset 28
 
-Point cubeVerticesA, cubeVerticesB;
 // defines each cube edge by it's two vertices
 // Store as a byte to save on memory
 const unsigned char cubeEdgeVertices[] PROGMEM= {
@@ -934,7 +1158,7 @@ const uint8_t validSideToFlipTo[][6] = {
 };
 
 uint8_t findRandomNextSide(uint8_t thisSide);
-void setCubeVertices(int8_t index);
+void setCubeVertices(int8_t index, Point& vertexA, Point& vertexB);
 void runCubeClassics(uint32_t c, uint8_t mode);
 void setplane_x (int x, Color col);
 void setplane_y (int y, Color col);
@@ -970,40 +1194,61 @@ void box_wireframe(int x1, int y1, int z1, int x2, int y2, int z2, Color col);
 void argorder(int ix1, int ix2, int *ox1, int *ox2);
 int folder(uint8_t sideStart, uint8_t sideEnd, Color col);
 float distance2d (float x1, float y1, float x2, float y2);
-float distance3d (float x1, float y1, float z1, float x2, float y2, float z2);
+float distance3dSquared(float x1, float y1, float z1, float x2, float y2, float z2);
 
 
 /* ========================== ACID/GOLD RAIN Definitions ===================== */
-#define MAX_POINTS            128
-#define MIN_SALVO_SPACING     0
-typedef struct {
-	Point raindrop;
-  	float speed;
-  	Color color;
-  	bool flipped;
-  	bool dead;
-} raindrop;
+// Nombre maximal historique de gouttes dans une salve.
+const uint8_t RAIN_MAX_DROPS = 128;
 
-typedef struct {
-    raindrop raindrops[MAX_POINTS];
-    bool dead;
-} salvo;
+// Facteur exact représentant les positions et vitesses par pas de 0,05.
+const int16_t RAIN_POSITION_SCALE = 20;
 
-salvo salvos[SIDE];
-int fadingMax, ledColor;
-long timeAboveThreshhold;
+// Position verticale initiale, juste au-dessus du cube logique.
+const int16_t RAIN_INITIAL_Y = SIDE * RAIN_POSITION_SCALE;
+
+// Espacement minimal historique entre deux salves automatiques.
+const uint32_t MIN_SALVO_SPACING = 0;
+
+// Goutte compacte conservant exactement les sept vitesses historiques.
+typedef struct CompactRainDrop {
+    int16_t yTwentieths;
+    uint8_t speedTwentieths;
+    CubeAxisIndex x;
+    CubeAxisIndex z;
+    Color color;
+} CompactRainDrop;
+
+// Salve compacte ; un compteur nul indique que la salve est inactive.
+typedef struct CompactRainSalvo {
+    CompactRainDrop drops[RAIN_MAX_DROPS];
+    uint8_t dropCount;
+} CompactRainSalvo;
+
+static_assert(sizeof(CompactRainDrop) == 8,
+    "Une goutte Rain compacte doit tenir sur huit octets");
+static_assert(sizeof(CompactRainSalvo) == 1026,
+    "Une salve Rain compacte doit tenir sur 1 026 octets");
+
+CompactRainSalvo salvos[SIDE];
+
+static_assert(sizeof(salvos) == 8208,
+    "Les huit salves Rain doivent conserver 1 024 emplacements compacts");
+
+int fadingMax;
+uint16_t ledColor;
+uint32_t timeAboveThreshhold;
 void acidRain(void);
 void initSalvos(void);
 void drawSalvos(void);
 void updateSalvos(void);
 void checkMicrohpone(void);
 void launchRain(int amplitude);
-float setNewSpeed(void);
+uint8_t setNewSpeed(void);
 
 
 /* ========================== SLIDESHOW Definitions ===================== */
 #define TRAIL_LENGTH	50
-Color trailColor;
 const  unsigned char PROGMEM table_3p[][8]= { //3p char
 	0x20,0x40,0x20,0xFC,0xFA,0xFA,0xFC,0xF8,	//Cup of Coffee
 	0x7E,0x81,0xA5,0x81,0xA5,0x99,0x81,0x7E,	//Smiley
@@ -1050,7 +1295,7 @@ void mixVoxel(Point currentPoint, Color col);
 void fadeInToColor(uint32_t index, Color col);
 void fadeOutFromColor(uint32_t index, Color col);
 void setPixelColor(int x, int y, int z, Color col);
-void arrayShuffle(int arrayToShuffle[], int arraySize);
+void arrayShuffle(uint8_t arrayToShuffle[], uint8_t arraySize);
 void fadeSmooth(char lowerLim, char upperLim, float scaleFactor);
 void drawSolidHorizontalCircle(int xOrigin, int yOrigin, int z, int radius, Color col);
 void drawHollowHorizontalCircle(int xOrigin, int yOrigin, int z, int radius, Color col, bool rndColor);
@@ -1061,6 +1306,7 @@ Color complement(Color original);
 Color getColorFromInteger(uint32_t col);
 Color getPixelColor(int x, int y, int z);
 Color fadeColor(Color col, float scaleFactor);
+Color fadeColorSevenEighths(Color color);
 uint8_t fadeSqRt(float value);
 uint8_t fadeSquare(float value);
 uint8_t fadeLinear(float value);
@@ -1131,6 +1377,6 @@ char* getWeekDay(void);
 char* getMonth(void);
 void moveSnake(void);
 void updateDirection(void);
-void addTreat(void);
+bool addTreat(void);
 
 

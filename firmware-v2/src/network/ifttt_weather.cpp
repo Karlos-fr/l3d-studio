@@ -1,8 +1,28 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// IftttWeather - Implémentation de l'affichage temporaire IFTTT
+// ----------------------------------------------------------------------------
+// Ce fichier réutilise les primitives texte et restaure le mode précédent. Il
+// n'ouvre aucune connexion réseau et ne possède aucun buffer de réponse.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Affiche la couleur ou le texte IFTTT pendant l'intervalle historique.
+//
+// Parametres :
+// - c : couleur entière transmise par la commande externe.
+//
+// Effet de bord :
+// - avance le texte, modifie le framebuffer puis restaure éventuellement le
+//   mode, la luminosité et les switches précédents.
+// ----------------------------------------------------------------------------
 void iftttWeather(uint32_t c) {
-    unsigned long calculatedInterval;
-    unsigned long iftttWeatherInterval = 10*60*1000;    //Revert back to last mode for IFTTT Weather
+    uint32_t calculatedInterval;
+    // Durée maximale historique avant le retour au mode précédent.
+    const uint32_t iftttWeatherInterval = 10UL * 60UL * 1000UL;
+    // Longueur bornée réutilisée par le positionnement et les seuils du texte.
+    const size_t messageLength = strnlen(message, sizeof(message));
     
     //If we're displaying text, configure the interval individually
     if(isNewText) {
@@ -22,23 +42,31 @@ void iftttWeather(uint32_t c) {
             background(black);
             
             //(largest_item - smallest_item) maps to (max-min)
-            float ratio = (.5 - .05)/((120*.05) - .05);
+            // Rapport constant entre la vitesse utilisateur et le déplacement.
+            const float ratio = (.5 - .05)/((120*.05) - .05);
             //(min + ratio*(value-smallest_item))
-            float speedFactor = .05 + ratio * ((map(speed, 1, 120, 120, 1) * .05) - .05);
+            // Déplacement du texte calculé une fois pour la frame.
+            const float speedFactor = .05 +
+                ratio * ((map(speed, 1, 120, 120, 1) * .05) - .05);
             pos += speedFactor;
 
             switch(whichTextMode) {
                 case 0:
                     //Can't call textMarquee(col, 0) wrapper directly, due to conflicts with switches 2 and 3
                     marquee(message, pos, getColorFromInteger(c));
-                    if (pos >= (SIDE*map(strlen(message), 1, 63, 4, SIDE))+(strlen(message))*8)
-                        pos = map(strlen(message), 1, 63, (int)-(SIDE*.5), 0);
+                    if (pos >= (SIDE*map(messageLength, 1, 63, 4, SIDE))+
+                        messageLength*8)
+                        pos = map(messageLength, 1, 63, (int)-(SIDE*.5), 0);
                     break;
                 case 1:
                     //Can't call textScroll(col, 0) wrapper directly, due to conflicts with switches 2 and 3
-                    scrollText(message, Point(pos - strlen(message), 0, 6), getColorFromInteger(c));
-                    if (pos >= (SIDE*map(strlen(message), 1, 63, 1, SIDE))+(strlen(message))*8)
-                        pos = map(strlen(message), 1, 63, (int)-(SIDE*.5), 0);
+                    scrollText(
+                        message,
+                        Point(pos - messageLength, 0, 6),
+                        getColorFromInteger(c));
+                    if (pos >= (SIDE*map(messageLength, 1, 63, 1, SIDE))+
+                        messageLength*8)
+                        pos = map(messageLength, 1, 63, (int)-(SIDE*.5), 0);
                     break;
 
             }

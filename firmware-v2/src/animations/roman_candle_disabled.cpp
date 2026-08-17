@@ -1,4 +1,11 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// RomanCandleDisabled - Archive du prototype RomanCandle désactivé
+// ----------------------------------------------------------------------------
+// Ce fichier conserve le prototype historique uniquement comme référence. Il
+// ne compile aucune animation et ne réserve aucun état dans le firmware actif.
+// ============================================================================
+
+#ifdef L3D_UNITY_BUILD
 
 /* ========================= Roman Candle mode routines ======================== */
 /*void romanCandle() {

@@ -368,10 +368,7 @@
 
 #include "platform/neopixel.h"
 #include <avr/pgmspace.h>
-#include <bitset>
 #include <math.h>
-#include <string>
-#include <vector>
 
 #define L3D_UNITY_BUILD 1
 
@@ -464,8 +461,8 @@ void setup() {
     // Initialize audio capture
     initMicrophone();
 	
-	//populate the shuffle order array
-	for(int i=0;i<(int)(sizeof modeStruct / sizeof modeStruct[0]);i++)
+	// Initialise chaque index compact avant le premier mélange.
+	for(uint8_t i=0;i<sizeof modeStruct / sizeof modeStruct[0];i++)
 		modeShuffleOrder[i] = i;
 
     diagnosticsSetupComplete(currentModeID);

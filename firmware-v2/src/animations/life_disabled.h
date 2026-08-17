@@ -1,4 +1,8 @@
-﻿#pragma once
+// ============================================================================
+// LifeDisabled - Déclaration vide du prototype GameOfLife
+// ----------------------------------------------------------------------------
+// Le prototype reste archivé dans le fichier C++ mais ne fournit actuellement
+// aucune fonction au unity build actif.
+// ============================================================================
 
-void lifeResetCube();
-int countNeighbors(int x, int y, int z);
+#pragma once

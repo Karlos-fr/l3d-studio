@@ -1,5 +1,3 @@
-﻿#ifdef L3D_UNITY_BUILD
-
 // ============================================================================
 // PuckDude - Implementation de l'animation PacMan historique
 // ----------------------------------------------------------------------------
@@ -7,26 +5,27 @@
 // Il partage son stockage temporaire avec les autres animations exclusives.
 // ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
 // ----------------------------------------------------------------------------
 // Construit, transforme et affiche une frame des personnages PacMan.
 //
 // Effet de bord :
-// - reutilise les quatre zones de sprites du scratch partage et incremente
+// - réutilise les trois zones de sprites du scratch partagé et incrémente
 //   `PDframe`.
 // ----------------------------------------------------------------------------
 void puckDude() {
 	background(black);
 	
-	uint8_t spritesize = 65;
-	PackedPoint* puckdude = sharedAnimationScratch.puckSprites[0];
-	PackedPoint* ghost = sharedAnimationScratch.puckSprites[1];
-	PackedPoint* ghostface = sharedAnimationScratch.puckSprites[2];
-	PackedPoint* ghosteye = sharedAnimationScratch.puckSprites[3];
+	PackedPoint* puckdude = sharedAnimationScratch.puckDude.puckDude;
+	PackedPoint* ghost = sharedAnimationScratch.puckDude.ghost;
+	PackedPoint* ghosteye = sharedAnimationScratch.puckDude.ghostEye;
 
-	for(uint8_t i=spritesize-1;i>0;i--){
+	for(uint8_t i=PUCK_DUDE_MAIN_POINT_COUNT-1;i>0;i--){
 	    puckdude[i]={-1,-1,-1};
 	    ghost[i]={-1,-1,-1};
-	    ghostface[i]={-1,-1,-1};
+	}
+	for(uint8_t i=PUCK_DUDE_EYE_POINT_COUNT-1;i>0;i--){
 	    ghosteye[i]={-1,-1,-1};
     }
 	ghost[ 1]={3,6,0};
@@ -62,13 +61,6 @@ void puckDude() {
 	ghosteye[2]={5,5,0};
 	ghosteye[3]={3,4,0};
 	ghosteye[4]={5,4,0};
-    ghostface[1]={2,2,0};
-    ghostface[2]={3,3,0};
-    ghostface[3]={4,2,0};
-    ghostface[4]={5,3,0};
-    ghostface[5]={6,2,0};
-    ghostface[6]={5,5,0};
-    ghostface[7]={3,5,0};
     puckdude[ 1]={4,6,7};
     puckdude[ 2]={3,6,7};
     puckdude[ 3]={2,6,7};
@@ -161,10 +153,11 @@ void puckDude() {
         ghostface2=ghostface_normal;
     }else{
         direction=-1;
-    	for(uint8_t i=spritesize-1;i>0;i--){   
+	for(uint8_t i=PUCK_DUDE_MAIN_POINT_COUNT-1;i>0;i--){
     	    puckdude[i].x=(7-puckdude[i].x); 
     	    ghost[i].x=(7-ghost[i].x);
-    	    ghostface[i].x=(7-ghostface[i].x);
+		}
+		for(uint8_t i=PUCK_DUDE_EYE_POINT_COUNT-1;i>0;i--){
     	    ghosteye[i].x=(7-ghosteye[i].x);
         }
         if((phase/10)%2){
@@ -180,7 +173,7 @@ void puckDude() {
         }
     }
     uint8_t start_delay = 1;
-	for(uint8_t i=spritesize-1;i>0;i--){
+	for(uint8_t i=PUCK_DUDE_MAIN_POINT_COUNT-1;i>0;i--){
 	    
 	    if(PDframe>(start_delay*PDSPEED)){
 	        rotate_x(puckdude[i],PDframe%(28*PDSPEED)*direction);
@@ -193,11 +186,13 @@ void puckDude() {
         rotate_x(puckdude[i],(1*PDSPEED*direction));// move puckdude ahead of ghosts
 		setPixelColor(puckdude[i].x,puckdude[i].y,puckdude[i].z,{50,46,0});
 
-	    if(PDframe>(start_delay*PDSPEED)){rotate_x(ghosteye[i],PDframe%(28*PDSPEED)*direction);}
-		setPixelColor(ghosteye[i].x,ghosteye[i].y,ghosteye[i].z,ghostface1);
-	    rotate_x(ghosteye[i],(8*PDSPEED*direction));
-	    rotate_x(ghosteye[i],(1*PDSPEED*direction));//makes red look forward
-		setPixelColor(ghosteye[i].x,ghosteye[i].y,ghosteye[i].z,ghostface2);
+		if(i < PUCK_DUDE_EYE_POINT_COUNT) {
+		if(PDframe>(start_delay*PDSPEED)){rotate_x(ghosteye[i],PDframe%(28*PDSPEED)*direction);}
+			setPixelColor(ghosteye[i].x,ghosteye[i].y,ghosteye[i].z,ghostface1);
+		rotate_x(ghosteye[i],(8*PDSPEED*direction));
+		rotate_x(ghosteye[i],(1*PDSPEED*direction));//makes red look forward
+			setPixelColor(ghosteye[i].x,ghosteye[i].y,ghosteye[i].z,ghostface2);
+		}
 		
 	    if(PDframe>(start_delay*PDSPEED)){rotate_x(ghost[i],PDframe%(28*PDSPEED)*direction);}
 		setPixelColor(ghost[i].x,ghost[i].y,ghost[i].z,ghost1);
@@ -210,58 +205,6 @@ void puckDude() {
 	showPixels();
 	delay(speed);
 	run = TRUE;
-}
-
-void rotate_x(Point& a, int b) {
-    if(b>0){
-        for(int i=abs(b)/PDSPEED;i>0;i--){
-            if(a.z==7){
-               if(a.x<7)
-                    a.x+=1;
-                else 
-                    a.z-=1;
-            }else if(a.x==7){
-                if(a.z>0)
-                    a.z-=1;
-                else 
-                    a.x-=1;
-            }else if(a.z==0){
-               if(a.x>0)
-                    a.x-=1;
-                else 
-                    a.z+=1;
-            }else if(a.x==0){
-                if(a.z<7)
-                    a.z+=1;
-                else 
-                    a.x-=1;
-            }
-        }
-    }else{
-        for(int i=abs(b)/PDSPEED;i>0;i--){
-            if(a.z==7){
-               if(a.x>0)
-                    a.x-=1;
-                else
-                    a.z-=1;
-            }else if(a.x==7){
-                if(a.z<7)
-                    a.z+=1;
-                else 
-                    a.x+=1;
-            }else if(a.z==0){
-               if(a.x<7)
-                    a.x+=1;
-                else
-                   a.z-=1;
-            }else if(a.x==0){
-                if(a.z>0)
-                    a.z-=1;
-                else 
-                    a.x+=1;
-            }
-        }
-    }
 }
 
 // ----------------------------------------------------------------------------

@@ -258,13 +258,17 @@ test("le code actif n'utilise plus sprintf, strcat ou strcpy", () => {
 // Verifie la mutualisation statique des anciens gros buffers de pile.
 // ----------------------------------------------------------------------------
 test("les gros états temporaires utilisent le scratch statique partagé", () => {
+  // Implémentation des transitions utilisant le framebuffer partagé.
   const transitions = fs.readFileSync(path.join(firmwareRoot, "src/rendering/transitions.cpp"), "utf8");
+  // Implémentation Digi utilisant l'ordre de pixels partagé.
   const digi = fs.readFileSync(path.join(firmwareRoot, "src/animations/digi.cpp"), "utf8");
+  // Famille CubeClassics utilisant les particules partagées.
   const classics = fs.readFileSync(path.join(firmwareRoot, "src/animations/cube_classics.cpp"), "utf8");
+  // Implémentation PacMan utilisant ses trois sprites compacts partagés.
   const puck = fs.readFileSync(path.join(firmwareRoot, "src/animations/puck_dude.cpp"), "utf8");
   assert.doesNotMatch(transitions, /uint32_t\s+startColor\s*\[/);
   assert.match(transitions, /drawingBuffer\[offset\]/);
   assert.match(digi, /sharedAnimationScratch\.pixelOrder/);
   assert.match(classics, /sharedAnimationScratch\.particles/);
-  assert.match(puck, /sharedAnimationScratch\.puckSprites/);
+  assert.match(puck, /sharedAnimationScratch\.puckDude/);
 });

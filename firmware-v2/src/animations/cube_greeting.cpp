@@ -1,4 +1,11 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// CubeGreeting - Implémentation des messages de démonstration internes
+// ----------------------------------------------------------------------------
+// Ce fichier dessine les sept écrans de bienvenue avec le rendu texte partagé.
+// Le séquencement et ses temporisations restent dans le dispatcher de modes.
+// ============================================================================
+
+#ifdef L3D_UNITY_BUILD
 
 // ----------------------------------------------------------------------------
 // Prepare et affiche une frame de la sequence de bienvenue.

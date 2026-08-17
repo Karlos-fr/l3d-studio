@@ -1,17 +1,37 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// Filler - Implémentation des remplissages ordonnés du cube
+// ----------------------------------------------------------------------------
+// Ce fichier choisit une couleur et un axe puis remplit le framebuffer commun.
+// Il ne conserve que l'index de couleur nécessaire entre deux appels.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Choisit une couleur et remplit le cube suivant un axe aléatoire.
+//
+// Parametres :
+// - c1 : première couleur du cycle.
+// - c2 : deuxième couleur du cycle.
+// - c3 : troisième couleur du cycle.
+//
+// Effet de bord :
+// - avance l'index de couleur statique, consomme cinq tirages aléatoires au
+//   plus, modifie le framebuffer et applique les délais historiques.
+// ----------------------------------------------------------------------------
 void filler(uint32_t c1, uint32_t c2, uint32_t c3) {
-    static uint32_t whichColor = -1, whichFill;
+    // Index de couleur ; deux reproduit la sentinelle précédant le premier zéro.
+    static uint8_t colorIndex = 2;
     Color col;
     run = TRUE;
 
     if(switch1) {
-        whichColor = Wheel(random(256));
-        col = getColorFromInteger(whichColor);
+        col = getColorFromInteger(Wheel(random(256)));
+        colorIndex = 2;
     }
     else {
-        if(whichColor >= 2) {whichColor = 0;} else {whichColor++;}
-	    switch(whichColor) {
+		if(colorIndex >= 2) {colorIndex = 0;} else {colorIndex++;}
+	    switch(colorIndex) {
 	        case 0:
 	            col = getColorFromInteger(c1);
 	            break;
@@ -26,7 +46,8 @@ void filler(uint32_t c1, uint32_t c2, uint32_t c3) {
     
     if(col != lastCol) {
     	lastCol = col;
-        whichFill = random(0, 3);
+		// Axe de remplissage choisi uniquement lorsqu'une nouvelle couleur apparaît.
+		const uint8_t whichFill = random(0, 3);
         switch(whichFill) {
             case 0:
                 fillX(col);

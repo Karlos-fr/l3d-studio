@@ -1,109 +1,173 @@
-﻿#ifdef L3D_UNITY_BUILD
-
 // ============================================================================
-// CubePainter - Implementation des ecritures voxel persistantes
+// CubePainter - Implémentation des écritures voxel persistantes
 // ----------------------------------------------------------------------------
-// Ce module valide les commandes de peinture avant d'ecrire dans le buffer RGB
-// ou l'EEPROM. Il n'interprete pas les autres commandes de mode.
+// Ce module valide entièrement les commandes de peinture avant d'écrire dans
+// le framebuffer ou l'EEPROM. Il ne traite pas les autres commandes Cloud.
 // ============================================================================
+
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Convertit une tranche décimale de la commande sans créer de sous-chaîne.
+//
+// Parametres :
+// - commandText : texte complet de la commande.
+// - beginIndex : premier caractère inclus dans la tranche.
+// - endIndex : premier caractère exclu de la tranche.
+// - value : destination de la valeur convertie.
+//
+// Retour :
+// - vrai lorsque la tranche représente un index de voxel valide.
+// ----------------------------------------------------------------------------
+bool parsePainterVoxelIndex(
+    const char* commandText,
+    int beginIndex,
+    int endIndex,
+    int* value) {
+    return parseUnsignedText(
+        commandText + beginIndex,
+        endIndex - beginIndex,
+        0,
+        PIXEL_CNT - 1,
+        value);
+}
 
 // ----------------------------------------------------------------------------
 // Valide puis applique une commande de couleur ou d'effacement CubePainter.
 //
 // Parametres :
-// - command : segments `I`, couleur hexadecimale ou plage `C`, termines par
+// - command : segments `I`, couleur hexadécimale ou plage `C`, terminés par
 //   une virgule.
 //
 // Retour :
-// - zero en cas de succes ou un code COMMAND_ERROR negatif.
+// - zéro en cas de succès ou un code COMMAND_ERROR négatif.
 //
 // Effet de bord :
-// - modifie uniquement les voxels valides 0 a 511 et leurs octets EEPROM.
+// - modifie uniquement les voxels valides 0 à 511 et leurs octets EEPROM.
 // ----------------------------------------------------------------------------
 int CubePainter(String command) {
-	if(currentModeID != CUBE_PAINTER) {return 0;}
+    if (currentModeID != CUBE_PAINTER) {
+        return 0;
+    }
 
-    // Les espaces exterieurs ne font pas partie du protocole utile.
+    // Les espaces extérieurs ne font pas partie du protocole utile.
     command.trim();
-    if(command.length() == 0)
+    if (command.length() == 0) {
         return COMMAND_ERROR_EMPTY;
-    if(command.length() > CLOUD_COMMAND_MAX_LENGTH)
+    }
+    if (command.length() > CLOUD_COMMAND_MAX_LENGTH) {
         return COMMAND_ERROR_TOO_LONG;
-    if(command.charAt(command.length() - 1) != ',')
+    }
+    if (command.charAt(command.length() - 1) != ',') {
         return COMMAND_ERROR_MALFORMED;
+    }
 
     command.toUpperCase();
+    // Pointeur stable tant que la chaîne n'est plus modifiée.
+    const char* commandText = command.c_str();
 
-    // La commande complete est controlee avant la premiere ecriture.
+    // La commande complète est contrôlée avant la première écriture.
     int selectedVoxel = -1;
-    int beginIdx = 0;
-    int endIdx = command.indexOf(',');
-    while(endIdx != -1) {
-        if(endIdx <= beginIdx)
+    int beginIndex = 0;
+    int endIndex = command.indexOf(',');
+    while (endIndex != -1) {
+        if (endIndex <= beginIndex) {
             return COMMAND_ERROR_MALFORMED;
+        }
 
-        char type = command.charAt(beginIdx);
-        if(type == 'I') {
-            String indexText = command.substring(beginIdx + 1, endIdx);
-            if(!parseUnsignedText(indexText.c_str(), indexText.length(), 0, PIXEL_CNT - 1, &selectedVoxel))
+        const char type = commandText[beginIndex];
+        if (type == 'I') {
+            if (!parsePainterVoxelIndex(
+                    commandText,
+                    beginIndex + 1,
+                    endIndex,
+                    &selectedVoxel)) {
                 return COMMAND_ERROR_OUT_OF_RANGE;
-        }
-        else if(type == '#') {
-            if(selectedVoxel < 0 || endIdx - beginIdx != 7 ||
-               !isHexText(command.c_str() + beginIdx + 1, 6))
+            }
+        } else if (type == '#') {
+            if (selectedVoxel < 0 || endIndex - beginIndex != 7 ||
+                !isHexText(commandText + beginIndex + 1, 6)) {
                 return COMMAND_ERROR_MALFORMED;
-        }
-        else if(type == 'C') {
-            int colonIdx = command.indexOf(':', beginIdx);
-            if(colonIdx <= beginIdx + 1 || colonIdx >= endIdx - 1)
+            }
+        } else if (type == 'C') {
+            const int colonIndex = command.indexOf(':', beginIndex);
+            if (colonIndex <= beginIndex + 1 || colonIndex >= endIndex - 1) {
                 return COMMAND_ERROR_MALFORMED;
-            String startText = command.substring(beginIdx + 1, colonIdx);
-            String finishText = command.substring(colonIdx + 1, endIdx);
+            }
             int startVoxel = 0;
             int finishVoxel = 0;
-            if(!parseUnsignedText(startText.c_str(), startText.length(), 0, PIXEL_CNT - 1, &startVoxel) ||
-               !parseUnsignedText(finishText.c_str(), finishText.length(), 0, PIXEL_CNT - 1, &finishVoxel) ||
-               startVoxel > finishVoxel)
+            if (!parsePainterVoxelIndex(
+                    commandText,
+                    beginIndex + 1,
+                    colonIndex,
+                    &startVoxel) ||
+                !parsePainterVoxelIndex(
+                    commandText,
+                    colonIndex + 1,
+                    endIndex,
+                    &finishVoxel) ||
+                startVoxel > finishVoxel) {
                 return COMMAND_ERROR_OUT_OF_RANGE;
-        }
-        else {
+            }
+        } else {
             return COMMAND_ERROR_MALFORMED;
         }
 
-		beginIdx = endIdx + 1;
-		endIdx = command.indexOf(',', beginIdx);
+        beginIndex = endIndex + 1;
+        endIndex = command.indexOf(',', beginIndex);
     }
-    if(beginIdx != command.length())
+    if (beginIndex != static_cast<int>(command.length())) {
         return COMMAND_ERROR_MALFORMED;
+    }
 
     run = TRUE;
     selectedVoxel = -1;
-    beginIdx = 0;
-    endIdx = command.indexOf(',');
-    while(endIdx != -1) {
-        char type = command.charAt(beginIdx);
-        if(type == 'I') {
-            selectedVoxel = command.substring(beginIdx + 1, endIdx).toInt();
-        }
-        else if(type == '#') {
-            int voxelOffset = selectedVoxel * BPP;
-            drawingBuffer[voxelOffset] = hexToInt(command.charAt(beginIdx + 1)) * 16 + hexToInt(command.charAt(beginIdx + 2));
-            drawingBuffer[voxelOffset + 1] = hexToInt(command.charAt(beginIdx + 3)) * 16 + hexToInt(command.charAt(beginIdx + 4));
-            drawingBuffer[voxelOffset + 2] = hexToInt(command.charAt(beginIdx + 5)) * 16 + hexToInt(command.charAt(beginIdx + 6));
-            strip.setPixelColor(selectedVoxel, strip.Color(
-                drawingBuffer[voxelOffset],
-                drawingBuffer[voxelOffset + 1],
-                drawingBuffer[voxelOffset + 2]));
+    beginIndex = 0;
+    endIndex = command.indexOf(',');
+    while (endIndex != -1) {
+        const char type = commandText[beginIndex];
+        if (type == 'I') {
+            parsePainterVoxelIndex(
+                commandText,
+                beginIndex + 1,
+                endIndex,
+                &selectedVoxel);
+        } else if (type == '#') {
+            const int voxelOffset = selectedVoxel * BPP;
+            drawingBuffer[voxelOffset] =
+                hexToInt(commandText[beginIndex + 1]) * 16 +
+                hexToInt(commandText[beginIndex + 2]);
+            drawingBuffer[voxelOffset + 1] =
+                hexToInt(commandText[beginIndex + 3]) * 16 +
+                hexToInt(commandText[beginIndex + 4]);
+            drawingBuffer[voxelOffset + 2] =
+                hexToInt(commandText[beginIndex + 5]) * 16 +
+                hexToInt(commandText[beginIndex + 6]);
+            strip.setPixelColor(
+                selectedVoxel,
+                strip.Color(
+                    drawingBuffer[voxelOffset],
+                    drawingBuffer[voxelOffset + 1],
+                    drawingBuffer[voxelOffset + 2]));
             EEPROM.write(voxelOffset, drawingBuffer[voxelOffset]);
             EEPROM.write(voxelOffset + 1, drawingBuffer[voxelOffset + 1]);
             EEPROM.write(voxelOffset + 2, drawingBuffer[voxelOffset + 2]);
-        }
-        else {
-            int colonIdx = command.indexOf(':', beginIdx);
-            int startVoxel = command.substring(beginIdx + 1, colonIdx).toInt();
-            int finishVoxel = command.substring(colonIdx + 1, endIdx).toInt();
-            for(int voxel = startVoxel; voxel <= finishVoxel; voxel++) {
-                int voxelOffset = voxel * BPP;
+        } else {
+            const int colonIndex = command.indexOf(':', beginIndex);
+            int startVoxel = 0;
+            int finishVoxel = 0;
+            parsePainterVoxelIndex(
+                commandText,
+                beginIndex + 1,
+                colonIndex,
+                &startVoxel);
+            parsePainterVoxelIndex(
+                commandText,
+                colonIndex + 1,
+                endIndex,
+                &finishVoxel);
+            for (int voxel = startVoxel; voxel <= finishVoxel; voxel++) {
+                const int voxelOffset = voxel * BPP;
                 strip.setPixelColor(voxel, 0);
                 drawingBuffer[voxelOffset] = 0;
                 drawingBuffer[voxelOffset + 1] = 0;
@@ -114,13 +178,12 @@ int CubePainter(String command) {
             }
         }
 
-		beginIdx = endIdx + 1;
-		endIdx = command.indexOf(',', beginIdx);
+        beginIndex = endIndex + 1;
+        endIndex = command.indexOf(',', beginIndex);
     }
     return 0;
 }
 
 #include "color_all.cpp"
-
 
 #endif

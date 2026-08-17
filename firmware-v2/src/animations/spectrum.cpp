@@ -18,16 +18,16 @@ void FFTJoy() {
     run = TRUE;
     
     for(int i=0; i<ARRAY_SIZE; i++) {
-        real[i]=analogRead(MICROPHONE)-SAMPLES;
+        spectrumReal[i]=analogRead(MICROPHONE)-SAMPLES;
         delayMicroseconds(120);  /* 210 this sets our 'sample rate'.  I went through a bunch of trial and error to 
                                   * find a good sample rate to put a soprano's vocal range in the spectrum of the cube
     							  *
       							  * 120 gets the entire range from bass to soprano within the cube's spectrum
       							  * *From bass to soprano: https://youtu.be/6jqCuE7C3rg */
-        imaginary[i]=0;
+        spectrumImaginary[i]=0;
     }
     
-    FFT(1, M, real, imaginary);
+    FFT(1, M, spectrumReal, spectrumImaginary);
     
     /* In this loop we can trim our 'viewing window', in regards to
      * what range of the audio spectrum we want to see at all times.
@@ -36,10 +36,13 @@ void FFTJoy() {
      * the more our 'window' will shift towards high frequencies. */
     for(int i=0; i<ARRAY_SIZE; i++) {
 		int ii = (i+1) < ARRAY_SIZE ? i+1 : i;
-        imaginary[i]=sqrt(imaginary[ii] * imaginary[ii] + real[ii] * real[ii]);
+        spectrumImaginary[i]=sqrt(
+          spectrumImaginary[ii] * spectrumImaginary[ii] +
+          spectrumReal[ii] * spectrumReal[ii]
+        );
         //imaginary[i]=sqrt(pow(imaginary[i+1],2)+pow(real[i+1],2));
-        if(imaginary[i]>maxVal)
-            maxVal=imaginary[i];
+        if(spectrumImaginary[i]>maxVal)
+            maxVal=spectrumImaginary[i];
     }
         
     boundedTextFormat(debug, sizeof(debug), "%f", maxVal);
@@ -51,10 +54,10 @@ void FFTJoy() {
     if(maxVal<=450) maxVal+=0.5;                // We cutoff maxVal to keep from clipping due to excess peaking
 
     for(int i=0; i<ARRAY_SIZE/2; i++) {
-        imaginary[i]=SIDE*imaginary[i]/maxVal;
+        spectrumImaginary[i]=SIDE*spectrumImaginary[i]/maxVal;
         Color pixelColor;
         int y, pixIdx, pixUppIdx, pixLowIdx;
-        for(y=0; y<=imaginary[i]; y++) {
+        for(y=0; y<=spectrumImaginary[i]; y++) {
             pixelColor=y<SIDE-1 ? getColorFromInteger(colorMap(y,0,SIDE+2)) : Color(191,0,15);
           	//pixelColor=getColorFromInteger(colorMap(y,0,SIDE+2));
             uint16_t mappedIndex;

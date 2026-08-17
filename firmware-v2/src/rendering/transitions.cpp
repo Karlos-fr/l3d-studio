@@ -1,4 +1,11 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// Transitions - Implémentation des transitions et affichages partagés
+// ----------------------------------------------------------------------------
+// Ce fichier interpole les couleurs et transmet le framebuffer au pilote. Il
+// ne décide ni du mode actif ni du mapping logique des coordonnées.
+// ============================================================================
+
+#ifdef L3D_UNITY_BUILD
 
 // ----------------------------------------------------------------------------
 // Fait evoluer simultanement les 512 pixels vers une couleur cible.
@@ -12,9 +19,8 @@
 //   evenements Particle entre les affichages.
 // ----------------------------------------------------------------------------
 void transitionAll(Color endColor, uint16_t method) {
-    int numSteps = 8;
-    //run = FALSE;
-
+    // Nombre historique d'étapes affichées par une transition globale.
+    const uint8_t numSteps = 8;
     // Le buffer RGB persistant de CubePainter sert ici de scratch. Cette duree
     // de vie exclusive retire 2 048 octets de la pile sans second framebuffer.
     // CubePainter recharge ensuite son contenu depuis l'EEPROM a son entree.
@@ -26,14 +32,30 @@ void transitionAll(Color endColor, uint16_t method) {
         drawingBuffer[offset + 2] = startColor.blue;
     }
 
-    for(int i=1; i<=numSteps; i++) {
-        for(int index = 0; index < strip.numPixels(); index++) {
+    for(uint8_t step = 1; step <= numSteps; step++) {
+        // Progression flottante identique à celle du calcul polaire historique.
+        const float progress = static_cast<float>(step) / numSteps;
+        // Facteur décroissant commun aux 512 voxels de cette étape.
+        const double polarDecreaseFactor =
+            method == LINEAR ? 0.0 : sqrt(progress);
+        // Facteur croissant commun aux 512 voxels de cette étape.
+        const float polarIncreaseFactor =
+            method == LINEAR ? 0.0f : progress * progress;
+        for(uint16_t index = 0; index < strip.numPixels(); index++) {
             int offset = index * BPP;
             Color startColor = Color(
                 drawingBuffer[offset],
                 drawingBuffer[offset + 1],
                 drawingBuffer[offset + 2]);
-            transitionHelper(startColor, endColor, index, method, numSteps, i);
+            transitionHelper(
+                startColor,
+                endColor,
+                index,
+                method,
+                numSteps,
+                step,
+                polarDecreaseFactor,
+                polarIncreaseFactor);
             if(stop || stopDemo) {return;}
         }
         showPixels();
@@ -41,31 +63,87 @@ void transitionAll(Color endColor, uint16_t method) {
     }
 }
 
-//Same as transitionAll but only for one pixel
+// ----------------------------------------------------------------------------
+// Fait évoluer un pixel physique vers une couleur cible.
+//
+// Parametres :
+// - endColor : couleur atteinte à la dernière étape.
+// - index : index physique du pixel, prévalidé par l'appelant.
+// - method : courbe LINEAR ou POLAR de l'interpolation.
+//
+// Effet de bord :
+// - affiche huit états et traite les événements Particle entre les états.
+// ----------------------------------------------------------------------------
 void transitionOne(Color endColor, uint16_t index, uint16_t method) {
-    int numSteps = 8;
+    // Nombre historique d'étapes affichées pour un pixel.
+    const uint8_t numSteps = 8;
     Color startColor = getColorFromInteger(strip.getPixelColor(index));
 
-    for(int i=1; i<=numSteps; i++) {
-        transitionHelper(startColor, endColor, index, method, numSteps, i);
+    for(uint8_t step = 1; step <= numSteps; step++) {
+        // Progression flottante identique à celle du calcul polaire historique.
+        const float progress = static_cast<float>(step) / numSteps;
+        // Facteur décroissant partagé par les trois canaux de cette étape.
+        const double polarDecreaseFactor =
+            method == LINEAR ? 0.0 : sqrt(progress);
+        // Facteur croissant partagé par les trois canaux de cette étape.
+        const float polarIncreaseFactor =
+            method == LINEAR ? 0.0f : progress * progress;
+        transitionHelper(
+            startColor,
+            endColor,
+            index,
+            method,
+            numSteps,
+            step,
+            polarDecreaseFactor,
+            polarIncreaseFactor);
         if(stop || stopDemo) {return;}
         showPixels();
         delay(speed);
     }
 }
 
-//Used to set the next color step for transitionAll and transitionOne
-void transitionHelper(Color startColor, Color endColor, uint16_t index, uint16_t method, int16_t numSteps, int16_t step) {
+// ----------------------------------------------------------------------------
+// Calcule puis écrit les trois canaux d'une étape de transition.
+//
+// Parametres :
+// - startColor : couleur capturée au début de la transition.
+// - endColor : couleur cible.
+// - index : index physique du pixel.
+// - method : courbe d'interpolation historique.
+// - numSteps : nombre total d'étapes, strictement positif.
+// - step : étape courante comprise entre un et numSteps.
+// - polarDecreaseFactor : racine de la progression déjà mutualisée.
+// - polarIncreaseFactor : carré de la progression déjà mutualisé.
+//
+// Effet de bord :
+// - écrit le pixel dans le framebuffer NeoPixel sans l'afficher.
+// ----------------------------------------------------------------------------
+void transitionHelper(
+    Color startColor,
+    Color endColor,
+    uint16_t index,
+    uint16_t method,
+    uint8_t numSteps,
+    uint8_t step,
+    double polarDecreaseFactor,
+    float polarIncreaseFactor) {
     Color col2;
 
-    //Find the step
-    int16_t redStep   = getTransitionStep(startColor, endColor, method, numSteps, step, RED);
-    int16_t greenStep = getTransitionStep(startColor, endColor, method, numSteps, step, GREEN);
-    int16_t blueStep  = getTransitionStep(startColor, endColor, method, numSteps, step, BLUE);
+    // Incrément calculé pour le canal rouge.
+    const int16_t redStep = getTransitionStep(
+        startColor.red, endColor.red, method, numSteps, step,
+        polarDecreaseFactor, polarIncreaseFactor);
+    // Incrément calculé pour le canal vert.
+    const int16_t greenStep = getTransitionStep(
+        startColor.green, endColor.green, method, numSteps, step,
+        polarDecreaseFactor, polarIncreaseFactor);
+    // Incrément calculé pour le canal bleu.
+    const int16_t blueStep = getTransitionStep(
+        startColor.blue, endColor.blue, method, numSteps, step,
+        polarDecreaseFactor, polarIncreaseFactor);
 
-    //Add the increment to get the next color segments
-    //If new color is a higher value, set the high clamp to the new color
-    //If new color is a smaller value, set the low clamp to the new color
+    // Les bornes suivent la direction de chaque canal vers sa cible.
     if(endColor.red   > startColor.red)   col2.red   = clamp(startColor.red   + redStep,  0,             endColor.red);
 	else                                  col2.red   = clamp(startColor.red   + redStep,  endColor.red,  0xFF);
 	if(endColor.green > startColor.green) col2.green = clamp(startColor.green + greenStep,0,             endColor.green);
@@ -73,7 +151,7 @@ void transitionHelper(Color startColor, Color endColor, uint16_t index, uint16_t
 	if(endColor.blue  > startColor.blue)  col2.blue  = clamp(startColor.blue  + blueStep, 0,             endColor.blue);
 	else                                  col2.blue  = clamp(startColor.blue  + blueStep, endColor.blue, 0xFF);
 	
-    //Let's make sure we hit the target
+    // La dernière étape impose la cible exacte malgré les troncatures.
     if(step == numSteps) {
         col2.red   = endColor.red;
         col2.green = endColor.green;
@@ -83,43 +161,51 @@ void transitionHelper(Color startColor, Color endColor, uint16_t index, uint16_t
     strip.setPixelColor(index, strip.Color(col2.red, col2.green, col2.blue));
 }
 
-//Used to get the next color step for transitionHelper()
-int16_t getTransitionStep(Color startColor, Color endColor, uint16_t method, int16_t numSteps, int16_t step, uint8_t whichColor) {
-	int16_t increment=0;
-
+// ----------------------------------------------------------------------------
+// Calcule l'incrément signé d'un canal pour une étape.
+//
+// Parametres :
+// - startChannel : valeur initiale du canal.
+// - endChannel : valeur cible du canal.
+// - method : interpolation LINEAR ou polaire historique.
+// - numSteps : nombre total d'étapes, strictement positif.
+// - step : étape courante comprise entre un et numSteps.
+// - polarDecreaseFactor : racine de progression précalculée.
+// - polarIncreaseFactor : carré de progression précalculé.
+//
+// Retour :
+// - incrément tronqué comme dans l'implémentation historique.
+// ----------------------------------------------------------------------------
+int16_t getTransitionStep(
+    uint8_t startChannel,
+    uint8_t endChannel,
+    uint16_t method,
+    uint8_t numSteps,
+    uint8_t step,
+    double polarDecreaseFactor,
+    float polarIncreaseFactor) {
+    // Écart signé borné entre -255 et 255.
+    const int16_t difference =
+        static_cast<int16_t>(endChannel) - startChannel;
     if(method == LINEAR) {
-        if(whichColor == RED)        increment = (step * (endColor.red-startColor.red))     / numSteps;
-        else if(whichColor == GREEN) increment = (step * (endColor.green-startColor.green)) / numSteps;
-        else if(whichColor == BLUE)  increment = (step * (endColor.blue-startColor.blue))   / numSteps;
+        return (step * difference) / numSteps;
     }
-	else { // Not Quite POLAR     
-	    if(whichColor == RED) {
-	        if(endColor.red < startColor.red)
-	            increment = sqrt(float(step)/numSteps) * float(endColor.red-startColor.red);
-	        else
-	            increment = (float(step)/numSteps) * (float(step)/numSteps) * float(endColor.red-startColor.red);
-	    }
-	    else if(whichColor == GREEN) {
-	        if(endColor.green < startColor.green)
-	            increment = sqrt(float(step)/numSteps) * float(endColor.green-startColor.green);
-	        else
-	            increment = (float(step)/numSteps) * (float(step)/numSteps) * float(endColor.green-startColor.green);
-	    }
-	    else if(whichColor == BLUE) {
-	        if(endColor.blue < startColor.blue)
-	            increment = sqrt(float(step)/numSteps) * float(endColor.blue-startColor.blue);
-	        else 
-	            increment = (float(step)/numSteps) * (float(step)/numSteps) * float(endColor.blue-startColor.blue);
-	    }
-	}
-
-    return increment;
+    if(endChannel < startChannel) {
+        return polarDecreaseFactor * static_cast<float>(difference);
+    }
+    return polarIncreaseFactor * static_cast<float>(difference);
 }
 
-//Used to make smooth transitions between colors; we give it the color we
-//want to get to, and it figures out how to make it happen by estimating the
-//maximum color level achievable from the given color (if that makes sense)
-// @loop: always FALSE when fading IN to a color; TRUE when fading to black.
+// ----------------------------------------------------------------------------
+// Exécute l'ancienne transition globale à pas d'intensité variables.
+//
+// Parametres :
+// - bgcolor : couleur cible, ou noir pour une extinction progressive.
+// - loop : indique une extinction historique lorsqu'il vaut vrai.
+//
+// Effet de bord :
+// - modifie `run`, le framebuffer et affiche chaque niveau calculé.
+// ----------------------------------------------------------------------------
 void transition(Color bgcolor, bool loop) {
     uint32_t maxColorPixel = getHighestValFromRGB(bgcolor);
     uint32_t top = maxColorPixel > 0 ? maxColorPixel : 0xFF;
@@ -166,15 +252,29 @@ void transition(Color bgcolor, bool loop) {
     }while(tryCount<6 && didWeFindAVoxelStillOn);
 }*/
 
-/** Set the entire cube to one color.
-  @param col The color to set all LEDs in the cube to.
-*/
+// ----------------------------------------------------------------------------
+// Remplit le framebuffer physique avec une couleur uniforme.
+//
+// Parametres :
+// - col : couleur RGB appliquée aux 512 pixels.
+//
+// Effet de bord :
+// - modifie le framebuffer sans appeler `showPixels`.
+// ----------------------------------------------------------------------------
 void background(Color col) {
     for(int index = 0; index < strip.numPixels(); index++)
         strip.setPixelColor(index, strip.Color(col.red, col.green, col.blue));
 }
 
-//Used in all modes to set the brightness, show the lights, process Spark events and delay
+// ----------------------------------------------------------------------------
+// Applique la luminosité, transmet le framebuffer et traite Particle.
+//
+// Retour :
+// - un, pour conserver le contrat historique des appelants.
+//
+// Effet de bord :
+// - pilote les LEDs puis permet au Cloud de traiter ses événements.
+// ----------------------------------------------------------------------------
 int showPixels(void) {
 	strip.setBrightness(brightness);
     strip.show();

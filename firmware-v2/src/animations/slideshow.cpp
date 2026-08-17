@@ -1,9 +1,25 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// SlideShow - Implémentation du défilement d'images monochromes
+// ----------------------------------------------------------------------------
+// Ce fichier lit les images stockées en Flash et anime leur profondeur. Il ne
+// conserve aucun framebuffer ni ordre de diapositives entre deux appels.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Affiche toutes les images Flash dans un ordre aléatoire.
+//
+// Effet de bord :
+// - utilise 23 octets de pile pour l'ordre, modifie le framebuffer et attend
+//   entre les étapes de profondeur.
+// ----------------------------------------------------------------------------
 void slideshow() {
 	unsigned char i,j,k,z,c;
-	int numSlides = sizeof table_3p /  8;
-	int slideShowOrder[numSlides];
+	// Nombre d'images de huit lignes stockées dans la table Flash.
+	const uint8_t numSlides = sizeof table_3p / sizeof table_3p[0];
+	uint8_t slideShowOrder[sizeof table_3p / sizeof table_3p[0]];
+	Color slideTrailColor;
 	j=0;
 	for (i=0; i<numSlides; i++) { slideShowOrder[i] = i; }
 	arrayShuffle(slideShowOrder, numSlides);
@@ -15,11 +31,11 @@ void slideshow() {
 	for (i=0; i<numSlides; i++) {
 		for (j=0; j<8; j++) {
 			for (k=0; k<8; k++) {
-				trailColor = getPixelColor(7-k,7-j,0);
+				slideTrailColor = getPixelColor(7-k,7-j,0);
 				if ((table_3p[slideShowOrder[i]][j]>>k)&1) {
 					for (z=1; z<8; z++) {
 						setPixelColor(7-k,7-j,0,black);
-						setPixelColor(7-k,7-j,z,trailColor);
+						setPixelColor(7-k,7-j,z,slideTrailColor);
 						if (z-1)
 							setPixelColor(7-k,7-j,z-1,black);
 						if(stop || stopDemo) { return;}
@@ -39,27 +55,38 @@ void slideshow() {
 	}
 }
 
+// ----------------------------------------------------------------------------
+// Fait rouler une nappe colorée autour des faces YZ.
+//
+// Parametres :
+// - n : face de départ comprise entre zéro et trois.
+// - speedFactor : diviseur positif du délai utilisateur.
+//
+// Effet de bord :
+// - avance la roue chromatique, modifie le framebuffer et affiche huit étapes.
+// ----------------------------------------------------------------------------
 void roll_apeak_yz(unsigned char n, unsigned int speedFactor) {
 	unsigned char i, j;
+	Color rollColor;
 	
 	for (i=0; i<8; i++) {
 		for (j=0; j<8; j++) {
-			trailColor = getColorFromInteger(Wheel(colorWheel));
+			rollColor = getColorFromInteger(Wheel(colorWheel));
 			switch(n) {
 				case 0:
-					setPixelColor(j, 7, i, trailColor);
+					setPixelColor(j, 7, i, rollColor);
 					setPixelColor(j, i, 0, black);
 					break;
 				case 1:
-					setPixelColor(j, 7-i, 7, trailColor);
+					setPixelColor(j, 7-i, 7, rollColor);
 					setPixelColor(j, 7, i, black);
 					break;
 				case 2:
-					setPixelColor(j, 0, 7-i, trailColor);
+					setPixelColor(j, 0, 7-i, rollColor);
 					setPixelColor(j, 8-i, 7, black);
 					break;
 				case 3:
-					setPixelColor(j, i, 0, trailColor);
+					setPixelColor(j, i, 0, rollColor);
 					setPixelColor(j, 0, 8-i, black);
 					break;
 			}

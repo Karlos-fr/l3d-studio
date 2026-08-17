@@ -1,4 +1,11 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// HyperDisabled - Archive du prototype HyperBall désactivé
+// ----------------------------------------------------------------------------
+// Ce fichier conserve le prototype historique uniquement comme référence. Il
+// ne compile aucune animation et ne réserve aucun état dans le firmware actif.
+// ============================================================================
+
+#ifdef L3D_UNITY_BUILD
 
 /* ======================== HYPER Cube mode routines ======================== */
 /*void hyper() {

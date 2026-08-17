@@ -1,4 +1,11 @@
-﻿#pragma once
+// ============================================================================
+// CubeClassics - Déclaration des animations géométriques historiques
+// ----------------------------------------------------------------------------
+// Ce fichier expose les effets CubeClassics au unity build. Il ne possède ni
+// framebuffer ni état d'animation résident propre.
+// ============================================================================
+
+#pragma once
 
 void runCubeClassics(uint32_t c, uint8_t mode);
 uint8_t findRandomNextSide(uint8_t thisSide);
@@ -16,7 +23,8 @@ void setplane_y (int y, Color col);
 int effect_telcstairs (int invert, int val, Color col);
 int effect_telcstairs_do(int x, int val, Color col);
 int diagonal_planes(Point pA, Point pB, int8_t mode, Color col);
-void setCubeVertices(int8_t index);
+// Décode une arête Flash dans deux points temporaires fournis par l'appelant.
+void setCubeVertices(int8_t index, Point& vertexA, Point& vertexB);
 int folder(uint8_t sideStart, uint8_t sideEnd, Color col);
 int effect_axis_updown_randsuspend (char axis, int sleep, int invert, Color col);
 int effect_loadbar(int axis, Color col);
@@ -31,7 +39,8 @@ float distance2d (float x1, float y1, float x2, float y2);
 int linespin (int iterations, char axis, Color col);
 int sinelines (int iterations, char axis, Color col);
 int spheremove (int iterations, Color col);
-float distance3d (float x1, float y1, float z1, float x2, float y2, float z2);
+// Calcule une distance 3D au carré pour les comparaisons de rayon.
+float distance3dSquared(float x1, float y1, float z1, float x2, float y2, float z2);
 int fireworks (int iterations, int n, Color col);
 int effect_rand_patharound (int iterations, Color col);
 void font_getpath (unsigned char path, unsigned char *destination, int length);

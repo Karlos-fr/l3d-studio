@@ -1,99 +1,161 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// Collide2 - Implementation compacte des points en collision
+// ----------------------------------------------------------------------------
+// Ce fichier anime 72 points sans allocation dynamique. La sphère historique
+// conserve volontairement ses calculs flottants pour préserver son rendu.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Tire une direction orthogonale unitaire pour un point Collide2.
+//
+// Parametres :
+// - dot : point dont les trois composantes de direction sont remplacées.
+//
+// Effet de bord :
+// - consomme des tirages rand jusqu'à obtenir exactement un axe non nul.
+// ----------------------------------------------------------------------------
+void randomizeCollideDirection(CompactCollideDot& dot) {
+  int8_t direction[3];
+  uint8_t axisCount;
+  do {
+    direction[0] = rand() % 3 - 1;
+    direction[1] = rand() % 3 - 1;
+    direction[2] = rand() % 3 - 1;
+    axisCount = abs(direction[0]) + abs(direction[1]) + abs(direction[2]);
+  } while (axisCount != 1);
+
+  dot.directionX = direction[0];
+  dot.directionY = direction[1];
+  dot.directionZ = direction[2];
+}
+
+// ----------------------------------------------------------------------------
+// Initialise les 72 points, couleurs et directions de Collide2.
+//
+// Effet de bord :
+// - remplit l'état compact en conservant l'ordre historique des tirages rand.
+// ----------------------------------------------------------------------------
 void initCollide() {
-  for (int i=0; i<COMAX_DOTS; i++) {
-    //COdots[i] = { rand()%cube.size, rand()%cube.size, rand()%cube.size };
-	COdots[i] = { rand()%SIDE, rand()%SIDE, rand()%SIDE };
-    randomColor(&COclr[i]);
-    int d[3], a;
-    do {
-		d[0] = rand()%3-1;
-		d[1] = rand()%3-1;
-		d[2] = rand()%3-1;
-		a = abs(d[0]) + abs(d[1]) + abs(d[2]);
-	} while (a != 1);
-    COdir[i] = { d[0], d[1], d[2] };
+  for (uint8_t index = 0; index < COLLIDE_DOT_COUNT; index++) {
+    CompactCollideDot& dot = collideDots[index];
+    dot.x = rand() % SIDE;
+    dot.y = rand() % SIDE;
+    dot.z = rand() % SIDE;
+    randomColor(&dot.color);
+    randomizeCollideDirection(dot);
   }
 }
-	int wrapIf (int n) {
-    //if (n >= cube.size) n = 0;
-    //if (n < 0) n = cube.size - 1;
-	if(n >= SIDE)  n = 0;
-    if(n < 0)  n = SIDE - 1;
-    return n;
+
+// ----------------------------------------------------------------------------
+// Replie une coordonnée Collide2 sur l'axe logique 0 à 7.
+//
+// Parametres :
+// - coordinate : coordonnée après un déplacement unitaire.
+//
+// Retour :
+// - coordonnée opposée aux frontières, selon le comportement historique.
+// ----------------------------------------------------------------------------
+CubeAxisIndex wrapCollideCoordinate(int16_t coordinate) {
+  if (coordinate >= SIDE) {
+    return 0;
+  }
+  if (coordinate < 0) {
+    return SIDE - 1;
+  }
+  return static_cast<CubeAxisIndex>(coordinate);
 }
 
+// ----------------------------------------------------------------------------
+// Exécute une frame des 72 points Collide2.
+//
+// Effet de bord :
+// - efface le cube, déplace et dessine les points, traite les collisions puis
+//   modifie occasionnellement leurs directions avant d'afficher la frame.
+// ----------------------------------------------------------------------------
 void collide2() {
-    //cube.background(black); 
-	background(black); 
-	
-	for(int i=0; i<COMAX_DOTS; ++i) {
-		setPixelColor(COdots[i], Color(COclr[i].red/8, COclr[i].green/8, COclr[i].blue/8));
-		COdots[i].x += COdir[i].x;
-		COdots[i].y += COdir[i].y;
-		COdots[i].z += COdir[i].z;
-		COdots[i].x = wrapIf(COdots[i].x);
-		COdots[i].y = wrapIf(COdots[i].y);
-		COdots[i].z = wrapIf(COdots[i].z);
-		//Color test = cube.getVoxel(COdots[i]);
-		Color test = getPixelColor(COdots[i].x, COdots[i].y, COdots[i].z);
-		Color uc = COclr[i];
-		bool bang = false;
-		if(test.red != 0 || test.green != 0 || test.blue != 0) 
-			bang = true;
-		if(bang) {
-			uc = Color(128, 128, 128);
-			//cube.sphere(COdots[i], 1, Color(4, 4, 4));
-			sphere(COdots[i], 1, Color(4, 4, 4));
-		}
-		setPixelColor(COdots[i], uc);
-		if(bang) 
-			//COdots[i] = { rand()%cube.size, rand()%cube.size, rand()%cube.size };
-			COdots[i] = { rand()%SIDE, rand()%SIDE, rand()%SIDE };
-	}
+  background(black);
 
-	for(int i=0; i<COMAX_DOTS; i++) {
-		if (rand()%16 != 0) continue;
-		int d[3], a;
-		
-		do {
-			d[0] = rand()%3-1;
-			d[1] = rand()%3-1;
-			d[2] = rand()%3-1;
-			a = abs(d[0]) + abs(d[1]) + abs(d[2]);
-		} while (a != 1);
-	
-		COdir[i] = { d[0], d[1], d[2] };
-	}
-	
-	if(stop || stopDemo) {return;}
-	showPixels();
-	delay(speed);
-	run = TRUE;
+  for (uint8_t index = 0; index < COLLIDE_DOT_COUNT; index++) {
+    CompactCollideDot& dot = collideDots[index];
+    setPixelColor(
+      dot.x,
+      dot.y,
+      dot.z,
+      Color(dot.color.red / 8, dot.color.green / 8, dot.color.blue / 8)
+    );
+
+    dot.x = wrapCollideCoordinate(dot.x + dot.directionX);
+    dot.y = wrapCollideCoordinate(dot.y + dot.directionY);
+    dot.z = wrapCollideCoordinate(dot.z + dot.directionZ);
+
+    // Couleur déjà présente à la future position du point.
+    const Color occupiedColor = getPixelColor(dot.x, dot.y, dot.z);
+    // Collision détectée dès qu'un canal du voxel cible est non nul.
+    const bool collision =
+      occupiedColor.red != 0 || occupiedColor.green != 0 || occupiedColor.blue != 0;
+    Color renderedColor = dot.color;
+    if (collision) {
+      renderedColor = Color(128, 128, 128);
+      sphere(Point(dot.x, dot.y, dot.z), 1, Color(4, 4, 4));
+    }
+    setPixelColor(dot.x, dot.y, dot.z, renderedColor);
+
+    if (collision) {
+      dot.x = rand() % SIDE;
+      dot.y = rand() % SIDE;
+      dot.z = rand() % SIDE;
+    }
+  }
+
+  for (uint8_t index = 0; index < COLLIDE_DOT_COUNT; index++) {
+    if (rand() % 16 != 0) {
+      continue;
+    }
+    randomizeCollideDirection(collideDots[index]);
+  }
+
+  if (stop || stopDemo) {
+    return;
+  }
+  showPixels();
+  delay(speed);
+  run = TRUE;
 }
 
-
-// draws a hollow  centered around the 'center' Point, with radius
-// radius and color col
-void sphere(Point center, float radius, Color col) {
-	float res = 30;
-	for (float m = 0; m < res; m++) {
-		for (float n = 0; n < res; n++) {
-			//setVoxel(
-			//		center.x + radius * sin((float) PI * m / res) * cos((float) 2 * PI * n / res),
-			//		center.y + radius * sin((float) PI * m / res) * sin((float) 2 * PI * n / res),
-			//		center.z + radius * cos((float) PI * m / res), 
-			//		col);
-			setPixelColor(
-					(int) (center.x + radius * sin((float) PI * m / res) * cos((float) 2 * PI * n / res)),
-					(int) (center.y + radius * sin((float) PI * m / res) * sin((float) 2 * PI * n / res)),
-					(int) (center.z + radius * cos((float) PI * m / res)), 
-					col);
-		}
-	}
+// ----------------------------------------------------------------------------
+// Dessine la sphère creuse historique autour d'un centre.
+//
+// Parametres :
+// - center : centre logique de la sphère.
+// - radius : rayon historique, égal à un dans Collide2.
+// - color : couleur écrite pour chaque échantillon valide.
+//
+// Effet de bord :
+// - effectue 900 tentatives d'écriture avec la troncature flottante historique.
+// ----------------------------------------------------------------------------
+void sphere(Point center, float radius, Color color) {
+  // Résolution angulaire historique sur chacun des deux axes.
+  const float resolution = 30;
+  for (float m = 0; m < resolution; m++) {
+    for (float n = 0; n < resolution; n++) {
+      setPixelColor(
+        static_cast<int>(
+          center.x + radius * sin(static_cast<float>(PI) * m / resolution) *
+          cos(static_cast<float>(2) * PI * n / resolution)
+        ),
+        static_cast<int>(
+          center.y + radius * sin(static_cast<float>(PI) * m / resolution) *
+          sin(static_cast<float>(2) * PI * n / resolution)
+        ),
+        static_cast<int>(
+          center.z + radius * cos(static_cast<float>(PI) * m / resolution)
+        ),
+        color
+      );
+    }
+  }
 }
-
-
-/* ========================== PuckDude mode routines =========================== */
 
 #endif

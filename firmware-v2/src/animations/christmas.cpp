@@ -1,8 +1,23 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// Christmas - Implémentation des deux animations de Noël
+// ----------------------------------------------------------------------------
+// Ce fichier dessine les motifs lumineux et le sapin sur le framebuffer commun.
+// Il ne gère ni le mapping physique ni la sélection des modes.
+// ============================================================================
 
+#ifdef L3D_UNITY_BUILD
+
+// ----------------------------------------------------------------------------
+// Anime les huit passages historiques de guirlandes multicolores.
+//
+// Effet de bord :
+// - remplit la bande physique, l'affiche et applique les délais historiques.
+// ----------------------------------------------------------------------------
 void christmasLights(void) {
-    uint16_t i, f;
-    int speedfactor = 12;    //increase the delay time
+    uint16_t i;
+    uint8_t f;
+    // Multiplicateur historique du délai utilisateur.
+    const uint8_t speedfactor = 12;
     run = TRUE;
     
     for (f=0; f < SIDE; f++) {
@@ -19,7 +34,7 @@ void christmasLights(void) {
         if(stop || stopDemo) {return;}
         showPixels();
         delay(speed*speedfactor);
-        for (int i=0; i < strip.numPixels(); i++)
+        for (uint16_t i=0; i < strip.numPixels(); i++)
             if(i%(SIDE-1)==f) strip.setPixelColor(i, 0,0,0 );
         if(stop || stopDemo) {return;}
         showPixels();
@@ -27,21 +42,30 @@ void christmasLights(void) {
     }
 }
 
-/*** credit: Kevin's friggin' xmas tree - there, have it! **/
+// ----------------------------------------------------------------------------
+// Dessine le sapin puis anime ses lumières, son étoile et sa neige.
+//
+// Effet de bord :
+// - modifie les états statiques de l'étoile, consomme le générateur aléatoire
+//   selon les switches et affiche le framebuffer.
+// ----------------------------------------------------------------------------
 void christmasTree(void) {
-    int xOrigin = 3; 
-    int yOrigin = 3;
-    int speedfactor = 8;    //increase the delay time,
+    // Abscisse centrale du sapin.
+    const uint8_t xOrigin = 3;
+    // Profondeur centrale du sapin.
+    const uint8_t yOrigin = 3;
+    // Multiplicateur historique du délai utilisateur.
+    const uint8_t speedfactor = 8;
     float radius  = 4;
-    static int starColorIdx = 16;
+    // Intensité courante de l'étoile, bornée entre 8 et 128.
+    static uint8_t starColorIdx = 16;
+    // Vrai pendant la phase descendante du clignotement de l'étoile.
     static bool flipped = FALSE;
     run = TRUE;
 
     if(isFirstLap) {
         //Paint the tree
         for(int z=0;z<7;z+=2,radius--) {
-            int gradient = switch1 ? PIXEL_CNT-(radius)*(z*(radius)) : radius+(z*(radius));
-            Color gradedGreen = {fadeSqRt(green.red+gradient),fadeLinear(green.green+gradient),fadeSquare(green.blue+gradient)};
             drawSolidHorizontalCircle(xOrigin, yOrigin, z, radius, green);
             drawSolidHorizontalCircle(xOrigin, yOrigin, z+1, radius-2, green);
             //drawHollowHorizontalCircle(xOrigin, yOrigin, z-1, radius-1, black, TRUE);
@@ -100,7 +124,7 @@ void christmasTree(void) {
     //make it snow?
     if(switch1) {
         //So you want some snow, do ya
-        int whiteLevel;
+        uint8_t whiteLevel;
         Color flakeColor;
         
         //First lets move any flakes that exist
@@ -121,17 +145,18 @@ void christmasTree(void) {
             }
         }
         //Now lets make new flakes - anywhere between 1 and 4 at a time
-        int numFlakes = random(1,4);
+        uint8_t numFlakes = random(1,4);
         for(uint16_t i=0;i<numFlakes;i++) {
-            Point flake = {0,7,0};
+            uint8_t flakeX = 0;
+            uint8_t flakeZ = 0;
             do{
-                flake.x = random(0,7);
-                flake.z = random(0,7);
-            } while(getPixelColor(flake)!=black);
+                flakeX = random(0,7);
+                flakeZ = random(0,7);
+            } while(getPixelColor(flakeX, 7, flakeZ)!=black);
             //make a flake
             whiteLevel = random(80, 255);
             flakeColor = {whiteLevel, whiteLevel, whiteLevel};
-            setPixelColor(flake,flakeColor);
+            setPixelColor(flakeX, 7, flakeZ, flakeColor);
         }
     }
     if(stop || stopDemo) {return;}
