@@ -1,0 +1,26 @@
+{
+  "source": "Photon chicken_turkey exécutant Spark Pixels Mega 1.4",
+  "capturedAt": "2026-08-17",
+  "modeList": "Off;Shuffle;AcidDream;Breathe;BouncyCube;Burst;BuildAWall;Chaser;CheerLights;ChristmasLights;ChristmasTree;Clock;Collide;Collide2;ColorAll;CrumblingPlane;Cubes;CubeClassics;CubePainter;DiagonalPlanes;Digi;DualChase;Filler;Fireworks;Flicker;Folder;Frozen;GoldRain;IFTTT;LineSpin;LineSpiral;Matrix;MovingSphere;PacMan;PlaneFill;Planes;Plasma;Police;Pulse;Pyramid;Rain;Rainbow;RandomPath;SineLines;SineWave;SlidingPlanes;SlideShow;Snake;Squarrel;Spectrum;Stripes;Text;TheaterChase;Transition;UpDown;VoxelDrop;VoxelRandom;WarmFade;Whirlwind;Worms;Zone;ZoneChase;",
+  "modeParmList": "N;N;N;C:1,S:1,\"Sweep BG\";N;N;N;C:1;N;N;S:3,\"Make it Snow\"\"Pulse Star\"\"Lights On\";C:3,S:4,\"3D Clock\"\"24h/12h\"\"Sweep BG\"\"No BG\";N;N;C:1;N;C:4,S:4,\"Fill\"\"Sweep BG\"\"Bleed Edges\"\"Bleed Sides\";C:1,S:1,\"Sweep BG\";N;N;C:1,S:3,\"Color Sweep\"\"Random Colors\"\"Fade In\";C:2;C:3,S:1,\"Sweep BG\";N;C:1;N;N;S:1,\"Sound Reactive\";N;N;N;N;N;N;N;N;N;N;N;N;C:1,S:4,\"Sweep BG\"\"Matrix Mode\"\"Fade Bottom\"\"Lightning!\";N;N;N;N;N;N;N;N;S:2,\"Smooth\"\"Peaks\";N;C:2,S:4,\"Bolden\"\"No BG\"\"Black Text\"\"Sweep BG\",T:;N;N;N;N;N;N;N;N;C:4,S:3,\"Loop\"\"Sweep BG\"\"Lerp\";C:4;",
+  "auxSwtchList": "2,Shuffle,ON,OFF,0;0,Auto Shut Off,ON,OFF,0;1,On Startup,Run Last Mode,Run Demo,0;",
+  "stateAtCapture": {
+    "mode": "Matrix",
+    "speed": 1,
+    "brightness": 2
+  },
+  "commands": {
+    "setModeColor": "M:ColorAll,S:4,B:80,C1:FF0000,",
+    "settingsOnly": "S:4,B:80,",
+    "modeWithSwitches": "M:Rain,S:4,B:40,C1:0000FF,T1:1,T2:0,T3:1,T4:0,",
+    "textMode": "M:Text,S:4,B:80,C1:FFFFFF,C2:000000,T1:1,T2:0,W:HELLO,",
+    "setText": "HELLO",
+    "getSwitchState": "GETSWITCHSTATE:1",
+    "getColor": "GETCOLOR:1",
+    "setTimeZone": "SETTIMEZONE:1",
+    "setAuxSwitch": "SETAUXSWITCH:1,0;",
+    "reboot": "REBOOT:",
+    "cubePainterVoxel": "I42,#FF0000,",
+    "cubePainterClear": "C0:511,"
+  }
+}
