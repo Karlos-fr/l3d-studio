@@ -102,7 +102,7 @@ void cheerlights() {
     // La luminosité et les commandes Cloud restent réactives entre deux polls.
     strip.setBrightness(brightness);
     strip.show();
-    Particle.process();
+    animationProcessCloud();
     delay(100);
     return;
   }
@@ -139,7 +139,7 @@ void cheerlights() {
       client.stop();
       return;
     }
-    Particle.process();
+    animationProcessCloud();
   }
 
   headers = TRUE;

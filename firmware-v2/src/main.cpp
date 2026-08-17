@@ -392,6 +392,7 @@ Timer demoTimer(2*60*1000, advanceDemo);
 
 #include "core/legacy_state.h"
 #include "core/animation_lifecycle.h"
+#include "core/animation_scheduler.h"
 #include "animations/animations.h"
 #include "diagnostics/runtime_diagnostics.h"
 
@@ -483,8 +484,10 @@ void loop() {
 
     if(run) {
 		stop = FALSE;
+        animationSchedulerBeginCycle();
         if(demo) { runDemo(); }
 		else { animationTick(); }
+        animationSchedulerFinishCycle();
     }
 	
 	if(currentModeID == STANDBY) {
@@ -532,6 +535,12 @@ void loop() {
 }
 
 //Disable random seed from the cloud
+#include "core/animation_scheduler.cpp"
+
+// Les modules historiques inclus ci-dessous conservent leur syntaxe `delay`,
+// mais chaque attente sert desormais Particle Cloud et peut etre abregee.
+#define delay(durationMillis) animationCooperativeDelay(durationMillis)
+
 #include "core/mode_runtime.cpp"
 
 #include "core/animation_lifecycle.cpp"
@@ -615,4 +624,6 @@ void loop() {
 #include "cloud/command_parser.cpp"
 
 #include "diagnostics/runtime_diagnostics.cpp"
+
+#undef delay
 

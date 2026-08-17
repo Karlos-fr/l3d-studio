@@ -177,7 +177,7 @@ void listen() {
                     //if(demo) {if(millis() - lastModeSet > twoMinuteInterval) {strip.setBrightness(brightness); return;}}
               		strip.setBrightness(brightness);
                     strip.show();
-                    Particle.process();    //process Spark events
+                    animationProcessCloud();
                 //}
             }
         }

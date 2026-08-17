@@ -278,7 +278,7 @@ void background(Color col) {
 int showPixels(void) {
 	strip.setBrightness(brightness);
     strip.show();
-    Particle.process();    //process Spark events
+    animationProcessCloud();
 	return 1;
 }
 

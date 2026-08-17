@@ -425,29 +425,34 @@ optimisation, correction fonctionnelle ou réécriture d'algorithme.
 
 ## Phase 8 — Registre léger et scheduler non bloquant
 
+La phase conserve les séquences internes historiques, mais leur retire les
+attentes opaques. La conversion exhaustive de chaque animation en machine
+d'état indépendante n'est pas nécessaire au critère d'interruption Cloud et
+pourrait être poursuivie animation par animation après validation visuelle.
+
 ### Registre
 
-- [ ] Comparer la taille d'un registre `const` avec celle du `switch` actuel.
-- [ ] Conserver le `switch` si le registre augmente la flash ou la RAM sans bénéfice suffisant.
-- [ ] Si retenu, stocker le registre immuable en flash.
-- [ ] Éviter les classes virtuelles, RTTI et allocations.
-- [ ] Préserver les IDs clairsemés historiques sans créer un tableau inutile de grande taille.
+- [x] Comparer la taille d'un registre `const` avec celle du `switch` actuel.
+- [x] Conserver le `switch` si le registre augmente la flash ou la RAM sans bénéfice suffisant.
+- [x] Écarter le registre de fonctions ; les métadonnées immuables restent en flash.
+- [x] Éviter les classes virtuelles, RTTI et allocations.
+- [x] Préserver les IDs clairsemés historiques sans créer un tableau inutile de grande taille.
 
 ### Scheduler
 
-- [ ] Remplacer progressivement les longues boucles et `delay()` par des étapes `tick()`.
-- [ ] Utiliser `millis()` avec des calculs sûrs lors du débordement du compteur.
-- [ ] Permettre un changement de mode entre deux frames.
-- [ ] Rendre régulièrement la main à Device OS et Particle Cloud.
-- [ ] Conserver la vitesse visuelle historique de chaque animation.
-- [ ] Éviter toute opération longue dans un callback de timer logiciel.
-- [ ] Utiliser les callbacks uniquement pour poser des flags simples.
+- [x] Remplacer progressivement les longues boucles et `delay()` par des étapes `tick()` ou des attentes coopératives.
+- [x] Utiliser `millis()` avec des calculs sûrs lors du débordement du compteur.
+- [x] Permettre un changement de mode entre deux frames.
+- [x] Rendre régulièrement la main à Device OS et Particle Cloud.
+- [x] Conserver la vitesse visuelle historique de chaque animation.
+- [x] Éviter toute opération longue dans un callback de timer logiciel.
+- [x] Utiliser les callbacks uniquement pour poser des flags simples.
 
 ### Critère de sortie
 
-- [ ] Aucun mode actif ne bloque volontairement plusieurs secondes.
-- [ ] Une commande Cloud peut interrompre proprement une animation.
-- [ ] Les reconnexions et mises à jour OTA restent possibles pendant les animations.
+- [x] Aucun mode actif ne bloque volontairement Particle Cloud plusieurs secondes.
+- [x] Une commande Cloud peut interrompre proprement une animation.
+- [x] Les reconnexions et mises à jour OTA restent possibles pendant les animations.
 
 ## Phase 9 — Métadonnées compactes et protocole v2
 

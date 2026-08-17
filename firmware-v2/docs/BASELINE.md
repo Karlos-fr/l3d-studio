@@ -64,6 +64,7 @@ particle compile photon firmware-v2 --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Nouveau mode GyrophareFR | 2.3.1 | 112 624 | 16 236 | 112 628 | 18 448 |
 | 2026-08-17 | Phase 6, etats d'animations mutualises | 2.3.1 | 112 608 | 13 780 | 112 612 | 18 464 |
 | 2026-08-17 | Phase 7, allocations applicatives supprimees | 2.3.1 | 111 600 | 13 780 | 111 604 | 19 472 |
+| 2026-08-17 | Phase 8, dispatcher et ordonnanceur cooperatif | 2.3.1 | 111 880 | 13 788 | 111 884 | 19 192 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
@@ -147,3 +148,7 @@ sources.
   mode, vitesse, luminosité, six couleurs, quatre switches, texte et commandes
   génériques à `B:1`. Minimum libre de 35 408 octets, aucun OOM, erreur
   CubePainter hors plage `-103`, puis retour sur `Off` avec `brightness=2`.
+- Flash OTA de la phase 8 réalisé le 2026-08-17 : `BuildAWall` et `SlideShow`
+  interrompus par une commande Cloud à `B:1`, minimum libre de 35 400 octets,
+  aucun OOM, OTA réussie pendant `BuildAWall`, puis retour sur `Off` avec
+  `brightness=2`.

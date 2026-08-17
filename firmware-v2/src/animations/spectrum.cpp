@@ -130,7 +130,7 @@ void FFTJoy() {
     if(demo) {
         strip.setBrightness(127);
         strip.show();
-        Particle.process();    //process Spark events
+        animationProcessCloud();
     }
     else {showPixels();}
 }

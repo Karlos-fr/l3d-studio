@@ -6,6 +6,20 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Dispatcher et ordonnanceur coopératif
+
+- Conservation du `switch` d'exécution après comparaison avec une table de 67
+  pointeurs qui aurait ajouté au moins 268 octets de Flash.
+- Redirection des attentes historiques vers des tranches coopératives de 20 ms
+  qui servent Particle Cloud sans changer les durées visuelles demandées.
+- Différé des changements de mode reçus pendant un rendu jusqu'à la frontière
+  sûre suivante, avant le remplacement de l'état d'animation partagé.
+- Protection des noms de modes invalides avant tout accès au registre.
+- Coût mesuré par rapport à la phase 7 : +280 octets de Flash et +8 octets de
+  RAM statique ; 127 tests hôte réussis.
+- Interruptions de `BuildAWall` et `SlideShow` validées à `B:1`, puis OTA
+  réussie pendant `BuildAWall`, sans OOM, avant le retour du cube sur `Off`.
+
 ### Allocations dynamiques applicatives supprimees
 
 - Suppression des dernieres sous-chaines `String` temporaires du parseur Cloud ;
@@ -75,8 +89,8 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 - Tests d'endurance, de reconnexion Wi-Fi et Particle Cloud.
 - Validation du parcours d'authentification avec un compte Particle utilisant
   la MFA.
-- API LAN locale, protocole firmware v2, scheduler non bloquant, EEPROM
-  versionnée et réactivation éventuelle des modes archivés.
+- API LAN locale, protocole firmware v2, EEPROM versionnée et réactivation
+  éventuelle des modes archivés.
 
 ## 2026-08-17 — Refactorisation et optimisation du firmware
 

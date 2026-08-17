@@ -163,13 +163,19 @@ int SetMode(String command) {
 	while(idx != -1) {
 		if(command.charAt(beginIdx) == 'M') {
 			//set the new mode from modeStruct array index
-			returnValue = setNewMode(getModeIndexFromName(
+			int requestedModeIndex = getModeIndexFromName(
                 commandText + beginIdx + 2,
-                idx - beginIdx - 2));
-			if(currentModeID == IFTTTWEATHER) { lastDemo = demo; }
+				idx - beginIdx - 2);
+			returnValue = setNewMode(requestedModeIndex);
+			// Une demande invalide conserve le mode courant et ne dereference
+			// jamais le registre avec l'index d'erreur negatif.
+			int requestedModeID = requestedModeIndex >= 0
+				? modeStruct[requestedModeIndex].modeId
+				: currentModeID;
+			if(requestedModeID == IFTTTWEATHER) { lastDemo = demo; }
 			
 			//Handle Shuffle stuff here
-			if(currentModeID == SHUFFLE) { stopDemo = shuffleMode = TRUE; }
+			if(requestedModeID == SHUFFLE) { stopDemo = shuffleMode = TRUE; }
 			else { stopDemo = shuffleMode = FALSE;  }
 			setAuxSwitchState(SHFL, shuffleMode ? TRUE : FALSE);
 			
@@ -550,6 +556,9 @@ int setNewMode(int newModeIndex) {
     //sprintf(debug,"%i", newModeIndex);
     if(newModeIndex < 0 || newModeIndex >= (int)(sizeof(modeStruct) / sizeof(modeStruct[0])))
         return COMMAND_ERROR_OUT_OF_RANGE;
+
+    if(animationSchedulerDeferModeChange(newModeIndex))
+        return newModeIndex;
 
     // We don't want to switch the cube to a IFTTT alert even when it's set, when the cube
     // is in CUBE PAINTER or LISTENER modes, to keep from disrupting the user experience
