@@ -4,8 +4,8 @@ Ce document decrit l'interface exposee par le firmware
 `SparkPixelsMega.ino` afin de guider l'implementation TypeScript de L3D
 Studio.
 
-Source analysee :
-`download/Spark_Pixels/Firmware/Neopixel_Library/SparkPixels_L3D_Cube/SparkPixelsMega.ino`
+Source active analysée : `firmware/src/main.cpp`. L'empreinte de la source
+upstream importée est conservée dans `firmware/docs/BASELINE.md`.
 
 ## Frontiere fonctionnelle
 

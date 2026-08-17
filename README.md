@@ -8,6 +8,9 @@ Application déployée :
 
 L’objectif est de développer une application TypeScript moderne permettant de contrôler le cube : choix des animations, couleurs, vitesse, luminosité, paramètres, etc.
 
+Le code de l'application se trouve dans `app/src/` et le firmware Particle dans
+`firmware/`.
+
 Dans un premier temps, l’application remplacera l’ancienne app Android Spark Pixels et pilotera le firmware existant SparkPixelsMega, qui contient déjà de nombreuses animations. À terme, le firmware pourra être modifié/forké pour ajouter une API locale et supprimer la dépendance au Particle Cloud.
 
 Ressources :

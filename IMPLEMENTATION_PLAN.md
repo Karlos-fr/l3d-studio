@@ -107,7 +107,7 @@ Objectif : creer une application TypeScript simple, sans React, pour remplacer l
 ### Structure cible
 
 ```text
-src/
+app/src/
   main.ts
   styles.css
   particle/
@@ -154,18 +154,18 @@ src/
 
 ### Etat de validation
 
-- `src/particle/client.ts` implemente le transport Particle Cloud avec `arg=<commande>` pour les fonctions.
-- `src/particle/session.ts` gere le stockage local du token, du refresh token et du device selectionne sans stocker le mot de passe.
-- Les tests unitaires de contrat sont ajoutes dans `src/particle/client.test.ts` et `src/particle/session.test.ts`.
+- `app/src/particle/client.ts` implemente le transport Particle Cloud avec `arg=<commande>` pour les fonctions.
+- `app/src/particle/session.ts` gere le stockage local du token, du refresh token et du device selectionne sans stocker le mot de passe.
+- Les tests unitaires de contrat sont ajoutes dans `app/src/particle/client.test.ts` et `app/src/particle/session.test.ts`.
 - `npx tsc --noEmit` passe dans l'environnement courant.
 - `npm audit --audit-level=moderate` passe avec `0 vulnerabilities`.
 - `npm run test` reste non executable dans cet environnement a cause de la limite memoire WebAssembly deja documentee en phase 3.
 
 ### Livrables
 
-- [x] `src/particle/client.ts`
-- [x] `src/particle/types.ts`
-- [x] `src/particle/session.ts`
+- [x] `app/src/particle/client.ts`
+- [x] `app/src/particle/types.ts`
+- [x] `app/src/particle/session.ts`
 - [x] Tests unitaires du client Particle.
 
 ## Phase 5 - Protocole Spark Pixels
@@ -187,10 +187,10 @@ src/
 
 ### Etat de validation
 
-- `src/sparkpixels/protocol.ts` construit les commandes `SetMode` et `SETAUXSWITCH`.
-- `src/sparkpixels/parsers.ts` parse `modeList`, `modeParmList`, `auxSwtchList` et fusionne les definitions de modes.
-- `src/sparkpixels/types.ts` decrit les modes, parametres, interrupteurs auxiliaires et options de commande.
-- Les tests unitaires de contrat sont ajoutes dans `src/sparkpixels/protocol.test.ts` et `src/sparkpixels/parsers.test.ts`.
+- `app/src/sparkpixels/protocol.ts` construit les commandes `SetMode` et `SETAUXSWITCH`.
+- `app/src/sparkpixels/parsers.ts` parse `modeList`, `modeParmList`, `auxSwtchList` et fusionne les definitions de modes.
+- `app/src/sparkpixels/types.ts` decrit les modes, parametres, interrupteurs auxiliaires et options de commande.
+- Les tests unitaires de contrat sont ajoutes dans `app/src/sparkpixels/protocol.test.ts` et `app/src/sparkpixels/parsers.test.ts`.
 - `npx tsc --noEmit` passe dans l'environnement courant.
 - `npm audit --audit-level=moderate` passe avec `0 vulnerabilities`.
 - `npm run test` reste non executable dans cet environnement a cause de la limite memoire WebAssembly deja documentee.
@@ -206,9 +206,9 @@ SETAUXSWITCH:1,0;
 
 ### Livrables
 
-- [x] `src/sparkpixels/protocol.ts`
-- [x] `src/sparkpixels/parsers.ts`
-- [x] `src/sparkpixels/types.ts`
+- [x] `app/src/sparkpixels/protocol.ts`
+- [x] `app/src/sparkpixels/parsers.ts`
+- [x] `app/src/sparkpixels/types.ts`
 - [x] Tests unitaires couvrant les commandes principales.
 
 ## Phase 6 - Interface MVP
@@ -243,11 +243,11 @@ SETAUXSWITCH:1,0;
 
 ### Etat de validation
 
-- `src/ui/state.ts` porte l'etat applicatif du MVP.
-- `src/ui/render.ts` rend la connexion Particle, les devices, l'etat du cube et les controles de mode.
-- `src/ui/events.ts` branche login, deconnexion, rafraichissement devices, lecture firmware et envoi `SetMode`.
-- `src/ui/preferences.ts` sauvegarde les derniers reglages locaux dans `localStorage`.
-- `src/main.ts` charge la session locale et hydrate les devices quand un token existe.
+- `app/src/ui/state.ts` porte l'etat applicatif du MVP.
+- `app/src/ui/render.ts` rend la connexion Particle, les devices, l'etat du cube et les controles de mode.
+- `app/src/ui/events.ts` branche login, deconnexion, rafraichissement devices, lecture firmware et envoi `SetMode`.
+- `app/src/ui/preferences.ts` sauvegarde les derniers reglages locaux dans `localStorage`.
+- `app/src/main.ts` charge la session locale et hydrate les devices quand un token existe.
 - `npx tsc --noEmit` passe dans l'environnement courant.
 - `npm audit --audit-level=moderate` passe avec `0 vulnerabilities`.
 - Le lancement navigateur avec Vite reste non valide dans cet environnement a cause de la limite memoire WebAssembly deja documentee.
@@ -281,7 +281,7 @@ SETAUXSWITCH:1,0;
 
 ### Etat de validation
 
-- Les erreurs Particle courantes sont traduites en messages utilisateur dans `src/ui/events.ts`.
+- Les erreurs Particle courantes sont traduites en messages utilisateur dans `app/src/ui/events.ts`.
 - Les sessions expirees ou refusees par Particle sont supprimees localement et forcent une reconnexion.
 - Les boutons d'action sont bloques pendant une action asynchrone.
 - La lecture firmware et l'envoi `SetMode` sont bloques quand aucun Photon online n'est selectionne.
@@ -309,10 +309,10 @@ SETAUXSWITCH:1,0;
 
 ### Etat de validation
 
-- `src/sparkpixels/protocol.ts` construit les commandes `GETSWITCHSTATE`, `GETCOLOR`, `SETTIMEZONE`, `SETAUXSWITCH` et `REBOOT`.
-- `src/sparkpixels/parsers.ts` parse `auxSwtchList` et `deviceInfo`.
-- `src/ui/render.ts` affiche les switches globaux, `SetText`, les commandes FnRouter et le panneau `Device Info`.
-- `src/ui/events.ts` appelle la fonction Particle `Function` pour FnRouter et `SetText` pour le texte persistant.
+- `app/src/sparkpixels/protocol.ts` construit les commandes `GETSWITCHSTATE`, `GETCOLOR`, `SETTIMEZONE`, `SETAUXSWITCH` et `REBOOT`.
+- `app/src/sparkpixels/parsers.ts` parse `auxSwtchList` et `deviceInfo`.
+- `app/src/ui/render.ts` affiche les switches globaux, `SetText`, les commandes FnRouter et le panneau `Device Info`.
+- `app/src/ui/events.ts` appelle la fonction Particle `Function` pour FnRouter et `SetText` pour le texte persistant.
 - `CubePainter` reste hors MVP : la fonction ne repond que si le mode courant est `CubePainter`, manipule un buffer 8x8x8 et demande une UI 3D dediee pour eviter des commandes voxel accidentelles.
 - `npx tsc --noEmit` passe dans l'environnement courant.
 - `npm audit --audit-level=moderate` passe avec `0 vulnerabilities`.

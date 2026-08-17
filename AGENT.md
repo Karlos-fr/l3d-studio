@@ -18,8 +18,8 @@ Le projet doit rester simple :
 
 ## Regles Generales
 
-- Ne pas modifier le firmware telecharge dans `download/` sauf demande explicite.
-- Traiter `download/` comme une reference upstream, pas comme du code applicatif principal.
+- Le firmware actif et ses références historiques documentées se trouvent dans
+  `firmware/` ; l'ancienne archive `download/` a été retirée du dépôt de travail.
 - Preferer des modules petits et explicites.
 - Isoler le protocole Spark Pixels de l'interface utilisateur.
 - Isoler les appels Particle Cloud dans un client dedie.
@@ -244,7 +244,7 @@ Eviter les commentaires vides qui repetent simplement le code.
 Le code applicatif doit tendre vers cette separation :
 
 ```text
-src/
+app/src/
   main.ts
   styles.css
   particle/
@@ -298,9 +298,9 @@ L'interface ne doit pas assembler ces chaines directement.
 
 ### Perimetre et reference historique
 
-- Le firmware actif du refactor se trouve dans `firmware-v2/`.
-- Le firmware situe dans `download/` reste une reference upstream en lecture
-  seule, sauf demande explicite contraire.
+- Le firmware actif du refactor se trouve dans `firmware/`.
+- La baseline historique reste décrite par ses mesures et ses empreintes dans
+  `firmware/docs/BASELINE.md` ; aucune copie `download/` n'est conservée.
 - Les IDs de modes, les noms historiques, le protocole Particle et le rendu
   visuel doivent rester compatibles pendant les phases de securisation.
 - Une optimisation ne doit pas etre melangee avec une evolution fonctionnelle
@@ -309,7 +309,7 @@ L'interface ne doit pas assembler ces chaines directement.
 ### Cible et compilation
 
 - La cible de reference est Particle Photon avec Device OS 2.3.1.
-- Compiler avec `firmware-v2/tools/compile.ps1`, qui charge les identifiants
+- Compiler avec `firmware/tools/compile.ps1`, qui charge les identifiants
   depuis `.env.local` sans les afficher.
 - Mesurer et documenter Flash, RAM statique, taille du binaire et mesures
   runtime pertinentes avant de valider une optimisation.
@@ -374,4 +374,4 @@ Avant de terminer une modification applicative :
 - verifier qu'aucun buffer de pile ou acces non borne interdit par la phase n'a
   ete reintroduit ;
 - verifier qu'aucun token ou secret n'a ete ajoute ;
-- verifier que `download/` n'a pas ete modifie sans demande explicite.
+- verifier qu'aucune archive historique volumineuse n'a été réintroduite.

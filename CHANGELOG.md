@@ -6,6 +6,16 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Réorganisation du dépôt
+
+- Fusion de `firmware/` et de l'ancien répertoire de refactor dans un unique
+  projet Particle situé sous `firmware/`.
+- Conservation du pilote canonique dans `firmware/src/platform/neopixel.cpp`
+  et suppression de ses anciennes copies à la racine du firmware.
+- Déplacement de l'application TypeScript dans `app/src/`.
+- Suppression de l'archive upstream `download/`, devenue inutile après
+  conservation des empreintes, mesures et artefacts de rollback.
+
 ### Dispatcher et ordonnanceur coopératif
 
 - Conservation du `switch` d'exécution après comparaison avec une table de 67
@@ -98,8 +108,8 @@ Commits principaux : `e38b664`, `32d5486`, `51a0283`, `d92b9a0`, `2adb3ff`.
 
 ### Projet firmware reproductible
 
-- Création de `firmware-v2/` sans modification de la référence upstream située
-  dans `download/`.
+- Création initiale du projet de refactor sans modification de l'archive
+  upstream alors présente dans le dépôt de travail.
 - Conservation de Particle Photon Gen 2 et de Device OS 2.3.1 comme cible de
   référence.
 - Ajout du projet Particle, de la bibliothèque NeoPixel corrigée et d'un script
@@ -209,7 +219,7 @@ Commits principaux : `e38b664`, `32d5486`, `51a0283`, `d92b9a0`, `2adb3ff`.
 - 99 tests hôte réussis à la fin de la passe.
 - Flash et smoke tests réalisés sur le Photon avec une luminosité limitée à
   `B:1`.
-- Aucun fichier de `download/` et aucun secret local modifié.
+- Aucune archive upstream ni aucun secret local modifié pendant cette phase.
 
 ### Documentation et règles de travail
 

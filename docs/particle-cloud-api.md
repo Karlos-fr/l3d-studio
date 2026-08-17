@@ -7,7 +7,7 @@ firmware `SparkPixelsMega`.
 Sources principales :
 
 - Documentation officielle Particle Cloud API : https://docs.particle.io/reference/cloud-apis/api/
-- Firmware analyse : `download/Spark_Pixels/Firmware/Neopixel_Library/SparkPixels_L3D_Cube/SparkPixelsMega.ino`
+- Firmware analysé : `firmware/src/main.cpp`.
 
 ## Decisions validees
 
