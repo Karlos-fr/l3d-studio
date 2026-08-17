@@ -42,6 +42,54 @@
 #define L3D_LISTENER_ENABLED 0
 #endif
 
+// Active ou retire entierement le premier serveur HTTP du reseau local.
+#ifndef L3D_LOCAL_API_ENABLED
+#define L3D_LOCAL_API_ENABLED 1
+#endif
+
+// Port TCP par defaut du serveur HTTP local.
+#define LOCAL_API_PORT                     8080
+
+// Capacite du chemin HTTP, caractere nul final compris.
+#define LOCAL_API_PATH_LENGTH              64
+
+// Capacite de la ligne de requete, caractere nul final compris.
+#define LOCAL_API_REQUEST_LINE_LENGTH      96
+
+// Capacite d'une ligne d'en-tete, caractere nul final compris.
+#define LOCAL_API_HEADER_LINE_LENGTH       128
+
+// Nombre cumule maximal d'octets d'en-tetes, separateurs CRLF compris.
+#define LOCAL_API_HEADER_BYTES_MAX         512
+
+// Nombre maximal de lignes d'en-tetes acceptees.
+#define LOCAL_API_HEADER_COUNT_MAX         12
+
+// Taille maximale d'un corps de requete, hors terminaison locale.
+#define LOCAL_API_BODY_LENGTH              622
+
+// Taille maximale contractuelle d'un corps de reponse envoye par segments.
+#define LOCAL_API_RESPONSE_BODY_MAX        1536
+
+// Nombre maximal d'octets lus ou ecrits par passage dans le service LAN.
+#define LOCAL_API_BYTES_PER_TICK           256
+
+// Duree maximale sans progres d'une transaction locale.
+#define LOCAL_API_IDLE_TIMEOUT_MS          2000UL
+
+// Duree totale maximale d'une transaction locale.
+#define LOCAL_API_TOTAL_TIMEOUT_MS         5000UL
+
+// Codes reserves aux erreurs de transport de l'API LAN.
+#define LOCAL_API_ERROR_BAD_REQUEST        -200
+#define LOCAL_API_ERROR_TOO_LARGE          -201
+#define LOCAL_API_ERROR_METHOD             -202
+#define LOCAL_API_ERROR_MEDIA_TYPE         -203
+#define LOCAL_API_ERROR_NOT_FOUND          -204
+#define LOCAL_API_ERROR_TIMEOUT            -205
+#define LOCAL_API_ERROR_BUSY               -206
+#define LOCAL_API_ERROR_INTERNAL           -207
+
 // Taille maximale de la reponse compacte des diagnostics.
 #define DIAGNOSTICS_TEXT_LENGTH 256
 

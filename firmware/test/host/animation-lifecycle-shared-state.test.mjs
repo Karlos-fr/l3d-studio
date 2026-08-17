@@ -34,8 +34,8 @@ function readFirmwareSource(relativePath) {
 // Verifie que tous les changements de mode suivent exit puis enter.
 // ----------------------------------------------------------------------------
 test("setNewMode applique la frontiere exit puis enter", () => {
-  // Parseur qui porte l'unique affectation runtime du mode courant.
-  const parser = readFirmwareSource("src/cloud/command_parser.cpp");
+  // Commandes metier qui portent l'unique affectation runtime du mode courant.
+  const parser = readFirmwareSource("src/core/command_dispatch.cpp");
   // Debut de la fonction de changement de mode.
   const start = parser.indexOf("int setNewMode(int newModeIndex)");
   // Corps limite au helper suivant.

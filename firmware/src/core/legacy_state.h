@@ -1021,6 +1021,7 @@ static_assert(sizeof(((SharedAnimationScratch*)0)->spectrumSamples) == 128,
 static_assert(sizeof(SharedAnimationScratch) == PIXEL_CNT * BPP,
     "Le scratch partage ne doit pas ajouter un second framebuffer");
 int CubePainter(String command);
+int cubePainterFromBuffer(const char* commandText, size_t commandLength);
 
 
 /* ====================== CLOCK mode Definitions =================== */
@@ -1419,6 +1420,8 @@ bool isThereEnoughRoomInModeParamList(int textSize);
 int FnRouter(String command);
 int SetMode(String command);
 int SetText(String command);
+int routeCommandFromBuffer(const char* commandText, size_t commandLength);
+int setModeFromBuffer(const char* commandText, size_t commandLength);
 int setTextFromBuffer(const char* text, size_t textLength);
 void makeDeviceInfo(void);
 inline void initEEPROM(void);

@@ -130,7 +130,7 @@ void FFTJoy() {
     if(demo) {
         strip.setBrightness(127);
         strip.show();
-        animationProcessCloud();
+        animationProcessServices();
     }
     else {showPixels();}
 }

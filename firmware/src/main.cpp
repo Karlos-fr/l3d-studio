@@ -389,12 +389,15 @@ Timer demoTimer(2*60*1000, advanceDemo);
 #include "core/shared_types.h"
 #include "core/bounded_text.h"
 #include "cloud/command_validation.h"
+#include "core/command_dispatch.h"
 
 #include "core/legacy_state.h"
 #include "core/animation_lifecycle.h"
 #include "core/animation_scheduler.h"
 #include "animations/animations.h"
 #include "diagnostics/runtime_diagnostics.h"
+#include "network/local_http_parser.h"
+#include "network/local_api_server.h"
 
 // ----------------------------------------------------------------------------
 // Initialise les endpoints Particle, le hardware et l'etat persistant.
@@ -468,6 +471,7 @@ void setup() {
 
     animationLifecycleStart(currentModeID);
     diagnosticsSetupComplete(currentModeID);
+    localApiSetup();
 }
 
 #include "cloud/metadata.cpp"
@@ -481,6 +485,7 @@ void setup() {
 // ----------------------------------------------------------------------------
 void loop() {
 	diagnosticsProcessRequests();
+    localApiProcess();
 
     if(run) {
 		stop = FALSE;
@@ -535,6 +540,10 @@ void loop() {
 }
 
 //Disable random seed from the cloud
+#include "network/local_http_parser.cpp"
+
+#include "network/local_api_server.cpp"
+
 #include "core/animation_scheduler.cpp"
 
 // Les modules historiques inclus ci-dessous conservent leur syntaxe `delay`,
@@ -620,6 +629,8 @@ void loop() {
 #include "animations/cube_bounce.cpp"
 
 #include "animations/slideshow.cpp"
+
+#include "core/command_dispatch.cpp"
 
 #include "cloud/command_parser.cpp"
 

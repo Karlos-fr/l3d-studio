@@ -1,11 +1,13 @@
 // ============================================================================
 // CubePainter - Déclaration des écritures voxel persistantes
 // ----------------------------------------------------------------------------
-// Ce fichier expose uniquement l'endpoint historique CubePainter. Le parsing
-// générique des autres commandes reste dans le module Cloud.
+// Ce fichier expose la commande a buffer fixe et son adaptateur Particle. Le
+// parsing générique des autres commandes reste dans CommandDispatch.
 // ============================================================================
 
 #pragma once
+
+#include <stddef.h>
 
 // ----------------------------------------------------------------------------
 // Convertit une tranche décimale de la commande sans créer de sous-chaîne.
@@ -24,6 +26,21 @@ bool parsePainterVoxelIndex(
     int beginIndex,
     int endIndex,
     int* value);
+
+// ----------------------------------------------------------------------------
+// Valide puis applique une commande CubePainter depuis une tranche bornee.
+//
+// Parametres :
+// - commandText : debut de la commande, sans terminaison obligatoire.
+// - commandLength : nombre exact de caracteres disponibles.
+//
+// Retour :
+// - zero en cas de succes ou un code COMMAND_ERROR negatif.
+//
+// Effet de bord :
+// - modifie les voxels et l'EEPROM uniquement apres validation complete.
+// ----------------------------------------------------------------------------
+int cubePainterFromBuffer(const char* commandText, size_t commandLength);
 
 // ----------------------------------------------------------------------------
 // Valide puis applique une commande de couleur ou d'effacement CubePainter.

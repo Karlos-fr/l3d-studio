@@ -100,7 +100,7 @@ test("GyrophareFR publie l'ID 75 et ses trois options", () => {
 test("GyrophareFR est inclus, dispatché, réinitialisé et plafonné", () => {
   const mainSource = readFirmwareSource("src/main.cpp");
   const runtimeSource = readFirmwareSource("src/core/mode_runtime.cpp");
-  const parserSource = readFirmwareSource("src/cloud/command_parser.cpp");
+  const parserSource = readFirmwareSource("src/core/command_dispatch.cpp");
   assert.match(mainSource, /#include "animations\/gyrophare_fr\.cpp"/u);
   assert.match(runtimeSource, /case GYROPHARE_FR:[\s\S]*?runGyrophareFr\(\)/u);
   assert.match(runtimeSource, /case GYROPHARE_FR:[\s\S]*?resetGyrophareFr\(\)/u);

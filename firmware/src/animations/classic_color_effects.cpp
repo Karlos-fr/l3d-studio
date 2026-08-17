@@ -45,7 +45,7 @@ void flicker(uint32_t c) {
         }
         if(stop || stopDemo) {return;}
         strip.show();
-        animationProcessCloud();
+        animationProcessServices();
         delay(random_delay);
     }
 }
@@ -87,7 +87,7 @@ void pulse_oneColorAll(uint32_t color1) {
   
     if(stop || stopDemo) {return;}
     strip.show();
-    animationProcessCloud();
+    animationProcessServices();
     delay(speed);
 }
 

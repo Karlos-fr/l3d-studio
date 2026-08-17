@@ -81,6 +81,116 @@ inline bool textRangeEquals(
 }
 
 // ----------------------------------------------------------------------------
+// Convertit un caractere ASCII minuscule en majuscule sans modifier les autres.
+//
+// Parametres :
+// - value : caractere a normaliser.
+//
+// Retour :
+// - lettre majuscule correspondante ou caractere original.
+// ----------------------------------------------------------------------------
+inline char asciiUpper(char value) {
+    if(value >= 'a' && value <= 'z')
+        return static_cast<char>(value - 'a' + 'A');
+    return value;
+}
+
+// ----------------------------------------------------------------------------
+// Compare une tranche et une chaine C sans distinguer la casse ASCII.
+//
+// Parametres :
+// - text : debut de la tranche a comparer.
+// - length : longueur exacte de la tranche.
+// - expected : chaine C attendue.
+//
+// Retour :
+// - vrai lorsque les textes sont identiques hors casse ASCII.
+// ----------------------------------------------------------------------------
+inline bool textRangeEqualsIgnoreAsciiCase(
+        const char* text,
+        size_t length,
+        const char* expected) {
+    if(text == NULL || expected == NULL)
+        return false;
+    size_t expectedLength = strlen(expected);
+    if(length != expectedLength)
+        return false;
+    for(size_t index = 0; index < length; index++) {
+        if(asciiUpper(text[index]) != asciiUpper(expected[index]))
+            return false;
+    }
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Recherche un caractere dans une tranche a partir d'un index borne.
+//
+// Parametres :
+// - text : debut de la tranche a parcourir.
+// - length : nombre exact de caracteres disponibles.
+// - expected : caractere recherche.
+// - beginIndex : premier index inspecte.
+//
+// Retour :
+// - index trouve ou moins un lorsque le caractere est absent.
+// ----------------------------------------------------------------------------
+inline int findTextCharacter(
+        const char* text,
+        size_t length,
+        char expected,
+        size_t beginIndex = 0) {
+    if(text == NULL || beginIndex >= length)
+        return -1;
+    for(size_t index = beginIndex; index < length; index++) {
+        if(text[index] == expected)
+            return static_cast<int>(index);
+    }
+    return -1;
+}
+
+// ----------------------------------------------------------------------------
+// Calcule le premier caractere utile selon la semantique de String.trim().
+//
+// Parametres :
+// - text : debut de la tranche a inspecter.
+// - length : nombre exact de caracteres disponibles.
+//
+// Retour :
+// - index du premier caractere ASCII superieur a l'espace, ou length.
+// ----------------------------------------------------------------------------
+inline size_t findTrimmedTextBegin(const char* text, size_t length) {
+    if(text == NULL)
+        return length;
+    size_t beginIndex = 0;
+    while(beginIndex < length && static_cast<uint8_t>(text[beginIndex]) <= 0x20)
+        beginIndex++;
+    return beginIndex;
+}
+
+// ----------------------------------------------------------------------------
+// Calcule la fin exclusive utile selon la semantique de String.trim().
+//
+// Parametres :
+// - text : debut de la tranche a inspecter.
+// - length : nombre exact de caracteres disponibles.
+// - beginIndex : premier caractere deja retenu.
+//
+// Retour :
+// - index exclusif suivant le dernier caractere utile.
+// ----------------------------------------------------------------------------
+inline size_t findTrimmedTextEnd(
+        const char* text,
+        size_t length,
+        size_t beginIndex) {
+    if(text == NULL)
+        return beginIndex;
+    size_t endIndex = length;
+    while(endIndex > beginIndex && static_cast<uint8_t>(text[endIndex - 1]) <= 0x20)
+        endIndex--;
+    return endIndex;
+}
+
+// ----------------------------------------------------------------------------
 // Convertit une tranche hexadecimale en entier non signe.
 //
 // Parametres :

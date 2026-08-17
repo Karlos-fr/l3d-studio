@@ -68,8 +68,8 @@ test("la boucle applique les changements differes apres le rendu", () => {
 // Verifie qu'un callback ne remplace jamais l'etat partage en cours d'usage.
 // ----------------------------------------------------------------------------
 test("setNewMode differe une demande recue pendant Particle.process", () => {
-  // Parseur contenant l'unique changement de mode public.
-  const parser = readFirmwareSource("src/cloud/command_parser.cpp");
+  // Commandes metier contenant l'unique changement de mode public.
+  const parser = readFirmwareSource("src/core/command_dispatch.cpp");
   // Ordonnanceur qui conserve la derniere demande Cloud.
   const scheduler = readFirmwareSource("src/core/animation_scheduler.cpp");
   assert.match(
@@ -88,8 +88,8 @@ test("setNewMode differe une demande recue pendant Particle.process", () => {
 // Verifie qu'un nom inconnu ne lit jamais modeStruct avec l'index moins un.
 // ----------------------------------------------------------------------------
 test("SetMode protege le registre avant de lire le mode demande", () => {
-  // Parseur qui conserve le mode courant lorsque la recherche echoue.
-  const parser = readFirmwareSource("src/cloud/command_parser.cpp");
+  // Commandes metier qui conservent le mode courant lorsque la recherche echoue.
+  const parser = readFirmwareSource("src/core/command_dispatch.cpp");
   assert.match(
     parser,
     /requestedModeIndex >= 0[\s\S]*modeStruct\[requestedModeIndex\]\.modeId[\s\S]*: currentModeID/u,
@@ -106,10 +106,10 @@ test("les attentes servent Particle et supportent le debordement de millis", () 
     scheduler,
     /static_cast<uint32_t>\(millis\(\) - startedAt\) < durationMillis/u,
   );
-  assert.match(scheduler, /ANIMATION_CLOUD_SERVICE_INTERVAL_MS = 20UL/u);
+  assert.match(scheduler, /ANIMATION_SERVICE_INTERVAL_MS = 20UL/u);
   assert.match(
     scheduler,
-    /animationCloudCallbackWindow = TRUE;\s*Particle\.process\(\);/u,
+    /animationServiceCallbackWindow = TRUE;\s*Particle\.process\(\);\s*localApiProcess\(\);/u,
   );
   assert.match(scheduler, /delay\(waitSliceMillis\);/u);
   assert.equal(elapsedMillis(3, UINT32_MAX - 4), 8);

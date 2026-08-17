@@ -36,8 +36,8 @@ bool parsePainterVoxelIndex(
 // Valide puis applique une commande de couleur ou d'effacement CubePainter.
 //
 // Parametres :
-// - command : segments `I`, couleur hexadécimale ou plage `C`, terminés par
-//   une virgule.
+// - commandText : debut des segments `I`, couleur ou plage `C`.
+// - commandLength : nombre exact de caracteres disponibles.
 //
 // Retour :
 // - zéro en cas de succès ou un code COMMAND_ERROR négatif.
@@ -45,37 +45,40 @@ bool parsePainterVoxelIndex(
 // Effet de bord :
 // - modifie uniquement les voxels valides 0 à 511 et leurs octets EEPROM.
 // ----------------------------------------------------------------------------
-int CubePainter(String command) {
+int cubePainterFromBuffer(const char* commandText, size_t commandLength) {
     if (currentModeID != CUBE_PAINTER) {
         return 0;
     }
 
-    // Les espaces extérieurs ne font pas partie du protocole utile.
-    command.trim();
-    if (command.length() == 0) {
+    size_t trimmedBegin = findTrimmedTextBegin(commandText, commandLength);
+    size_t trimmedEnd = findTrimmedTextEnd(
+        commandText,
+        commandLength,
+        trimmedBegin);
+    if(commandText != NULL)
+        commandText += trimmedBegin;
+    commandLength = trimmedEnd - trimmedBegin;
+
+    if (commandText == NULL || commandLength == 0) {
         return COMMAND_ERROR_EMPTY;
     }
-    if (command.length() > CLOUD_COMMAND_MAX_LENGTH) {
+    if (commandLength > CLOUD_COMMAND_MAX_LENGTH) {
         return COMMAND_ERROR_TOO_LONG;
     }
-    if (command.charAt(command.length() - 1) != ',') {
+    if (commandText[commandLength - 1] != ',') {
         return COMMAND_ERROR_MALFORMED;
     }
-
-    command.toUpperCase();
-    // Pointeur stable tant que la chaîne n'est plus modifiée.
-    const char* commandText = command.c_str();
 
     // La commande complète est contrôlée avant la première écriture.
     int selectedVoxel = -1;
     int beginIndex = 0;
-    int endIndex = command.indexOf(',');
+    int endIndex = findTextCharacter(commandText, commandLength, ',');
     while (endIndex != -1) {
         if (endIndex <= beginIndex) {
             return COMMAND_ERROR_MALFORMED;
         }
 
-        const char type = commandText[beginIndex];
+        const char type = asciiUpper(commandText[beginIndex]);
         if (type == 'I') {
             if (!parsePainterVoxelIndex(
                     commandText,
@@ -90,7 +93,11 @@ int CubePainter(String command) {
                 return COMMAND_ERROR_MALFORMED;
             }
         } else if (type == 'C') {
-            const int colonIndex = command.indexOf(':', beginIndex);
+            const int colonIndex = findTextCharacter(
+                commandText,
+                commandLength,
+                ':',
+                static_cast<size_t>(beginIndex));
             if (colonIndex <= beginIndex + 1 || colonIndex >= endIndex - 1) {
                 return COMMAND_ERROR_MALFORMED;
             }
@@ -114,18 +121,22 @@ int CubePainter(String command) {
         }
 
         beginIndex = endIndex + 1;
-        endIndex = command.indexOf(',', beginIndex);
+        endIndex = findTextCharacter(
+            commandText,
+            commandLength,
+            ',',
+            static_cast<size_t>(beginIndex));
     }
-    if (beginIndex != static_cast<int>(command.length())) {
+    if (beginIndex != static_cast<int>(commandLength)) {
         return COMMAND_ERROR_MALFORMED;
     }
 
     run = TRUE;
     selectedVoxel = -1;
     beginIndex = 0;
-    endIndex = command.indexOf(',');
+    endIndex = findTextCharacter(commandText, commandLength, ',');
     while (endIndex != -1) {
-        const char type = commandText[beginIndex];
+        const char type = asciiUpper(commandText[beginIndex]);
         if (type == 'I') {
             parsePainterVoxelIndex(
                 commandText,
@@ -135,14 +146,14 @@ int CubePainter(String command) {
         } else if (type == '#') {
             const int voxelOffset = selectedVoxel * BPP;
             drawingBuffer[voxelOffset] =
-                hexToInt(commandText[beginIndex + 1]) * 16 +
-                hexToInt(commandText[beginIndex + 2]);
+                hexToInt(asciiUpper(commandText[beginIndex + 1])) * 16 +
+                hexToInt(asciiUpper(commandText[beginIndex + 2]));
             drawingBuffer[voxelOffset + 1] =
-                hexToInt(commandText[beginIndex + 3]) * 16 +
-                hexToInt(commandText[beginIndex + 4]);
+                hexToInt(asciiUpper(commandText[beginIndex + 3])) * 16 +
+                hexToInt(asciiUpper(commandText[beginIndex + 4]));
             drawingBuffer[voxelOffset + 2] =
-                hexToInt(commandText[beginIndex + 5]) * 16 +
-                hexToInt(commandText[beginIndex + 6]);
+                hexToInt(asciiUpper(commandText[beginIndex + 5])) * 16 +
+                hexToInt(asciiUpper(commandText[beginIndex + 6]));
             strip.setPixelColor(
                 selectedVoxel,
                 strip.Color(
@@ -153,7 +164,11 @@ int CubePainter(String command) {
             EEPROM.write(voxelOffset + 1, drawingBuffer[voxelOffset + 1]);
             EEPROM.write(voxelOffset + 2, drawingBuffer[voxelOffset + 2]);
         } else {
-            const int colonIndex = command.indexOf(':', beginIndex);
+            const int colonIndex = findTextCharacter(
+                commandText,
+                commandLength,
+                ':',
+                static_cast<size_t>(beginIndex));
             int startVoxel = 0;
             int finishVoxel = 0;
             parsePainterVoxelIndex(
@@ -179,9 +194,29 @@ int CubePainter(String command) {
         }
 
         beginIndex = endIndex + 1;
-        endIndex = command.indexOf(',', beginIndex);
+        endIndex = findTextCharacter(
+            commandText,
+            commandLength,
+            ',',
+            static_cast<size_t>(beginIndex));
     }
     return 0;
+}
+
+// ----------------------------------------------------------------------------
+// Adapte la fonction Particle CubePainter a la commande metier bornee.
+//
+// Parametres :
+// - command : commande historique fournie par Device OS.
+//
+// Retour :
+// - zero en cas de succes ou un code COMMAND_ERROR negatif.
+//
+// Effet de bord :
+// - delegue les ecritures voxel et EEPROM a cubePainterFromBuffer().
+// ----------------------------------------------------------------------------
+int CubePainter(String command) {
+    return cubePainterFromBuffer(command.c_str(), command.length());
 }
 
 #include "color_all.cpp"

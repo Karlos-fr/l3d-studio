@@ -1,8 +1,8 @@
 // ============================================================================
 // AnimationScheduler - Declaration de l'ordonnanceur cooperatif
 // ----------------------------------------------------------------------------
-// Ce module rend la main a Particle pendant les attentes et differe les
-// changements Cloud jusqu'a une frontiere sure entre deux cycles de rendu.
+// Ce module rend la main aux services reseau pendant les attentes et differe
+// les changements de mode jusqu'a une frontiere sure entre deux rendus.
 // ============================================================================
 
 #pragma once
@@ -16,7 +16,7 @@
 void animationSchedulerBeginCycle(void);
 
 // ----------------------------------------------------------------------------
-// Termine un cycle et applique le changement de mode Cloud eventuellement differe.
+// Termine un cycle et applique le changement de mode reseau eventuellement differe.
 //
 // Effet de bord :
 // - peut quitter le mode courant puis initialiser le mode demande.
@@ -24,7 +24,7 @@ void animationSchedulerBeginCycle(void);
 void animationSchedulerFinishCycle(void);
 
 // ----------------------------------------------------------------------------
-// Enregistre un changement de mode lorsqu'un callback Cloud interrompt un rendu.
+// Enregistre un changement de mode lorsqu'un callback reseau interrompt un rendu.
 //
 // Parametres :
 // - modeIndex : index valide dans modeStruct.
@@ -38,15 +38,16 @@ void animationSchedulerFinishCycle(void);
 bool animationSchedulerDeferModeChange(int modeIndex);
 
 // ----------------------------------------------------------------------------
-// Traite les evenements Particle en identifiant la duree du callback Cloud.
+// Traite les services Particle et LAN dans une fenetre de callback protegee.
 //
 // Effet de bord :
-// - peut executer un callback et enregistrer un changement de mode differe.
+// - peut executer un callback et enregistrer un changement de mode differe ;
+// - sert une portion bornee de la transaction HTTP locale.
 // ----------------------------------------------------------------------------
-void animationProcessCloud(void);
+void animationProcessServices(void);
 
 // ----------------------------------------------------------------------------
-// Attend une duree historique tout en servant Particle Cloud.
+// Attend une duree historique tout en servant Particle Cloud et le LAN.
 //
 // Parametres :
 // - durationMillis : attente maximale en millisecondes.

@@ -65,6 +65,8 @@ particle compile photon firmware --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Phase 6, etats d'animations mutualises | 2.3.1 | 112 608 | 13 780 | 112 612 | 18 464 |
 | 2026-08-17 | Phase 7, allocations applicatives supprimees | 2.3.1 | 111 600 | 13 780 | 111 604 | 19 472 |
 | 2026-08-17 | Phase 8, dispatcher et ordonnanceur cooperatif | 2.3.1 | 111 880 | 13 788 | 111 884 | 19 192 |
+| 2026-08-17 | Serveur LAN phase 0, avant implementation | 2.3.1 | 111 880 | 13 788 | 111 884 | 19 192 |
+| 2026-08-17 | Serveur LAN phase 1, commandes separees des transports | 2.3.1 | 111 672 | 13 788 | 111 676 | 19 400 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
@@ -152,3 +154,60 @@ sources.
   interrompus par une commande Cloud à `B:1`, minimum libre de 35 400 octets,
   aucun OOM, OTA réussie pendant `BuildAWall`, puis retour sur `Off` avec
   `brightness=2`.
+
+## Baseline du serveur LAN avant implementation
+
+La phase 0 du serveur LAN a recompilé sans modification fonctionnelle le
+firmware de phase 8. Les mesures Flash, RAM statique et taille du binaire sont
+strictement identiques à la ligne précédente.
+
+Les contrôles runtime ont été réalisés sur `chicken_turkey`, sans flash, avec
+Device OS 2.3.1. Le cube était initialement sur `LineSpin`, vitesse 0 et
+luminosité interne 2. Cet état a été restauré après les essais.
+
+| Mode | Luminosité | Libre courante | Minimum du mode | Minimum global | Frame moyenne | FPS moyen | OOM |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| ColorAll | `B:1` / 2 interne | 36 664 | 35 400 | 34 024 | 432 026 us | 2,3 | 0 |
+| Rain | `B:1` / 2 interne | 35 400 | 35 400 | 34 024 | 152 282 us | 6,5 | 0 |
+
+La mémoire libre enregistrée à la fin de `setup()` est de 37 944 octets. Le
+minimum global de 34 024 octets couvre l'activité déjà exécutée depuis le
+dernier démarrage et n'est pas attribué à une animation unique.
+
+Sur `ColorAll`, la première lecture de `deviceInfo`, environ trois secondes
+après `GETDIAG`, contenait la séquence demandée. Sur `LineSpin`, la fonction
+Cloud a retourné la séquence 2, mais 17 lectures successives pendant plus de
+60 secondes ont conservé le contenu historique de `deviceInfo`. La demande est
+donc acceptée par le thread Cloud mais son formatage reste retardé tant que le
+mode ne rend pas la main à `diagnosticsProcessRequests()`.
+
+Cette observation devient une contrainte du serveur LAN : appeler uniquement
+`localApiProcess()` au début de `loop()` ne suffira pas. Les traitements longs
+devront appeler un service coopératif commun assez souvent pour respecter les
+timeouts du protocole local.
+
+Un redémarrage logiciel par `Function("REBOOT:")` a ensuite validé le retour de
+l'accès Particle Cloud : la première lecture a expiré vers 38 secondes et la
+première réponse valide a été obtenue vers 45 secondes. La luminosité interne 2
+et la vitesse 0 ont été conservées. Le mode chargé au redémarrage était toutefois
+`AcidDream` au lieu du `LineSpin` demandé avant le reset. `LineSpin`, vitesse 0
+et `B:1` ont été réappliqués après le contrôle. Cette anomalie de restauration
+du mode est consignée mais n'est pas corrigée dans la phase 0 du serveur LAN.
+
+## Phase 2 — Socle HTTP local borné
+
+La phase 2 ajoute un `TCPServer` optionnel, un parseur progressif à buffers
+fixes et le service LAN coopératif pendant les animations. Les mesures Photon
+Device OS 2.3.1 du 17 août 2026 sont :
+
+| Variante | Flash | RAM statique | Binaire | Marge Flash |
+| --- | ---: | ---: | ---: | ---: |
+| `L3D_LOCAL_API_ENABLED=0` | 111 640 | 13 788 | 111 644 | 19 432 |
+| `L3D_LOCAL_API_ENABLED=1` | 115 992 | 15 164 | 115 996 | 15 080 |
+
+Le coût mesuré du socle actif est de 4 352 octets de Flash et 1 376 octets de
+RAM statique. Sur le Photon réel, 100 appels `/api/v1/health`, une requête
+interrompue et un appel pendant `BuildAWall,S:0,B:1` ont conservé le minimum
+mémoire à 31 928 octets. Particle Cloud est resté accessible et le cube a été
+remis sur `M:Off,B:1,`. Le détail reproductible figure dans
+`firmware/docs/LOCAL_API_SERVER.md`.

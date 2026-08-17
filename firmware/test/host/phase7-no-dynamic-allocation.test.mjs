@@ -80,16 +80,23 @@ test("le code applicatif ne contient plus d'allocation dynamique", () => {
 // Verifie que les commandes Cloud ne creent plus de sous-chaines temporaires.
 // ----------------------------------------------------------------------------
 test("le parseur Cloud travaille directement sur le buffer Particle", () => {
-  // Parseur principal des commandes historiques.
+  // Adaptateurs Particle des commandes historiques.
   const parser = fs.readFileSync(
     path.join(sourceRoot, "cloud/command_parser.cpp"),
     "utf8",
   );
-  assert.doesNotMatch(stripComments(parser), /\.substring\s*\(/u);
+  // Coeur metier independant de Particle et des String.
+  const dispatch = fs.readFileSync(
+    path.join(sourceRoot, "core/command_dispatch.cpp"),
+    "utf8",
+  );
+  assert.doesNotMatch(stripComments(dispatch), /\.(?:substring|charAt|indexOf|trim|toUpperCase)\s*\(/u);
   assert.doesNotMatch(parser, /FnRouter\(tempBuf\)|SetText\(""\)|GetDiagnostics\("/u);
-  assert.match(parser, /const char\* commandText = command\.c_str\(\);/u);
-  assert.match(parser, /boundedTextCopyRange\(/u);
-  assert.match(parser, /parseHexText\(/u);
+  assert.match(parser, /setModeFromBuffer\(command\.c_str\(\), command\.length\(\)\)/u);
+  assert.match(parser, /routeCommandFromBuffer\(command\.c_str\(\), command\.length\(\)\)/u);
+  assert.match(parser, /setTextFromBuffer\(command\.c_str\(\), command\.length\(\)\)/u);
+  assert.match(dispatch, /boundedTextCopyRange\(/u);
+  assert.match(dispatch, /parseHexText\(/u);
 });
 
 // ----------------------------------------------------------------------------
@@ -103,11 +110,11 @@ test("String reste uniquement aux quatre frontieres Cloud", () => {
       definitions += `${fs.readFileSync(sourcePath, "utf8")}\n`;
     }
   }
-  // Signatures autorisees : validation interne du buffer et quatre callbacks.
+  // Signatures autorisees : les quatre callbacks imposes par Particle.
   const stringSignatures = [...definitions.matchAll(
-    /(?:validateSetModeCommand\(const String&|SetMode\(String|FnRouter\(String|SetText\(String|CubePainter\(String)/gu,
+    /(?:SetMode\(String|FnRouter\(String|SetText\(String|CubePainter\(String)/gu,
   )];
-  assert.equal(stringSignatures.length, 5);
+  assert.equal(stringSignatures.length, 4);
   assert.doesNotMatch(
     stripComments(definitions),
     /\bString\s+[A-Za-z_][A-Za-z0-9_]*\s*[=;]/u,

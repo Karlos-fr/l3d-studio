@@ -2,7 +2,7 @@
 // AnimationScheduler - Implementation de l'ordonnanceur cooperatif
 // ----------------------------------------------------------------------------
 // Ce module ne connait aucune animation. Il protege leur etat partage lors des
-// callbacks Particle et remplace les attentes opaques par des attentes servies.
+// callbacks reseau et remplace les attentes opaques par des attentes servies.
 // ============================================================================
 
 #ifdef L3D_UNITY_BUILD
@@ -13,14 +13,14 @@ const int ANIMATION_PENDING_MODE_NONE = -1;
 // Un cycle de rendu utilise actuellement l'etat partage.
 static bool animationCycleActive = FALSE;
 
-// Particle.process() peut actuellement appeler une fonction Cloud.
-static bool animationCloudCallbackWindow = FALSE;
+// Un service reseau peut actuellement demander un changement de mode.
+static bool animationServiceCallbackWindow = FALSE;
 
-// Index du dernier mode demande pendant la fenetre Cloud courante.
+// Index du dernier mode demande pendant la fenetre de service courante.
 static int animationPendingModeIndex = ANIMATION_PENDING_MODE_NONE;
 
-// Intervalle maximal entre deux traitements Particle pendant une attente.
-const uint32_t ANIMATION_CLOUD_SERVICE_INTERVAL_MS = 20UL;
+// Intervalle maximal entre deux traitements reseau pendant une attente.
+const uint32_t ANIMATION_SERVICE_INTERVAL_MS = 20UL;
 
 // ----------------------------------------------------------------------------
 // Marque le debut d'un cycle de rendu susceptible d'utiliser l'etat partage.
@@ -33,7 +33,7 @@ void animationSchedulerBeginCycle(void) {
 }
 
 // ----------------------------------------------------------------------------
-// Termine un cycle et applique le changement de mode Cloud eventuellement differe.
+// Termine un cycle et applique le changement de mode reseau eventuellement differe.
 //
 // Effet de bord :
 // - appelle setNewMode hors de la pile de l'ancienne animation.
@@ -49,7 +49,7 @@ void animationSchedulerFinishCycle(void) {
 }
 
 // ----------------------------------------------------------------------------
-// Enregistre un changement de mode lorsqu'un callback Cloud interrompt un rendu.
+// Enregistre un changement de mode lorsqu'un callback reseau interrompt un rendu.
 //
 // Parametres :
 // - modeIndex : index valide dans modeStruct.
@@ -61,7 +61,7 @@ void animationSchedulerFinishCycle(void) {
 // - conserve la derniere demande et positionne les drapeaux d'arret historiques.
 // ----------------------------------------------------------------------------
 bool animationSchedulerDeferModeChange(int modeIndex) {
-    if(!animationCycleActive || !animationCloudCallbackWindow)
+    if(!animationCycleActive || !animationServiceCallbackWindow)
         return false;
 
     animationPendingModeIndex = modeIndex;
@@ -71,19 +71,20 @@ bool animationSchedulerDeferModeChange(int modeIndex) {
 }
 
 // ----------------------------------------------------------------------------
-// Traite les evenements Particle en identifiant la duree du callback Cloud.
+// Traite Particle puis une portion du serveur LAN dans une fenetre protegee.
 //
 // Effet de bord :
-// - encadre Particle.process afin que setNewMode puisse differer son action.
+// - encadre les services afin que setNewMode puisse differer son action.
 // ----------------------------------------------------------------------------
-void animationProcessCloud(void) {
-    animationCloudCallbackWindow = TRUE;
+void animationProcessServices(void) {
+    animationServiceCallbackWindow = TRUE;
     Particle.process();
-    animationCloudCallbackWindow = FALSE;
+    localApiProcess();
+    animationServiceCallbackWindow = FALSE;
 }
 
 // ----------------------------------------------------------------------------
-// Attend une duree historique tout en servant Particle Cloud.
+// Attend une duree historique tout en servant Particle Cloud et le LAN.
 //
 // Parametres :
 // - durationMillis : attente maximale en millisecondes.
@@ -94,9 +95,7 @@ void animationProcessCloud(void) {
 void animationCooperativeDelay(uint32_t durationMillis) {
     uint32_t startedAt = millis();
     while(static_cast<uint32_t>(millis() - startedAt) < durationMillis) {
-        animationCloudCallbackWindow = TRUE;
-        Particle.process();
-        animationCloudCallbackWindow = FALSE;
+        animationProcessServices();
         if(animationPendingModeIndex != ANIMATION_PENDING_MODE_NONE)
             return;
 
@@ -106,14 +105,14 @@ void animationCooperativeDelay(uint32_t durationMillis) {
 
         uint32_t remainingMillis = durationMillis - elapsedMillis;
         uint32_t waitSliceMillis = remainingMillis;
-        if(waitSliceMillis > ANIMATION_CLOUD_SERVICE_INTERVAL_MS)
-            waitSliceMillis = ANIMATION_CLOUD_SERVICE_INTERVAL_MS;
+        if(waitSliceMillis > ANIMATION_SERVICE_INTERVAL_MS)
+            waitSliceMillis = ANIMATION_SERVICE_INTERVAL_MS;
 
-        // La pause native borne la charge CPU entre deux services Cloud. La
+        // La pause native borne la charge CPU entre deux services reseau. La
         // fenetre reste active si Device OS livre un callback pendant ce temps.
-        animationCloudCallbackWindow = TRUE;
+        animationServiceCallbackWindow = TRUE;
         delay(waitSliceMillis);
-        animationCloudCallbackWindow = FALSE;
+        animationServiceCallbackWindow = FALSE;
         if(animationPendingModeIndex != ANIMATION_PENDING_MODE_NONE)
             return;
     }
