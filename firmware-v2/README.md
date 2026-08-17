@@ -46,5 +46,6 @@ optimisation ou d'une nouvelle architecture d'exécution.
 - `docs/INVENTORY.md` : inventaire fonctionnel et mémoire ;
 - `docs/ANIMATION_INDEX.md` : correspondance IDs, noms et modules ;
 - `docs/DIAGNOSTICS.md` : format et garanties des mesures runtime ;
+- `docs/SAFETY.md` : pile, buffers bornes et validation des commandes ;
 - `docs/ROLLBACK.md` : retour au firmware stable ;
 - `docs/VISUAL_VALIDATION.md` : comparaison sur le cube réel.

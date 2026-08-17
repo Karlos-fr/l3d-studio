@@ -37,6 +37,7 @@ particle compile photon firmware-v2 --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Phase 1, découpage mécanique unity build | 2.3.1 | 114 328 | 39 852 | 114 332 | 16 744 |
 | 2026-08-17 | Phase 2, diagnostics désactivés | 2.3.1 | 114 328 | 39 852 | 114 332 | 16 744 |
 | 2026-08-17 | Phase 2, diagnostics activés et endpoints historiques réutilisés | 2.3.1 | 115 368 | 39 932 | 115 372 | 15 704 |
+| 2026-08-17 | Phase 3, pile et commandes sécurisées | 2.3.1 | 115 896 | 39 932 | 115 900 | 15 176 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire

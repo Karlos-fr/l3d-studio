@@ -13,22 +13,33 @@ void digi(uint32_t col) {
     run = TRUE;
 }
 
-/**
- * digi() helper function
- * Randomly fills the whole strip with a selected color or a random color
- * @param c: Next Color to populate
- * @switch1 = Random Color Fill: Ignore the passed color and choose random colors for each pixel
- */
+// ----------------------------------------------------------------------------
+// Remplit les pixels dans un ordre aleatoire avec une couleur donnee.
+//
+// Parametres :
+// - c : couleur entiere appliquee, sauf si le mode aleatoire est actif.
+//
+// Retour :
+// - un lorsque le remplissage se termine, zero lorsqu'il est interrompu.
+//
+// Effet de bord :
+// - reutilise l'ordre de pixels du scratch partage et actualise les LED.
+// ----------------------------------------------------------------------------
 int randomPixelFill(uint32_t c) {
     uint16_t i; 
     uint32_t pulseRate;
-    int pixelFillOrder[strip.numPixels()];
+    uint16_t* pixelFillOrder = sharedAnimationScratch.pixelOrder;
     
     for(i=0; i<strip.numPixels(); i++) {
         pixelFillOrder[i]=i;
     }
     
-    arrayShuffle(pixelFillOrder, sizeof pixelFillOrder / sizeof pixelFillOrder[0]);
+    for(i = strip.numPixels() - 1; i > 0; i--) {
+        uint16_t other = random(0, i + 1);
+        uint16_t value = pixelFillOrder[i];
+        pixelFillOrder[i] = pixelFillOrder[other];
+        pixelFillOrder[other] = value;
+    }
     
     for(i=0; i<strip.numPixels(); i++) {
         if(stop || stopDemo) {return 0;}

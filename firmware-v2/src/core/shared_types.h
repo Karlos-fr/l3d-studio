@@ -44,6 +44,13 @@ typedef struct Point {
   Point(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 } Point;
 
+/** Point entier compact reserve aux etats temporaires bornes des animations. */
+typedef struct PackedPoint {
+  int8_t x;
+  int8_t y;
+  int8_t z;
+} PackedPoint;
+
 /** A 3D RGB voxel. */
 typedef struct Voxel {
     Point coordinates;  // 12 Bytes

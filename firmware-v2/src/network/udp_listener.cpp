@@ -1,5 +1,11 @@
 ﻿#ifdef L3D_UNITY_BUILD
 
+// ----------------------------------------------------------------------------
+// Lit une frame TPM2.net bornee et la projette sur les voxels du cube.
+//
+// Effet de bord :
+// - lit le socket UDP, actualise les LED et produit un message de debug borne.
+// ----------------------------------------------------------------------------
 void listen() {
 	//some tpm2.net constants
 	//const char TPM2NET_HEADER_IDENT    = 0x9C;
@@ -16,12 +22,12 @@ void listen() {
     /*--- Size check ---*/
     /*------------------*/
 
-    sprintf(debug,"Received: %d Max: %d",received_packet_size,maximum_received_packet);
+    boundedTextFormat(debug, sizeof(debug), "Received: %d Max: %d", received_packet_size, maximum_received_packet);
 
     if (maximum_received_packet == 0){
         if ((received_packet_size == SINGLE_PLANE_PACKET_SIZE) || (received_packet_size == CUBE_PACKET_SIZE)){
             maximum_received_packet = received_packet_size;
-            sprintf(debug,"Got one %d",maximum_received_packet);
+            boundedTextFormat(debug, sizeof(debug), "Got one %d", maximum_received_packet);
         }
     }
 

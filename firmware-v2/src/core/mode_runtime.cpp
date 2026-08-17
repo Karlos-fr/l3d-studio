@@ -6,6 +6,13 @@ void random_seed_from_cloud(unsigned int seed) {
 
 #include "../storage/eeprom.cpp"
 
+// ----------------------------------------------------------------------------
+// Execute la sequence de demonstration historique puis le mode selectionne.
+//
+// Effet de bord :
+// - fait defiler les messages, change periodiquement de mode et traite les
+//   demandes de diagnostics entre deux frames de texte.
+// ----------------------------------------------------------------------------
 void runDemo() {
     static int textMode=0, frameCount=0;
     static int endOfMessage=0, cycleCount=-1;
@@ -51,9 +58,8 @@ void runDemo() {
         if(textMode == 3) {endOfMessage = strlen(message)*8;}	// Show Welcome Message
         if(textMode >= 4) {endOfMessage = SIDE*map(strlen(message), 1, 63, 1, SIDE)+(strlen(message))*8;}
         cubeGreeting(textMode, frameCount, pos);
-        // The greeting owns the loop for several frames. Service a deferred
-        // diagnostic request here, after rendering has unwound, so Cloud
-        // callers do not have to wait for the entire sequence.
+        // La sequence conserve la main plusieurs frames. La demande differee
+        // est traitee apres le rendu, avec une pile redevenue courte.
         diagnosticsProcessRequests();
 
         frameCount++;
@@ -146,6 +152,12 @@ void advanceDemo() {
 }
 
 
+// ----------------------------------------------------------------------------
+// Execute une frame du mode courant et mesure son cout runtime.
+//
+// Effet de bord :
+// - appelle l'animation selectionnee et actualise les diagnostics de frame.
+// ----------------------------------------------------------------------------
 void runMode() {
 	if(shuffleMode) { 
 		if(stopDemo) {
@@ -361,6 +373,15 @@ void runMode() {
 }
 
 
+// ----------------------------------------------------------------------------
+// Reinitialise les variables propres au mode qui vient d'etre selectionne.
+//
+// Parametres :
+// - modeIndex : ID historique du mode, malgre le nom conserve pour compatibilite.
+//
+// Effet de bord :
+// - reinitialise les etats d'animation et peut effectuer une transition LED.
+// ----------------------------------------------------------------------------
 void resetVariables(int modeIndex) {
 	if(!shuffleMode && demoTimer.isActive()) {
 		demoTimer.stop();
@@ -406,7 +427,7 @@ void resetVariables(int modeIndex) {
             mplane = 3;
             splane = 0;
             thickness = 1;
-            sprintf(clockMessage, "00:00:00XX");
+            boundedTextCopy(clockMessage, sizeof(clockMessage), "00:00:00XX");
             switch(whichTextMode) {
                 case 0:
                     pos = map(strlen(clockMessage), 1, 63, (int)-(SIDE*.5), 0);
@@ -500,7 +521,7 @@ void resetVariables(int modeIndex) {
 		    break;*/
 		case TEXT:
 		{
-            sprintf(message, textInputString);
+            boundedTextCopy(message, sizeof(message), textInputString);
             switch(whichTextMode) {
                 case 0:
                     pos = map(strlen(message), 1, 63, (int)-(SIDE*.98), 0);
@@ -545,10 +566,14 @@ void resetVariables(int modeIndex) {
             }
             transitionAll(black,LINEAR);	
 			break;
-		case CUBE_PAINTER:
+        case CUBE_PAINTER:
 		{
             unsigned char red, green, blue;
-            transitionAll(black,LINEAR);	
+			transitionAll(black,LINEAR);
+
+            // `transitionAll()` partage ce buffer comme scratch ; l'image de
+            // reference de CubePainter reste celle persistee dans l'EEPROM.
+            EEPROM.get(PAINTER_START_ADDR, drawingBuffer);
             
             // (If there's color data previously stored, there's nothing to do)
             // In either case, redraw the cube with the color data from the buffer array

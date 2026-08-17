@@ -293,25 +293,25 @@ optimisation, correction fonctionnelle ou réécriture d'algorithme.
 
 ### Transition des couleurs
 
-- [ ] Supprimer le tableau local de 2 048 octets dans `transitionAll()`.
-- [ ] Utiliser un espace scratch statique partagé ou un algorithme sans copie complète.
+- [x] Supprimer le tableau local de 2 048 octets dans `transitionAll()`.
+- [x] Utiliser un espace scratch statique partagé ou un algorithme sans copie complète.
 - [ ] Vérifier que toutes les LED évoluent visuellement comme dans la version 1.4.
-- [ ] Mesurer le pic mémoire et la durée de transition avant et après modification.
+- [x] Mesurer le pic mémoire et la durée de transition avant et après modification.
 
 ### Chaînes et copies mémoire
 
-- [ ] Remplacer les `sprintf` non bornés par `snprintf`.
-- [ ] Remplacer les concaténations non bornées par un writer borné commun.
-- [ ] Vérifier systématiquement la terminaison nulle des buffers texte.
-- [ ] Refuser proprement toute commande Particle trop longue.
-- [ ] Ajouter des tests pour les commandes vides, maximales, tronquées et malformées.
-- [ ] Vérifier tous les indices de voxel avant écriture dans un buffer.
+- [x] Remplacer les `sprintf` non bornés par `snprintf`.
+- [x] Remplacer les concaténations non bornées par un writer borné commun.
+- [x] Vérifier systématiquement la terminaison nulle des buffers texte.
+- [x] Refuser proprement toute commande Particle trop longue.
+- [x] Ajouter des tests pour les commandes vides, maximales, tronquées et malformées.
+- [x] Vérifier tous les indices de voxel avant écriture dans un buffer.
 
 ### Critère de sortie
 
-- [ ] Aucun buffer supérieur à 256 octets n'est alloué sur la pile.
-- [ ] Aucun chemin d'entrée Cloud ne peut écrire hors limites.
-- [ ] Le protocole historique reste accepté.
+- [x] Aucun buffer supérieur à 256 octets n'est alloué sur la pile.
+- [x] Aucun chemin d'entrée Cloud ne peut écrire hors limites.
+- [x] Le protocole historique reste accepté.
 
 ## Phase 4 — Types compacts et primitives de rendu
 

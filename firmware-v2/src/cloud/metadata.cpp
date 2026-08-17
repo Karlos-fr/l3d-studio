@@ -1,20 +1,33 @@
 ﻿#ifdef L3D_UNITY_BUILD
 
+// ============================================================================
+// Metadata - Construction bornee des variables Cloud historiques
+// ----------------------------------------------------------------------------
+// Ce module assemble les listes et informations publiees par Particle. Il ne
+// modifie pas le protocole de commande ni le rendu des animations.
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Construit les listes historiques des modes et de leurs parametres.
+//
+// Effet de bord :
+// - remplit `modeNameList`, `modeParamList` et `debug` avec des ecritures
+//   bornees.
+// ----------------------------------------------------------------------------
 void makeModeList(void) {
     for(int i=0; i<sizeof modeStruct / sizeof modeStruct[0]; i++) {
         char cNameBuff[20];
 		char cParamBuff[60];
-		if(strlen(modeNameList)+strlen(modeStruct[i].modeName)+1 <= MAX_PUBLISHED_STRING_SIZE) {
-            sprintf(cNameBuff,"%s;",modeStruct[i].modeName );
-		    strcat(modeNameList,cNameBuff);
+		if(boundedTextFormat(cNameBuff, sizeof(cNameBuff), "%s;", modeStruct[i].modeName) &&
+           boundedTextAppend(modeNameList, sizeof(modeNameList), cNameBuff)) {
 		}
 		else {
-		    sprintf(debug,"Error: modeNameList has reached max size limit");
+		    boundedTextCopy(debug, sizeof(debug), "Error: modeNameList has reached max size limit");
 		}
 		
 		if(modeStruct[i].numOfColors==0 && modeStruct[i].numOfSwitches==0 && modeStruct[i].textInput == FALSE) {
 		    if(isThereEnoughRoomInModeParamList(2)) {
-			    strcat(modeParamList,"N;");
+			    boundedTextAppend(modeParamList, sizeof(modeParamList), "N;");
 		    } else { return; }
 		}
 		else {
@@ -23,11 +36,11 @@ void makeModeList(void) {
 					modeStruct[i].numOfColors = MAX_NUM_COLORS;
 				}
 				if(isThereEnoughRoomInModeParamList(4)) {
-    				sprintf(cParamBuff,"C:%i",modeStruct[i].numOfColors);
-    				strcat(modeParamList,cParamBuff);
-    				if(modeStruct[i].numOfSwitches == 0 && modeStruct[i].textInput == FALSE) {
-    					strcat(modeParamList,";");
-    				} else { strcat(modeParamList,","); }
+				    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "C:%i", modeStruct[i].numOfColors);
+				    boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
+				    if(modeStruct[i].numOfSwitches == 0 && modeStruct[i].textInput == FALSE) {
+					    boundedTextAppend(modeParamList, sizeof(modeParamList), ";");
+				    } else { boundedTextAppend(modeParamList, sizeof(modeParamList), ","); }
 				} else { return; }
 			}
 			if(modeStruct[i].numOfSwitches > 0) {
@@ -37,50 +50,62 @@ void makeModeList(void) {
     					modeStruct[i].numOfSwitches = MAX_NUM_SWITCHES;
     				}
     				if(modeStruct[i].numOfSwitches >= 1) {
-    					sprintf(cParamBuff,"S:%i,\"%s\"",modeStruct[i].numOfSwitches,switchTitleStruct[switchTitleStructIdx].switch1Title);
+					    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "S:%i,\"%s\"", modeStruct[i].numOfSwitches, switchTitleStruct[switchTitleStructIdx].switch1Title);
                         //consider this instead: strncat(modeParamList,cParamBuff,MAX_PUBLISHED_STRING_SIZE-strlen(modeParamList)-1);
                         if(isThereEnoughRoomInModeParamList(strlen(cParamBuff)+1)) {
-    					    strcat(modeParamList,cParamBuff);
+						    boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
                         } else { return; }
     				}
     				if(modeStruct[i].numOfSwitches >= 2) {
-    					sprintf(cParamBuff,"\"%s\"",switchTitleStruct[switchTitleStructIdx].switch2Title);
+					    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "\"%s\"", switchTitleStruct[switchTitleStructIdx].switch2Title);
     					if(isThereEnoughRoomInModeParamList(strlen(cParamBuff)+1)) {
-    					    strcat(modeParamList,cParamBuff);
+						    boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
     					} else { return; }
     				}
     				if(modeStruct[i].numOfSwitches >= 3) {
-    					sprintf(cParamBuff,"\"%s\"",switchTitleStruct[switchTitleStructIdx].switch3Title);
+					    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "\"%s\"", switchTitleStruct[switchTitleStructIdx].switch3Title);
     					if(isThereEnoughRoomInModeParamList(strlen(cParamBuff)+1)) {
-    					    strcat(modeParamList,cParamBuff);
+						    boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
     					} else { return; }
     				}
     				if(modeStruct[i].numOfSwitches >= 4) {
-    					sprintf(cParamBuff,"\"%s\"",switchTitleStruct[switchTitleStructIdx].switch4Title);
+					    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "\"%s\"", switchTitleStruct[switchTitleStructIdx].switch4Title);
     					if(isThereEnoughRoomInModeParamList(strlen(cParamBuff)+1)) {
-                            strcat(modeParamList,cParamBuff);
+                            boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
     					} else { return; }
     				}
     			    if(modeStruct[i].textInput == FALSE) {
-    					strcat(modeParamList,";");
-    				}
-    				else { strcat(modeParamList,","); }
+					    boundedTextAppend(modeParamList, sizeof(modeParamList), ";");
+				    }
+				    else { boundedTextAppend(modeParamList, sizeof(modeParamList), ","); }
                 } else {
-                    sprintf(cParamBuff,"S:E;");
+				    boundedTextCopy(cParamBuff, sizeof(cParamBuff), "S:E;");
                     if(isThereEnoughRoomInModeParamList(strlen(cParamBuff)+1)) {
-                       strcat(modeParamList,cParamBuff);
+                       boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
                     } else { return; }
 			    }
 			}
 			if(modeStruct[i].textInput == TRUE) {
 			    if(isThereEnoughRoomInModeParamList(3)) {
-				    strcat(modeParamList,"T:;");
+				    boundedTextAppend(modeParamList, sizeof(modeParamList), "T:;");
 			    } else { return; }
 			}
 		} 
     }
 }
 
+// ----------------------------------------------------------------------------
+// Verifie la place restante avant un ajout dans `modeParamList`.
+//
+// Parametres :
+// - textSize : nombre d'octets a ajouter, hors terminaison finale.
+//
+// Retour :
+// - vrai si l'ajout tient, faux lorsque la liste doit etre terminee.
+//
+// Effet de bord :
+// - remplace si necessaire le dernier separateur valide par un point-virgule.
+// ----------------------------------------------------------------------------
 bool isThereEnoughRoomInModeParamList(int textSize) {
     if(strlen(modeParamList) + textSize + 1 <= MAX_PUBLISHED_STRING_SIZE) {
         return true;
@@ -90,24 +115,40 @@ bool isThereEnoughRoomInModeParamList(int textSize) {
 		idx--;
 	}
 	modeParamList[idx] = ';';
-    sprintf(debug,"Error: modeParamList has reached max size limit");
+    boundedTextCopy(debug, sizeof(debug), "Error: modeParamList has reached max size limit");
     return false;
 }
 
+// ----------------------------------------------------------------------------
+// Recherche les titres de switches associes a un ID de mode.
+//
+// Parametres :
+// - modeId : ID historique du mode.
+//
+// Retour :
+// - index trouve ou moins un si les titres sont absents.
+// ----------------------------------------------------------------------------
 int getSwitchTitleStructIndex(int modeId) {
     uint16_t i;
     for(i=0;i<sizeof switchTitleStruct / sizeof switchTitleStruct[0];i++) {
         if(switchTitleStruct[i].modeId == modeId)
             return i;
     }
-    sprintf(debug,"Error: Missing Switch Titles for mode %s", modeStruct[getModeIndexFromID(modeId)].modeName);
+    boundedTextFormat(debug, sizeof(debug), "Error: Missing Switch Titles for mode %s", modeStruct[getModeIndexFromID(modeId)].modeName);
     return -1;
 }
 
 // Uses the auxSwitchStruct to assemble the cloud attainable auxSwtchList variable
 // Switch param order: "id,title,onName,offName,switchState;"
+// ----------------------------------------------------------------------------
+// Construit la liste Cloud des switches auxiliaires.
+//
+// Effet de bord :
+// - lit leurs etats EEPROM, actualise les variables runtime et remplit
+//   `auxSwitchList` avec des ecritures bornees.
+// ----------------------------------------------------------------------------
 void makeAuxSwitchList(void) {
-    sprintf(auxSwitchList,"");
+    boundedTextClear(auxSwitchList, sizeof(auxSwitchList));
     for(uint16_t i=0;i<sizeof auxSwitchStruct / sizeof auxSwitchStruct[0];i++) {
         // Update Aux Switch states from EEPROM
         int START_ADDRESS = AUXSW_START_ADDR + (auxSwitchStruct[i].auxSwitchId * (sizeof(uint8_t) + 1));
@@ -119,20 +160,20 @@ void makeAuxSwitchList(void) {
         
         char cNameBuff[62];
 		if(strlen(auxSwitchList)+strlen(auxSwitchStruct[i].auxSwitchTitle)+strlen(auxSwitchStruct[i].auxSwitchOnName)+strlen(auxSwitchStruct[i].auxSwitchOffName)+9 <= MAX_PUBLISHED_STRING_SIZE) {
-            sprintf(cNameBuff,"%i,%s,%s,%s,%i;",auxSwitchStruct[i].auxSwitchId,
+            boundedTextFormat(cNameBuff, sizeof(cNameBuff), "%i,%s,%s,%s,%i;", auxSwitchStruct[i].auxSwitchId,
                                                 auxSwitchStruct[i].auxSwitchTitle,
                                                 auxSwitchStruct[i].auxSwitchOnName,
                                                 auxSwitchStruct[i].auxSwitchOffName,
                                                 auxSwitchStruct[i].auxSwitchState ? 1 : 0 );
-		    strcat(auxSwitchList,cNameBuff);
+		    boundedTextAppend(auxSwitchList, sizeof(auxSwitchList), cNameBuff);
 		}
 		else {
-		    sprintf(debug,"Error: auxSwitchList has reached max size limit");
+		    boundedTextCopy(debug, sizeof(debug), "Error: auxSwitchList has reached max size limit");
 		}
 
 		// Update local Aux Switch variables
 		if(-1 == updateAuxSwitches(auxSwitchStruct[i].auxSwitchId))
-		    sprintf(debug,"Error: auxSwitch %s failed to update local variable", auxSwitchStruct[i].auxSwitchTitle);
+		    boundedTextFormat(debug, sizeof(debug), "Error: auxSwitch %s failed to update local variable", auxSwitchStruct[i].auxSwitchTitle);
 	}
 }
 
@@ -158,33 +199,23 @@ int updateAuxSwitches(int id) {
 }
 
 
+// ----------------------------------------------------------------------------
+// Construit la chaine historique d'informations du Photon.
+//
+// Effet de bord :
+// - remplace `deviceInfo` par une chaine bornee contenant reseau, build,
+//   memoire libre et heure courante.
+// ----------------------------------------------------------------------------
 void makeDeviceInfo(void) {
-  	char cBuff[60];
-  	
-  	IPAddress myIp = WiFi.localIP();
-  	sprintf(deviceInfo,"Local IP Address:\"%d.%d.%d.%d\",",myIp[0], myIp[1], myIp[2], myIp[3]);
-
-  	sprintf(cBuff,"SSID:\"%s\",",WiFi.SSID());
-  	strcat(deviceInfo,cBuff);
-
-  	sprintf(cBuff,"WiFi Strength:\"%i\",",WiFi.RSSI());
-  	strcat(deviceInfo,cBuff);
-
-  	sprintf(cBuff,"Firmware ID:\"%s\",",BUILD_FILE_NAME);
-  	strcat(deviceInfo,cBuff);
-  	
-  	sprintf(cBuff,"Firmware Rev:\"%s\",",BUILD_REVISION);
-  	strcat(deviceInfo,cBuff);
-  		
-  	sprintf(cBuff,"Particle Build Version:\"%s\",",System.version().c_str());
-  	strcat(deviceInfo,cBuff);
-  	
-  	sprintf(cBuff,"Free Memory (bytes):\"%i\",",System.freeMemory());
-  	strcat(deviceInfo,cBuff);
-  	
-  	sprintf(cBuff,"Current Time On Device:\"%i:%i:%i %s %s %i %i\",",Time.hour(),Time.minute(),Time.second(),getWeekDay(),getMonth(),Time.day(),Time.year());
-  	//sprintf(cBuff,"Current Time On Device:\"%s\",",Time.timeStr().c_str());
-  	strcat(deviceInfo,cBuff);
+	IPAddress myIp = WiFi.localIP();
+	boundedTextFormat(deviceInfo, sizeof(deviceInfo), "Local IP Address:\"%d.%d.%d.%d\",", myIp[0], myIp[1], myIp[2], myIp[3]);
+	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "SSID:\"%s\",", WiFi.SSID());
+	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "WiFi Strength:\"%i\",", WiFi.RSSI());
+	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Firmware ID:\"%s\",", BUILD_FILE_NAME);
+	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Firmware Rev:\"%s\",", BUILD_REVISION);
+	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Particle Build Version:\"%s\",", System.version().c_str());
+	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Free Memory (bytes):\"%i\",", System.freeMemory());
+	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Current Time On Device:\"%i:%i:%i %s %s %i %i\",", Time.hour(), Time.minute(), Time.second(), getWeekDay(), getMonth(), Time.day(), Time.year());
 }
   
 char* getWeekDay(void) {

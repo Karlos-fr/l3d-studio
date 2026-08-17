@@ -1,5 +1,12 @@
 ﻿#ifdef L3D_UNITY_BUILD
 
+// ----------------------------------------------------------------------------
+// Calcule puis affiche une frame du spectre audio historique.
+//
+// Effet de bord :
+// - echantillonne le microphone, actualise les pics et ecrit le debug avec une
+//   taille bornee.
+// ----------------------------------------------------------------------------
 void FFTJoy() {
     run = TRUE;
     
@@ -28,7 +35,7 @@ void FFTJoy() {
             maxVal=imaginary[i];
     }
         
-    sprintf(debug,"%f", maxVal);
+    boundedTextFormat(debug, sizeof(debug), "%f", maxVal);
     /* We try to keep the baseline reading at 450.0 when idle;                          *
      * when peaking, readings can get upwards from 1000.0 to 1200.0 (clipping occurs);  *
      * maxVal is constantly adjusted to keep mean readings within optimal capture range */

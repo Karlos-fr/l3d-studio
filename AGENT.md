@@ -294,6 +294,75 @@ SETAUXSWITCH:1,0;
 
 L'interface ne doit pas assembler ces chaines directement.
 
+## Adaptation au Firmware Refactore
+
+### Perimetre et reference historique
+
+- Le firmware actif du refactor se trouve dans `firmware-v2/`.
+- Le firmware situe dans `download/` reste une reference upstream en lecture
+  seule, sauf demande explicite contraire.
+- Les IDs de modes, les noms historiques, le protocole Particle et le rendu
+  visuel doivent rester compatibles pendant les phases de securisation.
+- Une optimisation ne doit pas etre melangee avec une evolution fonctionnelle
+  sans tache et mesure distinctes.
+
+### Cible et compilation
+
+- La cible de reference est Particle Photon avec Device OS 2.3.1.
+- Compiler avec `firmware-v2/tools/compile.ps1`, qui charge les identifiants
+  depuis `.env.local` sans les afficher.
+- Mesurer et documenter Flash, RAM statique, taille du binaire et mesures
+  runtime pertinentes avant de valider une optimisation.
+- Une optimisation desactivee par un drapeau de compilation doit retrouver la
+  reference attendue lorsque ce critere fait partie de la phase.
+
+### Contraintes memoire et surete
+
+- Ne pas ajouter d'allocation dynamique dans le chemin de rendu.
+- Eviter `String`, `new`, `vector` et les conteneurs dynamiques dans toute
+  nouvelle implementation firmware ; leur maintien temporaire dans le code
+  historique doit etre explicite.
+- Aucun buffer local superieur a 256 octets ne doit etre place sur la pile.
+- Preferer un scratch statique partage aux buffers temporaires concurrents,
+  uniquement lorsque les durees de vie sont mutuellement exclusives et
+  documentees.
+- Toute commande Cloud doit etre bornee et validee avant de modifier l'etat,
+  un framebuffer ou l'EEPROM.
+- Toute coordonnee ou tout index doit etre valide avant une ecriture dans un
+  buffer. Les primitives de rendu doivent rester la frontiere de controle.
+- Un handler systeme ou memoire ne doit pas publier, allouer, formater une
+  chaine complexe ni redemarrer directement le Photon.
+
+### Compatibilite et validation
+
+- Conserver les commandes et valeurs de retour historiques pour les entrees
+  valides. Les nouveaux codes d'erreur doivent etre negatifs et documentes.
+- Ajouter des tests pour les commandes vides, maximales, tronquees, malformees
+  et hors plage.
+- Toute validation visuelle de demonstration doit utiliser `B:1`, soit une
+  luminosite demandee de 1 %.
+- Les tests materiels longs restent des taches explicites ; ne pas les marquer
+  comme realises sur la seule base d'un test court ou d'une compilation.
+
+### Commentaires du firmware
+
+- Les fichiers C++ et les scripts de test du firmware suivent les memes regles
+  de langue, d'en-tete, de fonctions et de constantes que les sources
+  TypeScript.
+- Utiliser la structure separatrice `// ===`, `// ---` pour les en-tetes de
+  fichiers C++ et `// ---` pour les commentaires de fonctions.
+- Tout nouveau fichier et toute nouvelle fonction doivent etre entierement
+  conformes des leur creation.
+- Lorsqu'une fonction historique est modifiee, ajouter ou corriger son
+  commentaire d'en-tete en francais dans la meme tache.
+- Les commentaires historiques anglais situes hors des fonctions touchees
+  peuvent rester temporairement afin d'eviter une reecriture documentaire
+  massive sans lien avec la phase courante. Aucun nouveau commentaire anglais
+  ne doit etre introduit.
+- Un commentaire d'optimisation doit expliquer la duree de vie du scratch, la
+  borne protegee ou la raison de compatibilite ; il ne doit pas paraphraser le
+  code.
+
 ## Verification Avant Livraison
 
 Avant de terminer une modification applicative :
@@ -301,5 +370,8 @@ Avant de terminer une modification applicative :
 - lancer les tests disponibles ;
 - lancer le build si le projet est initialise ;
 - verifier que les commentaires nouveaux respectent ces regles ;
+- pour le firmware, lancer les tests hote et la compilation Particle 2.3.1 ;
+- verifier qu'aucun buffer de pile ou acces non borne interdit par la phase n'a
+  ete reintroduit ;
 - verifier qu'aucun token ou secret n'a ete ajoute ;
 - verifier que `download/` n'a pas ete modifie sans demande explicite.

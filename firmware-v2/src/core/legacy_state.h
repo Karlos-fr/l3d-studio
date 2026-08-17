@@ -574,6 +574,7 @@ int PDframe=0;
 Color voxelColor;
 void puckDude(void);
 void rotate_x(Point& a, int b);
+void rotate_x(PackedPoint& a, int b);
 
 
 /* ========================= Transition Definitions ========================= */
@@ -791,7 +792,18 @@ void cheerlights(void);
 
 
 /* ======================= CUBE PAINTER mode Definitions ===================== */
-unsigned char drawingBuffer[PIXEL_CNT*BPP];
+// Espace partage de 1 536 octets utilise par des animations mutuellement
+// exclusives. Le membre `bytes` conserve l'API historique de CubePainter.
+union SharedAnimationScratch {
+    unsigned char bytes[PIXEL_CNT * BPP];
+    uint16_t pixelOrder[PIXEL_CNT];
+    float particles[50][6];
+    PackedPoint puckSprites[4][65];
+};
+SharedAnimationScratch sharedAnimationScratch;
+#define drawingBuffer sharedAnimationScratch.bytes
+static_assert(sizeof(SharedAnimationScratch) == PIXEL_CNT * BPP,
+    "Le scratch partage ne doit pas ajouter un second framebuffer");
 int CubePainter(String command);
 
 

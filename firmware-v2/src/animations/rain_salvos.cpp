@@ -41,6 +41,12 @@ void acidRain() {
     showPixels();
 }
 
+// ----------------------------------------------------------------------------
+// Echantillonne le microphone et actualise le niveau utilise par AcidRain.
+//
+// Effet de bord :
+// - met a jour les statistiques audio et le buffer de debug borne.
+// ----------------------------------------------------------------------------
 void checkMicrohpone() {
 	const uint8_t NUM_SAMPLES=5;
   	int runningAverage=0;
@@ -61,7 +67,7 @@ void checkMicrohpone() {
 		if(stop || stopDemo) {return;}
 	}
   	runningAverage/=NUM_SAMPLES;
-  	sprintf(debug,"%f", maxVal);
+		boundedTextFormat(debug, sizeof(debug), "%f", maxVal);
     /* We try to keep the baseline reading at 450.0 when idle;                          *
      * when peaking, readings can get upwards from 1000.0 to 1200.0 (clipping occurs);  *
      * maxVal is constantly adjusted to keep mean readings within optimal capture range */

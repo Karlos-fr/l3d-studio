@@ -390,11 +390,20 @@ Timer demoTimer(2*60*1000, advanceDemo);
 
 #include "config/mode_ids.h"
 #include "core/shared_types.h"
+#include "core/bounded_text.h"
+#include "cloud/command_validation.h"
 
 #include "core/legacy_state.h"
 #include "animations/animations.h"
 #include "diagnostics/runtime_diagnostics.h"
 
+// ----------------------------------------------------------------------------
+// Initialise les endpoints Particle, le hardware et l'etat persistant.
+//
+// Effet de bord :
+// - enregistre les fonctions Cloud, initialise les LED, l'EEPROM, le microphone
+//   et les diagnostics.
+// ----------------------------------------------------------------------------
 void setup() {
     diagnosticsSetupEarly();
 
@@ -434,9 +443,9 @@ void setup() {
 	strip.begin();
     
     //Clear the mode list and mode param list variables
-	sprintf(modeNameList,"");
-	sprintf(modeParamList,"");
-	sprintf(auxSwitchList,"");
+	boundedTextClear(modeNameList, sizeof(modeNameList));
+	boundedTextClear(modeParamList, sizeof(modeParamList));
+	boundedTextClear(auxSwitchList, sizeof(auxSwitchList));
     
     /***************** DEBUG *****************/
     //clearEEPROM();    // Pre-0.4.9 firmware
@@ -464,6 +473,13 @@ void setup() {
 
 #include "cloud/metadata.cpp"
 
+// ----------------------------------------------------------------------------
+// Orchestre le rendu courant et les taches periodiques du firmware.
+//
+// Effet de bord :
+// - execute une frame, traite les diagnostics, actualise les metadonnees et
+//   peut demander une synchronisation horaire ou un redemarrage.
+// ----------------------------------------------------------------------------
 void loop() {
 	diagnosticsProcessRequests();
 

@@ -14,3 +14,14 @@ Les premières cibles de tests après le découpage mécanique seront :
 
 Aucun framework de test C++ n'est ajouté pendant la baseline afin de ne pas
 modifier la compilation Particle de référence.
+
+À partir de la phase 3, les contrats de sécurité indépendants du hardware sont
+testés avec le runner `node:test` fourni par Node.js :
+
+```powershell
+node --test firmware-v2/test/host/*.test.mjs
+```
+
+Ces tests couvrent les fixtures historiques, les commandes vides, maximales,
+tronquées et malformées, les bornes CubePainter et les invariants statiques des
+buffers partagés. La compilation cloud reste le test autoritatif du C++ Particle.

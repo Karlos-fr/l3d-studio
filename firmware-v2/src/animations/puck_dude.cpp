@@ -1,13 +1,27 @@
 ﻿#ifdef L3D_UNITY_BUILD
 
+// ============================================================================
+// PuckDude - Implementation de l'animation PacMan historique
+// ----------------------------------------------------------------------------
+// Ce module dessine les sprites sur le cube avec des points entiers compacts.
+// Il partage son stockage temporaire avec les autres animations exclusives.
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Construit, transforme et affiche une frame des personnages PacMan.
+//
+// Effet de bord :
+// - reutilise les quatre zones de sprites du scratch partage et incremente
+//   `PDframe`.
+// ----------------------------------------------------------------------------
 void puckDude() {
 	background(black);
 	
 	uint8_t spritesize = 65;
-	Point puckdude[spritesize],
-		  ghost[spritesize],
-		  ghostface[spritesize],
-		  ghosteye[spritesize];
+	PackedPoint* puckdude = sharedAnimationScratch.puckSprites[0];
+	PackedPoint* ghost = sharedAnimationScratch.puckSprites[1];
+	PackedPoint* ghostface = sharedAnimationScratch.puckSprites[2];
+	PackedPoint* ghosteye = sharedAnimationScratch.puckSprites[3];
 
 	for(uint8_t i=spritesize-1;i>0;i--){
 	    puckdude[i]={-1,-1,-1};
@@ -248,7 +262,60 @@ void rotate_x(Point& a, int b) {
             }
         }
     }
-} 
+}
+
+// ----------------------------------------------------------------------------
+// Fait tourner un point entier compact autour du contour horizontal du cube.
+//
+// Parametres :
+// - a : point compact modifie sur place.
+// - b : deplacement signe, exprime selon PDSPEED.
+//
+// Effet de bord :
+// - modifie les coordonnees X et Z du point.
+// ----------------------------------------------------------------------------
+void rotate_x(PackedPoint& a, int b) {
+    if(b > 0) {
+        for(int i = abs(b) / PDSPEED; i > 0; i--) {
+            if(a.z == 7) {
+                if(a.x < 7) a.x += 1;
+                else a.z -= 1;
+            }
+            else if(a.x == 7) {
+                if(a.z > 0) a.z -= 1;
+                else a.x -= 1;
+            }
+            else if(a.z == 0) {
+                if(a.x > 0) a.x -= 1;
+                else a.z += 1;
+            }
+            else if(a.x == 0) {
+                if(a.z < 7) a.z += 1;
+                else a.x -= 1;
+            }
+        }
+    }
+    else {
+        for(int i = abs(b) / PDSPEED; i > 0; i--) {
+            if(a.z == 7) {
+                if(a.x > 0) a.x -= 1;
+                else a.z -= 1;
+            }
+            else if(a.x == 7) {
+                if(a.z < 7) a.z += 1;
+                else a.x += 1;
+            }
+            else if(a.z == 0) {
+                if(a.x < 7) a.x += 1;
+                else a.z -= 1;
+            }
+            else if(a.x == 0) {
+                if(a.z > 0) a.z -= 1;
+                else a.x += 1;
+            }
+        }
+    }
+}
 
 
 #include "roman_candle_disabled.cpp"

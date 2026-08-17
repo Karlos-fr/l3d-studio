@@ -1,18 +1,39 @@
 ﻿#ifdef L3D_UNITY_BUILD
 
+// ----------------------------------------------------------------------------
+// Fait evoluer simultanement les 512 pixels vers une couleur cible.
+//
+// Parametres :
+// - endColor : couleur atteinte a la derniere etape.
+// - method : courbe LINEAR ou POLAR utilisee par l'interpolation historique.
+//
+// Effet de bord :
+// - utilise temporairement `drawingBuffer`, affiche huit etapes et traite les
+//   evenements Particle entre les affichages.
+// ----------------------------------------------------------------------------
 void transitionAll(Color endColor, uint16_t method) {
     int numSteps = 8;
-    uint32_t startColor[strip.numPixels()];
     //run = FALSE;
-    
-    //Save the start color for each pixel - yeah, I know this is using a lot of memory, but I'm not smart enough to do it a better way
+
+    // Le buffer RGB persistant de CubePainter sert ici de scratch. Cette duree
+    // de vie exclusive retire 2 048 octets de la pile sans second framebuffer.
+    // CubePainter recharge ensuite son contenu depuis l'EEPROM a son entree.
     for(int index = 0; index < strip.numPixels(); index++) {
-        startColor[index] = strip.getPixelColor(index);
+        Color startColor = getColorFromInteger(strip.getPixelColor(index));
+        int offset = index * BPP;
+        drawingBuffer[offset] = startColor.red;
+        drawingBuffer[offset + 1] = startColor.green;
+        drawingBuffer[offset + 2] = startColor.blue;
     }
 
     for(int i=1; i<=numSteps; i++) {
         for(int index = 0; index < strip.numPixels(); index++) {
-            transitionHelper(getColorFromInteger(startColor[index]), endColor, index, method, numSteps, i); 
+            int offset = index * BPP;
+            Color startColor = Color(
+                drawingBuffer[offset],
+                drawingBuffer[offset + 1],
+                drawingBuffer[offset + 2]);
+            transitionHelper(startColor, endColor, index, method, numSteps, i);
             if(stop || stopDemo) {return;}
         }
         showPixels();

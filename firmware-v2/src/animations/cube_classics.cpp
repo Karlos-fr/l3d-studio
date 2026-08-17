@@ -1636,6 +1636,20 @@ float distance3d (float x1, float y1, float z1, float x2, float y2, float z2) {
 	return dist;
 }
 
+// ----------------------------------------------------------------------------
+// Anime une serie d'explosions avec un nombre borne de particules.
+//
+// Parametres :
+// - iterations : nombre d'explosions successives.
+// - n : nombre de particules, compris entre 1 et 50.
+// - col : couleur de base de l'explosion.
+//
+// Retour :
+// - un apres execution, zero en cas d'interruption ou de borne invalide.
+//
+// Effet de bord :
+// - reutilise la zone de particules du scratch partage et affiche les frames.
+// ----------------------------------------------------------------------------
 int fireworks (int iterations, int n, Color col) {
     int i,f,e;
     int rand_y, rand_x, rand_z;
@@ -1643,7 +1657,9 @@ int fireworks (int iterations, int n, Color col) {
 	float origin_y = 3;
 	float origin_z = 3;
 	float slowrate, gravity;
-	float particles[n][6];  // Particles and their position, x,y,z and their movement, dx, dy, dz
+	if(n < 1 || n > 50)
+		return 0;
+	float (*particles)[6] = sharedAnimationScratch.particles;
     
 	//background(black);
 

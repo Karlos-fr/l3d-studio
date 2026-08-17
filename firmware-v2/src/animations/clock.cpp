@@ -18,6 +18,12 @@ void showClock() {
         textClock();
 }
 
+// ----------------------------------------------------------------------------
+// Formate et affiche l'heure sous forme de texte anime.
+//
+// Effet de bord :
+// - met a jour `clockMessage` dans ses bornes puis affiche le texte sur le cube.
+// ----------------------------------------------------------------------------
 void textClock() {
     Color bg = getColorFromInteger(color1);
     //static int frameCount = 0;
@@ -53,7 +59,7 @@ void textClock() {
     float speedFactor = .05 + ratio * ((map(speed, 1, 120, 120, 1) * .05) - .05);
     pos += speedFactor;
 
-    sprintf(clockMessage, "%i%i:%i%i:%i%i%s", hTenths, hUnits, mTenths, mUnits, sTenths, sUnits, switch2 ? "" : Time.isAM() ? "AM" : "PM");
+    boundedTextFormat(clockMessage, sizeof(clockMessage), "%i%i:%i%i:%i%i%s", hTenths, hUnits, mTenths, mUnits, sTenths, sUnits, switch2 ? "" : Time.isAM() ? "AM" : "PM");
 	if(stop || stopDemo) {return;}
 	
 	switch(whichTextMode) {

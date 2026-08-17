@@ -1,5 +1,12 @@
 ﻿#ifdef L3D_UNITY_BUILD
 
+// ----------------------------------------------------------------------------
+// Recupere et affiche la couleur courante du service CheerLights.
+//
+// Effet de bord :
+// - utilise le reseau, actualise les LED et copie les diagnostics HTTP dans un
+//   buffer borne.
+// ----------------------------------------------------------------------------
 void cheerlights(void) {
     int red, green, blue;
     bool headers;
@@ -43,11 +50,11 @@ void cheerlights(void) {
             client.println("Content-Length: 0");
             client.println();
           	// DEBUG
-            sprintf(debug, "connected");
+            boundedTextCopy(debug, sizeof(debug), "connected");
         }
         else {
           	// DEBUG
-            sprintf(debug, "not connected");
+            boundedTextCopy(debug, sizeof(debug), "not connected");
 			
 			if(stop || stopDemo) {demo = FALSE; client.stop(); return;}
             client.stop();
@@ -133,11 +140,11 @@ void cheerlights(void) {
         	    }
     	    }
           	// DEBUG
-            sprintf(debug, response);
+            boundedTextCopy(debug, sizeof(debug), response.c_str());
         }
         else {
           	// DEBUG
-            sprintf(debug, "no reply from host");
+            boundedTextCopy(debug, sizeof(debug), "no reply from host");
             if(stop || stopDemo) {demo = FALSE; client.stop(); return;}
             client.stop();
 		    response = "";

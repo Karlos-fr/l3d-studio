@@ -1,9 +1,98 @@
 ﻿#ifdef L3D_UNITY_BUILD
 
+// ============================================================================
+// CommandParser - Implementation du protocole Particle Cloud historique
+// ----------------------------------------------------------------------------
+// Ce module valide puis applique les commandes du cube. Il protege les bornes
+// des buffers et de l'EEPROM sans connaitre l'interface TypeScript.
+// ============================================================================
+
+// ----------------------------------------------------------------------------
+// Valide integralement une commande SetMode avant toute modification d'etat.
+//
+// Parametres :
+// - command : commande historique terminee par une virgule.
+//
+// Retour :
+// - zero si la commande est valide, sinon un code COMMAND_ERROR negatif.
+// ----------------------------------------------------------------------------
+static int validateSetModeCommand(const String& command) {
+    if(command.length() == 0)
+        return COMMAND_ERROR_EMPTY;
+    if(command.length() > CLOUD_COMMAND_MAX_LENGTH)
+        return COMMAND_ERROR_TOO_LONG;
+    if(command.charAt(command.length() - 1) != ',')
+        return COMMAND_ERROR_MALFORMED;
+
+    int beginIdx = 0;
+    int endIdx = command.indexOf(',');
+    while(endIdx != -1) {
+        if(endIdx <= beginIdx)
+            return COMMAND_ERROR_MALFORMED;
+
+        char type = command.charAt(beginIdx);
+        if(type == 'M') {
+            if(command.charAt(beginIdx + 1) != ':' || endIdx <= beginIdx + 2 ||
+               getModeIndexFromName(command.substring(beginIdx + 2, endIdx)) < 0)
+                return COMMAND_ERROR_MALFORMED;
+        }
+        else if(type == 'S' || type == 'B') {
+            if(command.charAt(beginIdx + 1) != ':')
+                return COMMAND_ERROR_MALFORMED;
+            String value = command.substring(beginIdx + 2, endIdx);
+            int parsed = 0;
+            int maximum = type == 'S'
+                ? (int)(sizeof(speedPresets) / sizeof(speedPresets[0])) - 1
+                : 100;
+            if(!parseUnsignedText(value.c_str(), value.length(), 0, maximum, &parsed))
+                return COMMAND_ERROR_OUT_OF_RANGE;
+        }
+        else if(type == 'C') {
+            if(beginIdx + 3 > endIdx || command.charAt(beginIdx + 2) != ':' ||
+               command.charAt(beginIdx + 1) < '1' || command.charAt(beginIdx + 1) > '6')
+                return COMMAND_ERROR_MALFORMED;
+            String color = command.substring(beginIdx + 3, endIdx);
+            if(color.length() != 6 || !isHexText(color.c_str(), color.length()))
+                return COMMAND_ERROR_MALFORMED;
+        }
+        else if(type == 'T') {
+            if(endIdx != beginIdx + 4 || command.charAt(beginIdx + 2) != ':' ||
+               command.charAt(beginIdx + 1) < '1' || command.charAt(beginIdx + 1) > '4' ||
+               (command.charAt(beginIdx + 3) != '0' && command.charAt(beginIdx + 3) != '1'))
+                return COMMAND_ERROR_MALFORMED;
+        }
+        else if(type == 'W') {
+            if(command.charAt(beginIdx + 1) != ':')
+                return COMMAND_ERROR_MALFORMED;
+            if(endIdx - (beginIdx + 2) >= TEXT_LENGTH)
+                return COMMAND_ERROR_TOO_LONG;
+        }
+        else {
+            return COMMAND_ERROR_MALFORMED;
+        }
+
+        beginIdx = endIdx + 1;
+        endIdx = command.indexOf(',', beginIdx);
+    }
+    return 0;
+}
+
+// ----------------------------------------------------------------------------
+// Applique les segments historiques de selection et de reglage d'un mode.
+//
+// Parametres :
+// - command : commande validee contenant modes, couleurs, switches et texte.
+//
+// Retour :
+// - index du mode, code historique de reglage ou code COMMAND_ERROR negatif.
+//
+// Effet de bord :
+// - modifie l'etat du mode et persiste les reglages concernes dans l'EEPROM.
+// ----------------------------------------------------------------------------
 int SetMode(String command) {
 	int beginIdx = 0;
 	int returnValue = -1;
-	int idx = command.indexOf(',');
+	int idx = -1;
     bool isNewMode = FALSE;
 	bool isNewSpeed = FALSE;
 	bool isNewBrightness = FALSE;
@@ -16,6 +105,10 @@ int SetMode(String command) {
 
     // Trim extra spaces
     command.trim();
+    int validationResult = validateSetModeCommand(command);
+    if(validationResult != 0)
+        return validationResult;
+    idx = command.indexOf(',');
     // Convert it to upper-case for easier matching
     //command.toUpperCase();	//Don't do this if the mode names are not all uppercase
     
@@ -35,15 +128,13 @@ int SetMode(String command) {
 			if(currentModeID == SHUFFLE) { stopDemo = shuffleMode = TRUE; }
 			else { stopDemo = shuffleMode = FALSE;  }
 			char tempBuf[20];
-			sprintf(tempBuf,"SETAUXSWITCH:%i,%i;",SHFL,shuffleMode?1:0);
+			boundedTextFormat(tempBuf, sizeof(tempBuf), "SETAUXSWITCH:%i,%i;", SHFL, shuffleMode ? 1 : 0);
 			FnRouter(tempBuf);  //update to reflect on or off states of shuffle
 			
 			isNewMode = TRUE;
 		}
 		else if(command.charAt(beginIdx) == 'S') {
 		    int receivedSpeedValue = command.substring(beginIdx+2, idx).toInt();
-		    if(receivedSpeedValue > (int)(sizeof(speedPresets)/sizeof(int)))
-		        receivedSpeedValue = sizeof(speedPresets)/sizeof(int) - 1;
 		    if (speedIndex != receivedSpeedValue) {
 		        //we don't update the speed when currently in LISTENER mode
 				if(currentModeID != LISTENER) isNewSpeed = TRUE;
@@ -100,10 +191,7 @@ int SetMode(String command) {
             }
 		}
 		else if(command.charAt(beginIdx) == 'W') {
-		    if(strlen(command.substring(beginIdx+2, idx).c_str()) > 63)
-		        sprintf(message,"%s", command.substring(beginIdx+2, beginIdx+65).c_str());
-            else
-                sprintf(message,"%s", command.substring(beginIdx+2, idx).c_str());
+		    boundedTextCopy(message, sizeof(message), command.substring(beginIdx+2, idx).c_str());
             isNewText = TRUE;
 		}
 
@@ -170,14 +258,26 @@ int SetMode(String command) {
 }
 
 
-/** 
- * Miscellaneous Cloud Function Router
- * Expect a string with a single function identifier 
- * followed by a colon followed by parameters
- **/
+// ----------------------------------------------------------------------------
+// Route une commande generique recue par la fonction Cloud historique.
+//
+// Parametres :
+// - command : identifiant de fonction suivi de ses parametres eventuels.
+//
+// Retour :
+// - valeur historique de la commande ou code COMMAND_ERROR negatif.
+//
+// Effet de bord :
+// - peut regler l'heure, les switches auxiliaires, les diagnostics ou demander
+//   un redemarrage differe.
+// ----------------------------------------------------------------------------
 int FnRouter(String command) {
 	// Trim extra spaces
     command.trim();
+    if(command.length() == 0)
+        return COMMAND_ERROR_EMPTY;
+    if(command.length() > CLOUD_COMMAND_MAX_LENGTH)
+        return COMMAND_ERROR_TOO_LONG;
     // Convert it to upper-case for easier matching
     command.toUpperCase();
 	
@@ -192,18 +292,28 @@ int FnRouter(String command) {
     if(command == "RESETDIAG")
         return GetDiagnostics("RESET");
 #endif
+
+    if(colonIdx <= 0)
+        return COMMAND_ERROR_MALFORMED;
 	
 	// Set time zone offset
     if(command.substring(beginIdx, colonIdx)=="SETTIMEZONE") {
 		//Expect a string like this: SETTIMEZONE:-6
-        timeZone = command.substring(colonIdx+1).toInt();
+        String value = command.substring(colonIdx + 1);
+        int parsedTimeZone = 0;
+        if(!parseSignedText(value.c_str(), value.length(), -14, 14, &parsedTimeZone))
+            return COMMAND_ERROR_OUT_OF_RANGE;
+        timeZone = parsedTimeZone;
         Time.zone(timeZone);
         hour = Time.hour();
         return timeZone;
     }
     else if(command.substring(beginIdx, colonIdx)=="GETSWITCHSTATE") {
 		//Expect a string like this: GETSWITCHSTATE:1
-        int id = command.substring(colonIdx+1).toInt();
+        String value = command.substring(colonIdx + 1);
+        int id = 0;
+        if(!parseUnsignedText(value.c_str(), value.length(), 1, 4, &id))
+            return COMMAND_ERROR_OUT_OF_RANGE;
         switch(id) {
             case 1:
                 return (switch1 ? 1 : 0);
@@ -219,7 +329,10 @@ int FnRouter(String command) {
     }
     else if(command.substring(beginIdx, colonIdx)=="GETCOLOR") {
 		//Expect a string like this: GETCOLOR:1
-        int id = command.substring(colonIdx+1).toInt();
+        String value = command.substring(colonIdx + 1);
+        int id = 0;
+        if(!parseUnsignedText(value.c_str(), value.length(), 1, 6, &id))
+            return COMMAND_ERROR_OUT_OF_RANGE;
         switch(id) {
             case 1:
                 return color1;
@@ -241,24 +354,32 @@ int FnRouter(String command) {
 		//Expect a string like this: SETAUXSWITCH:1,0;
 		//That breaks down to: SwitchID,state;
 		beginIdx = colonIdx+1;
-		int commaIdx = command.indexOf(',');
-		int semiColonIdx = command.indexOf(';');
 		int id = 0;
-		while(semiColonIdx != -1) {
-			id = (int) command.substring(beginIdx, commaIdx).toInt();
-			bool state = command.substring(commaIdx+1,semiColonIdx).equals("1") ? TRUE : FALSE;
-			auxSwitchStruct[getAuxSwitchIndexFromID(id)].auxSwitchState = state;
+		while(beginIdx < command.length()) {
+			int commaIdx = command.indexOf(',', beginIdx);
+			int semiColonIdx = command.indexOf(';', beginIdx);
+			if(commaIdx <= beginIdx || semiColonIdx != commaIdx + 2)
+				return COMMAND_ERROR_MALFORMED;
+			String idText = command.substring(beginIdx, commaIdx);
+			if(!parseUnsignedText(idText.c_str(), idText.length(), 0, 255, &id))
+				return COMMAND_ERROR_OUT_OF_RANGE;
+			char stateText = command.charAt(commaIdx + 1);
+			if(stateText != '0' && stateText != '1')
+				return COMMAND_ERROR_MALFORMED;
+			int auxSwitchIndex = getAuxSwitchIndexFromID(id);
+			if(auxSwitchIndex < 0)
+				return COMMAND_ERROR_OUT_OF_RANGE;
+			bool state = stateText == '1' ? TRUE : FALSE;
+			auxSwitchStruct[auxSwitchIndex].auxSwitchState = state;
 			
 			// Update EEPROM storage area
 			int START_ADDRESS = AUXSW_START_ADDR + (id * (sizeof(uint8_t) + 1));
 			if(EEPROM.length() >= (START_ADDRESS + sizeof(uint8_t)))
 			    EEPROM.write(START_ADDRESS, state ? 1 : 0);
             else 
-                sprintf(debug,"Warning: EEPROM has reached max size limit; %s not updated", auxSwitchStruct[getAuxSwitchIndexFromID(id)].auxSwitchTitle);
+				boundedTextFormat(debug, sizeof(debug), "Warning: EEPROM has reached max size limit; %s not updated", auxSwitchStruct[auxSwitchIndex].auxSwitchTitle);
 			
 			beginIdx = semiColonIdx + 1;
-			commaIdx = command.indexOf(',', beginIdx);
-			semiColonIdx = command.indexOf(';', commaIdx);
 		}
 		
 		//Update the list
@@ -277,14 +398,28 @@ int FnRouter(String command) {
     return -1;  
  }
 
-//Added Particle Function to get Text Input
+// ----------------------------------------------------------------------------
+// Met a jour le texte persistant utilise par les animations textuelles.
+//
+// Parametres :
+// - command : texte de moins de TEXT_LENGTH octets.
+//
+// Retour :
+// - un en cas de succes ou COMMAND_ERROR_TOO_LONG si le texte depasse.
+//
+// Effet de bord :
+// - lit puis met a jour la zone de texte dans l'EEPROM si necessaire.
+// ----------------------------------------------------------------------------
 int SetText(String command) {
+    if(command.length() >= TEXT_LENGTH)
+        return COMMAND_ERROR_TOO_LONG;
     bool isTextSet = FALSE;
     /** DEBUG **/
     //clearEEPROM();  //EEPROM.clear();
     
     // Check EEPROM area and initialize text variable with data previoulsy set
     EEPROM.get(TEXT_START_ADDR, textInputString);
+    textInputString[TEXT_LENGTH - 1] = '\0';
     for(int i=0; i<TEXT_LENGTH; i++) {
         if(textInputString[i] != 0xFF) {
             isTextSet = TRUE;
@@ -293,22 +428,36 @@ int SetText(String command) {
     }
     if(isTextSet) {
         if(strcmp(textInputString, command.c_str()) != 0 && strlen(command.c_str()) > 0) {
-            sprintf(textInputString,"%s", command.c_str());
+            boundedTextCopy(textInputString, sizeof(textInputString), command.c_str());
             // Update the EEPROM storage area with EEPROM.put();
             EEPROM.put(TEXT_START_ADDR, textInputString);
         }
     }
     else {
-        sprintf(textInputString,"%s", command.c_str());
+        boundedTextCopy(textInputString, sizeof(textInputString), command.c_str());
         // Update the EEPROM storage area with EEPROM.put();
         EEPROM.put(TEXT_START_ADDR, textInputString);
     }
 	return 1;
 }
 
-//Change Mode based on the modeStruct array index
+// ----------------------------------------------------------------------------
+// Active un mode a partir de son index valide dans `modeStruct`.
+//
+// Parametres :
+// - newModeIndex : index du mode a activer.
+//
+// Retour :
+// - index applique ou COMMAND_ERROR_OUT_OF_RANGE.
+//
+// Effet de bord :
+// - met a jour l'EEPROM, les diagnostics et l'etat runtime du mode.
+// ----------------------------------------------------------------------------
 int setNewMode(int newModeIndex) {
     //sprintf(debug,"%i", newModeIndex);
+    if(newModeIndex < 0 || newModeIndex >= (int)(sizeof(modeStruct) / sizeof(modeStruct[0])))
+        return COMMAND_ERROR_OUT_OF_RANGE;
+
     // We don't want to switch the cube to a IFTTT alert even when it's set, when the cube
     // is in CUBE PAINTER or LISTENER modes, to keep from disrupting the user experience
     if((currentModeID == CUBE_PAINTER || currentModeID == LISTENER) && modeStruct[newModeIndex].modeId == IFTTTWEATHER) 
@@ -326,7 +475,7 @@ int setNewMode(int newModeIndex) {
     if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY) 
         EEPROM.write(LASTMODE_START_ADDR, currentModeID);
     
-    sprintf(currentModeName,"%s", modeStruct[newModeIndex].modeName);
+    boundedTextCopy(currentModeName, sizeof(currentModeName), modeStruct[newModeIndex].modeName);
 	resetVariables(modeStruct[newModeIndex].modeId);
 
 	return newModeIndex;
