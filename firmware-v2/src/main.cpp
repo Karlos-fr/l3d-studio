@@ -575,6 +575,16 @@ void loop() {
 
 #include "animations/spectrum.cpp"
 
+#include "animations/cubetube_fft_common.cpp"
+
+#include "animations/fft_joy_legacy.cpp"
+
+#include "animations/fft_meteors_rainbow.cpp"
+
+#include "animations/lightning_in_a_box.cpp"
+
+#include "animations/tranquility.cpp"
+
 #include "animations/text.cpp"
 
 #include "animations/squarral.cpp"

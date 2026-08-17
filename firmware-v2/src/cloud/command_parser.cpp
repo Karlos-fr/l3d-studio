@@ -528,6 +528,7 @@ void checkBrightness(void) {
 		case FILLER:
 		case FLICKER:
 		case NORMAL:
+		case TRANQUILITY:
 			maxBright = 37;
 			break;	
 		

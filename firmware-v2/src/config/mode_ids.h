@@ -72,6 +72,10 @@
 #define FOLDER						 68 //credit: Kevin Carlborg 
 #define DIAGONAL_PLANES              69 //credit: Kevin Carlborg
 #define SLIDESHOW		             70	//credit: Werner Moecke, Kevin Carlborg (memory optimization, new images)
+#define LIGHTNING_BOX                71 //credit: CubeTube Library
+#define FFT_METEORS_RAINBOW          72 //credit: Werner Moecke, CubeTube Library
+#define FFT_JOY_LEGACY               73 //credit: CubeTube Library
+#define TRANQUILITY                  74 //credit: CubeTube Library
 
 /* ======================= ADD NEW AUX SWITCH ID HERE. ======================= */
 // AUX SWITCH ID Defines

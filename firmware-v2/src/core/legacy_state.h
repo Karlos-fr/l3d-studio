@@ -15,7 +15,7 @@
 //Use this struct array to neatly organize and correlate Mode name with number of colors needed
 //The Android app uses numOfColors to help populate the view 
 //and to know how many colors to ask to update
-static modeParams modeStruct[] =
+static const modeParams modeStruct[] =
 {
     /*     modeId                       modeName                #Colors     #Switches   textInput
      *     --------------- 	            ---------------	        ---------   ---------   --------- */
@@ -44,6 +44,8 @@ static modeParams modeStruct[] =
         {  DIGI,                        "Digi",                 1,          3,      FALSE   },  //credit: Kevin Carlborg
         {  TWOCOLORCHASE,               "DualChase",            2,          0,      FALSE   },  //credit: Werner Moecke
         {  FILLER,                      "Filler",               3,          1,      FALSE   },  //credit: Werner Moecke (based on idea by Alex Hornstein)
+		{  FFT_JOY_LEGACY,              "FFTJoy",               0,          0,      FALSE   },  //credit: CubeTube Library
+		{  FFT_METEORS_RAINBOW,         "FFTMeteors",           0,          0,      FALSE   },  //credit: Werner Moecke, CubeTube Library
 		{  FIREWORKS,                   "Fireworks",    	    0,          0,      FALSE   },  //credit :http://www.instructables.com/id/Led-Cube-8x8x8/, Kevin Carlborg (L3D Cube port), Werner Moecke (smooth transitions)
         {  FLICKER,                     "Flicker",              1,          0,      FALSE   },  //credit: Werner Moecke
 		{  FOLDER,                      "Folder",               0,          0,      FALSE   },  //credit: Kevin Carlborg
@@ -53,6 +55,7 @@ static modeParams modeStruct[] =
 //		{  HYPER,                       "HyperBall",            0,          0,      FALSE   },  //credit: fool, mod by socaljj
         {  IFTTTWEATHER,                "IFTTT",                0,          0,      FALSE   },  //credit: Kevin Carlborg, Werner Moecke (code improvements)
 //        {  LIGHTNING,                   "Lightning",            0,          0,      FALSE   },  //credit: Bill Marrs
+		{  LIGHTNING_BOX,               "LightningBox",         0,          0,      FALSE   },  //credit: CubeTube Library
 		{  LINESPIN,                    "LineSpin",    	        0,          0,      FALSE   },  //credit :http://www.instructables.com/id/Led-Cube-8x8x8/, Kevin Carlborg (L3D Cube port), Werner Moecke (smooth transitions)
 		{  DSPIRAL,                     "LineSpiral",           0,          0,      FALSE   },  //credit: sputty01 modded by socaljj     
 //        {  LISTENER,                    "Listener",             0,          0,      FALSE   },  //credit: Werner Moecke
@@ -79,6 +82,7 @@ static modeParams modeStruct[] =
         {  COLORSTRIPES,                "Stripes",              0,          0,      FALSE   },  //credit: Werner Moecke
         {  TEXT,                        "Text",                 2,          4,      TRUE    },  //credit: Alex Hornstein, Hans-Peter "Hape", Werner Moecke (C++ port, extra settings)
         {  THEATERCHASE,                "TheaterChase",         0,          0,      FALSE   },  //credit: Kevin Carlborg
+		{  TRANQUILITY,                 "Tranquility",          0,          0,      FALSE   },  //credit: CubeTube Library
         {  COLORFADE,                   "Transition",           0,          0,      FALSE   },  //credit: Werner Moecke
 		{  UPNDOWN,	               	    "UpDown",               0,          0,      FALSE   },  //credit :http://www.instructables.com/id/Led-Cube-8x8x8/, Kevin Carlborg (L3D Cube port), Werner Moecke (smooth transitions)
         {  VOXELSLEFTBEHIND,            "VoxelDrop",  		    0,          0,      FALSE   },  //credit :http://www.instructables.com/id/Led-Cube-8x8x8/, Kevin Carlborg (L3D Cube port), Werner Moecke (smooth transitions)
@@ -90,7 +94,7 @@ static modeParams modeStruct[] =
         {  ZONECHASER,                  "ZoneChase",			4,          0,      FALSE   }   //credit: Werner Moecke
 };
 
-switchParams switchTitleStruct[] = 
+static const switchParams switchTitleStruct[] =
 { 
     /*  modeId           S1Title                S2Title                S3Title                S4Title 
      *  ---------------  ---------------------- ---------------------- ---------------------- ----------------------  */
@@ -160,14 +164,14 @@ bool isFirstLap;
 bool shuffleMode;
 volatile bool stopDemo;		//Set to TRUE when the Interrupt Timer demoTimer gets triggered
 
-// Le registre actif doit conserver les 62 modes publiés par le protocole.
-static_assert(sizeof modeStruct / sizeof modeStruct[0] == 62,
-    "Le registre actif doit contenir exactement 62 modes");
+// Le registre actif publie les 62 modes historiques et les quatre imports CubeTube.
+static_assert(sizeof modeStruct / sizeof modeStruct[0] == 66,
+    "Le registre actif doit contenir exactement 66 modes");
 
-// Position du prochain mode dans l'ordre mélangé, comprise entre zéro et 62.
+// Position du prochain mode dans l'ordre mélangé, comprise entre zéro et 66.
 uint8_t shuffleIdx;
 
-// Index compacts des 62 entrées actives du registre de modes.
+// Index compacts des 66 entrées actives du registre de modes.
 uint8_t modeShuffleOrder[sizeof modeStruct / sizeof modeStruct[0]];
 
 static_assert(sizeof modeShuffleOrder < 256,

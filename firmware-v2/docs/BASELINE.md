@@ -60,6 +60,7 @@ particle compile photon firmware-v2 --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Passe animations, facteurs ColorAll mutualisés | 2.3.1 | 110 752 | 18 812 | 110 756 | 20 320 |
 | 2026-08-17 | Passe animations, Listener retiré du build actif | 2.3.1 | 109 344 | 18 732 | 109 348 | 21 728 |
 | 2026-08-17 | Passe animations, durée de vie du scratch Whirlwind corrigée | 2.3.1 | 109 360 | 18 732 | 109 364 | 21 712 |
+| 2026-08-17 | Quatre imports CubeTube et métadonnées constantes | 2.3.1 | 111 856 | 16 228 | 111 860 | 19 216 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
@@ -129,3 +130,6 @@ sources.
 - Comparaison visuelle sur le matériel : validée par l'utilisateur le 2026-08-17.
 - Rollback matériel OTA : exécuté et validé le 2026-08-17 avec Spark Pixels
   Mega 1.4 ; la voie USB n'a pas été nécessaire.
+- Flash OTA des quatre imports CubeTube réalisé le 2026-08-17 : commandes
+  LightningBox, FFTMeteors, FFTJoy et Tranquility acceptées à `B:1`, puis mode
+  `Off` rétabli avec la valeur interne `brightness=2`.

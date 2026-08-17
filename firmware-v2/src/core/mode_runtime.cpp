@@ -161,7 +161,7 @@ void setRandomMode(void) {
 }
 
 // ----------------------------------------------------------------------------
-// Repart du premier index et mélange les 62 entrées actives du registre.
+// Repart du premier index et mélange les 66 entrées actives du registre.
 //
 // Effet de bord :
 // - remet l'index global à zéro et consomme un tirage par entrée.
@@ -307,6 +307,12 @@ void runMode() {
 		case FROZEN:
 		    frozen();
 		    break;
+		case FFT_JOY_LEGACY:
+			runFftJoyLegacy();
+			break;
+		case FFT_METEORS_RAINBOW:
+			runFftMeteorsRainbow();
+			break;
 /*		case HYPER:
 			hyper(); 
 	        break;*/
@@ -330,6 +336,9 @@ void runMode() {
 			else
 				transitionAll(black,LINEAR);
 		    break;
+		case LIGHTNING_BOX:
+			runLightningInABox();
+			break;
 	/*	case LISTENER:
 		    listen();
 		    break;*/
@@ -378,6 +387,9 @@ void runMode() {
 		case THEATERCHASE:
 		    theaterChaseRainbow();
 		    break;
+		case TRANQUILITY:
+			runTranquility();
+			break;
 		case TWOCOLORCHASE:
 		    twoColorChaser(color1, color2);
 		    break;
@@ -439,6 +451,22 @@ void resetVariables(int modeIndex) {
 			transitionAll(black, LINEAR);
 			lastLightning = millis();
 			lightningInterval = oneMinuteInterval / random(24, 76);
+			break;
+		case LIGHTNING_BOX:
+			transitionAll(black, LINEAR);
+			resetLightningInABox();
+			break;
+		case FFT_JOY_LEGACY:
+			transitionAll(black, LINEAR);
+			resetFftJoyLegacy();
+			break;
+		case FFT_METEORS_RAINBOW:
+			transitionAll(black, LINEAR);
+			resetFftMeteorsRainbow();
+			break;
+		case TRANQUILITY:
+			transitionAll(black, LINEAR);
+			resetTranquility();
 			break;
 		case COLLIDE2:
 		    transitionAll(black, LINEAR);

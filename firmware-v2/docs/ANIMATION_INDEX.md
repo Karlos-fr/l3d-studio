@@ -31,12 +31,15 @@ version 1.4 ; leurs interfaces navigables sont dans les fichiers .h voisins.
 | 36 | `DIGI` | Digi | `src/animations/digi.cpp` |
 | 17 | `TWOCOLORCHASE` | DualChase | `src/animations/classic_color_effects.cpp` |
 | 32 | `FILLER` | Filler | `src/animations/filler.cpp` |
+| 73 | `FFT_JOY_LEGACY` | FFTJoy | `src/animations/fft_joy_legacy.cpp` |
+| 72 | `FFT_METEORS_RAINBOW` | FFTMeteors | `src/animations/fft_meteors_rainbow.cpp` |
 | 55 | `FIREWORKS` | Fireworks | `src/animations/cube_classics.cpp` |
 | 14 | `FLICKER` | Flicker | `src/animations/classic_color_effects.cpp` |
 | 68 | `FOLDER` | Folder | `src/animations/cube_classics.cpp` |
 | 10 | `FROZEN` | Frozen | `src/animations/classic_color_effects.cpp` |
 | 40 | `GOLDRAIN` | GoldRain | `src/animations/rain_salvos.cpp` |
 | 35 | `IFTTTWEATHER` | IFTTT | `src/network/ifttt_weather.cpp` |
+| 71 | `LIGHTNING_BOX` | LightningBox | `src/animations/lightning_in_a_box.cpp` |
 | 52 | `LINESPIN` | LineSpin | `src/animations/cube_classics.cpp` |
 | 62 | `DSPIRAL` | LineSpiral | `src/animations/d_spiral.cpp` |
 | 64 | `MATRIX` | Matrix | `src/animations/matrix.cpp` |
@@ -61,6 +64,7 @@ version 1.4 ; leurs interfaces navigables sont dans les fichiers .h voisins.
 | 6 | `COLORSTRIPES` | Stripes | `src/animations/classic_color_effects.cpp` |
 | 27 | `TEXT` | Text | `src/animations/text.cpp` |
 | 9 | `THEATERCHASE` | TheaterChase | `src/animations/classic_color_effects.cpp` |
+| 74 | `TRANQUILITY` | Tranquility | `src/animations/tranquility.cpp` |
 | 12 | `COLORFADE` | Transition | `src/animations/classic_color_effects.cpp` |
 | 43 | `UPNDOWN` | UpDown | `src/animations/cube_classics.cpp` |
 | 47 | `VOXELSLEFTBEHIND` | VoxelDrop | `src/animations/cube_classics.cpp` |

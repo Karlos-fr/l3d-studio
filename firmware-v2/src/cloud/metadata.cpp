@@ -32,11 +32,12 @@ void makeModeList(void) {
 		}
 		else {
 			if(modeStruct[i].numOfColors > 0) {
-				if(modeStruct[i].numOfColors > MAX_NUM_COLORS) {
-					modeStruct[i].numOfColors = MAX_NUM_COLORS;
-				}
+				// Nombre de couleurs borné sans modifier la table désormais en flash.
+				const uint8_t colorCount = modeStruct[i].numOfColors > MAX_NUM_COLORS
+					? MAX_NUM_COLORS
+					: modeStruct[i].numOfColors;
 				if(isThereEnoughRoomInModeParamList(4)) {
-				    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "C:%i", modeStruct[i].numOfColors);
+				    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "C:%i", colorCount);
 				    boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
 				    if(modeStruct[i].numOfSwitches == 0 && modeStruct[i].textInput == FALSE) {
 					    boundedTextAppend(modeParamList, sizeof(modeParamList), ";");
@@ -45,30 +46,31 @@ void makeModeList(void) {
 			}
 			if(modeStruct[i].numOfSwitches > 0) {
 			    int switchTitleStructIdx = getSwitchTitleStructIndex(modeStruct[i].modeId);
-			    if(switchTitleStructIdx != -1) {
-    				if(modeStruct[i].numOfSwitches > MAX_NUM_SWITCHES) {
-    					modeStruct[i].numOfSwitches = MAX_NUM_SWITCHES;
-    				}
-    				if(modeStruct[i].numOfSwitches >= 1) {
-					    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "S:%i,\"%s\"", modeStruct[i].numOfSwitches, switchTitleStruct[switchTitleStructIdx].switch1Title);
+				if(switchTitleStructIdx != -1) {
+					// Nombre de switches borné sans modifier la table désormais en flash.
+					const uint8_t switchCount = modeStruct[i].numOfSwitches > MAX_NUM_SWITCHES
+						? MAX_NUM_SWITCHES
+						: modeStruct[i].numOfSwitches;
+					if(switchCount >= 1) {
+					    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "S:%i,\"%s\"", switchCount, switchTitleStruct[switchTitleStructIdx].switch1Title);
                         //consider this instead: strncat(modeParamList,cParamBuff,MAX_PUBLISHED_STRING_SIZE-strlen(modeParamList)-1);
                         if(isThereEnoughRoomInModeParamList(strlen(cParamBuff)+1)) {
 						    boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
                         } else { return; }
     				}
-    				if(modeStruct[i].numOfSwitches >= 2) {
+					if(switchCount >= 2) {
 					    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "\"%s\"", switchTitleStruct[switchTitleStructIdx].switch2Title);
     					if(isThereEnoughRoomInModeParamList(strlen(cParamBuff)+1)) {
 						    boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
     					} else { return; }
     				}
-    				if(modeStruct[i].numOfSwitches >= 3) {
+					if(switchCount >= 3) {
 					    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "\"%s\"", switchTitleStruct[switchTitleStructIdx].switch3Title);
     					if(isThereEnoughRoomInModeParamList(strlen(cParamBuff)+1)) {
 						    boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);
     					} else { return; }
     				}
-    				if(modeStruct[i].numOfSwitches >= 4) {
+					if(switchCount >= 4) {
 					    boundedTextFormat(cParamBuff, sizeof(cParamBuff), "\"%s\"", switchTitleStruct[switchTitleStructIdx].switch4Title);
     					if(isThereEnoughRoomInModeParamList(strlen(cParamBuff)+1)) {
                             boundedTextAppend(modeParamList, sizeof(modeParamList), cParamBuff);

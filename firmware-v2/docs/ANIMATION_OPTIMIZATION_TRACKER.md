@@ -32,9 +32,9 @@ Les priorités sont des hypothèses d'ordre de passage. L'audit peut les modifie
 
 ## État du passage code
 
-Les 70 modes et les six éléments partagés ont terminé les jalons `Audit`,
-`Opt.`, `Hôte`, `Build` et `Com./Doc`. La suite complète compte 99 tests hôte et
-le binaire courant mesure 109 360 octets de Flash pour 18 732 octets de RAM
+Les 74 modes et les sept éléments partagés ont terminé les jalons `Audit`,
+`Opt.`, `Hôte`, `Build` et `Com./Doc`. La suite complète compte 106 tests hôte
+et le binaire courant mesure 111 856 octets de Flash pour 16 228 octets de RAM
 statique.
 
 Les baselines longues, validations visuelles et commits encore décochés restent
@@ -69,12 +69,15 @@ validation physique complète. Le détail quantifié se trouve dans
 | P1 | 36 | Digi | `src/animations/digi.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | Scratch déjà optimal ; frame >12 s, cycle/visuel restants |
 | P2 | 17 | DualChase | `src/animations/classic_color_effects.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | Index compacts et atténuation partagée ; 2,7 FPS |
 | P2 | 32 | Filler | `src/animations/filler.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | État persistant 8→1 octet ; cycle matériel long en attente |
+| P1 | 73 | FFTJoy | `src/animations/fft_joy_legacy.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Scratch FFT mutualisé ; smoke `B:1` réussi, rendu et visuel restant |
+| P1 | 72 | FFTMeteors | `src/animations/fft_meteors_rainbow.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Scratch FFT partagé ; 378 frames au smoke `B:1`, visuel restant |
 | P1 | 55 | Fireworks | `src/animations/cube_classics.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | 2→1 `tan`/étape ; frame 4,27 s à `S:8`, cycle/visuel restants |
 | P2 | 14 | Flicker | `src/animations/classic_color_effects.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | Aléatoire conservé ; runtime `B:1`, visuel restant |
 | P2 | 68 | Folder | `src/animations/cube_classics.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Aucun état à réduire ; baseline longue et visuel en attente |
 | P1 | 10 | Frozen | `src/animations/classic_color_effects.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | −102 RAM attendue via scratch ; frame longue, visuel restant |
 | P0 | 40 | GoldRain | `src/animations/rain_salvos.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | −16 400 RAM statique, +16 400 libres ; flash/runtime `B:1` validés, visuel restant |
 | P2 | 35 | IFTTT | `src/network/ifttt_weather.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Longueur C bornée mutualisée ; smoke `B:1`, cycle et visuel restants |
+| P2 | 71 | LightningBox | `src/animations/lightning_in_a_box.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Points/couleur compacts ; smoke `B:1` réussi, visuel restant |
 | P2 | 52 | LineSpin | `src/animations/cube_classics.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | 8→1 sinus invariant/frame ; baseline longue et visuel en attente |
 | P1 | 62 | LineSpiral | `src/animations/d_spiral.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | État entier compact ; +32 libres au jalon, 18,1 FPS, visuel restant |
 | P0 | 64 | Matrix | `src/animations/matrix.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | −1 992 RAM statique/libre +1 992 ; flash/runtime `B:1` validés, visuel restant |
@@ -99,6 +102,7 @@ validation physique complète. Le détail quantifié se trouve dans
 | P2 | 6 | Stripes | `src/animations/classic_color_effects.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | Boucle longue conservée ; essai visuel complet en attente |
 | P1 | 27 | Text | `src/animations/text.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | API C fixe, 477,5 FPS ; flash/runtime `B:1`, visuel restant |
 | P2 | 9 | TheaterChase | `src/animations/classic_color_effects.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | Parcours historique conservé ; baseline 0,4 FPS, visuel restant |
+| P2 | 74 | Tranquility | `src/animations/tranquility.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | État mort retiré ; smoke `B:1` réussi, visuel restant |
 | P2 | 12 | Transition | `src/animations/classic_color_effects.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | Teinte compacte modulo 256 ; 18,8 FPS stables |
 | P2 | 43 | UpDown | `src/animations/cube_classics.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Deux buffers locaux bornés ; baseline longue et visuel en attente |
 | P2 | 47 | VoxelDrop | `src/animations/cube_classics.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Deux buffers locaux bornés ; baseline longue et visuel en attente |
@@ -134,7 +138,8 @@ affecter plusieurs lignes du tableau principal.
 | P1 | Transitions | `src/rendering/transitions.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [x] | Scratch partagé ; facteurs polaires mutualisés et équivalence exhaustive |
 | P1 | CubeGreeting | `src/animations/cube_greeting.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Aucun état propre à réduire ; cycle complet de démonstration reporté |
 | P0 | Scratch partagé | `src/core/legacy_state.h` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | 1 536 octets nécessaires ; contrats par vue, durée Whirlwind corrigée |
-| P1 | Registre et dispatcher | `src/core/mode_runtime.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | 62 IDs imposés, ordre compact et permutations validées ; visuel multi-modes restant |
+| P1 | Registre et dispatcher | `src/core/mode_runtime.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | 62 modes historiques préservés, 4 imports ajoutés et permutations validées ; visuel restant |
+| P1 | Primitives FFT CubeTube | `src/animations/cubetube_fft_common.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Capture 16 points et palette entière mutualisées entre les deux imports FFT |
 
 ## Ordre de démarrage proposé
 

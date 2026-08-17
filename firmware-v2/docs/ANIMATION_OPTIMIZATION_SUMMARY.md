@@ -2,10 +2,10 @@
 
 ## Résultat du passage code
 
-Les 70 modes inventoriés et les six éléments partagés possèdent désormais un
-audit, une décision d'optimisation, des tests hôte, une compilation Photon
-2.3.1 et une documentation. Les IDs et le registre de 62 modes actifs restent
-compatibles avec le protocole historique.
+À la clôture de la passe initiale, les 70 modes inventoriés et les six éléments
+partagés possédaient un audit, une décision d'optimisation, des tests hôte, une
+compilation Photon 2.3.1 et une documentation. Les IDs et le registre de 62
+modes alors actifs restaient compatibles avec le protocole historique.
 
 | Mesure | Début de la passe | État actuel | Différence |
 | --- | ---: | ---: | ---: |
@@ -56,3 +56,18 @@ décision de mettre les essais coûteux en stand-by, le tracker conserve :
 Ces cases restent ouvertes et ne sont pas remplacées par les smoke tests courts
 à `B:1`. Elles pourront être reprises sans ambiguïté depuis
 `ANIMATION_OPTIMIZATION_TRACKER.md`.
+
+## Imports CubeTube postérieurs à la passe
+
+Quatre modes ont ensuite rejoint le registre : LightningBox (71), FFTMeteors
+(72), FFTJoy (73) et Tranquility (74). Ils utilisent des états statiques
+compacts, aucune allocation dynamique, des temporisations non bloquantes pour
+LightningBox et Tranquility, ainsi que le scratch FFT existant pour les deux
+spectres.
+
+La mise en `const` des tables de modes et de switches compense leur ajout en
+RAM. Le nouvel état mesuré est de 111 856 octets de Flash, 16 228 octets de RAM
+statique et 19 216 octets de marge Flash. Les 106 tests hôte réussissent. Le
+détail du portage et des compromis est consigné dans `CUBETUBE_IMPORTS.md`.
+Le binaire a été flashé et les quatre modes ont passé un smoke test à `B:1` ;
+leur comparaison visuelle avec les exports reste ouverte.

@@ -2,7 +2,7 @@
 
 ## Périmètre
 
-Cette passe couvre le mode `Shuffle` (ID 26), le registre partagé de 62 modes
+Cette passe couvrait le mode `Shuffle` (ID 26), le registre partagé de 62 modes
 actifs et l'affichage `IFTTT` (ID 35). Elle touche aussi la primitive de mélange
 réutilisée par `CubeClassics` et `SlideShow`.
 
@@ -15,8 +15,9 @@ mode précédent sont conservés.
 - l'ordre permanent de `Shuffle` passe de 62 `int`, soit 248 octets, à 62
   `uint8_t`, soit 62 octets ;
 - l'index permanent du prochain mode passe de quatre à un octet ;
-- une assertion statique impose exactement 62 entrées actives afin qu'un ajout
-  de mode oblige à réexaminer la représentation compacte ;
+- l'assertion statique imposait exactement 62 entrées actives afin qu'un ajout
+  de mode oblige à réexaminer la représentation compacte. Elle impose maintenant
+  66 entrées après l'ajout explicite des quatre imports CubeTube ;
 - `arrayShuffle` mélange désormais des index `uint8_t` et reste commun à
   `Shuffle`, `CubeClassics` et `SlideShow` ;
 - le buffer de débogage local mort de la primitive de mélange est retiré ;

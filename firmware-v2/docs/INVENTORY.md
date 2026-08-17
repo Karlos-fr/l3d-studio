@@ -33,12 +33,15 @@ mode accepte le segment `W:` dans `SetMode`.
 | 36 | `DIGI` | Digi | 1 | 3 | non |
 | 17 | `TWOCOLORCHASE` | DualChase | 2 | 0 | non |
 | 32 | `FILLER` | Filler | 3 | 1 | non |
+| 73 | `FFT_JOY_LEGACY` | FFTJoy | 0 | 0 | non |
+| 72 | `FFT_METEORS_RAINBOW` | FFTMeteors | 0 | 0 | non |
 | 55 | `FIREWORKS` | Fireworks | 0 | 0 | non |
 | 14 | `FLICKER` | Flicker | 1 | 0 | non |
 | 68 | `FOLDER` | Folder | 0 | 0 | non |
 | 10 | `FROZEN` | Frozen | 0 | 0 | non |
 | 40 | `GOLDRAIN` | GoldRain | 0 | 1 | non |
 | 35 | `IFTTTWEATHER` | IFTTT | 0 | 0 | non |
+| 71 | `LIGHTNING_BOX` | LightningBox | 0 | 0 | non |
 | 52 | `LINESPIN` | LineSpin | 0 | 0 | non |
 | 62 | `DSPIRAL` | LineSpiral | 0 | 0 | non |
 | 64 | `MATRIX` | Matrix | 0 | 0 | non |
@@ -63,6 +66,7 @@ mode accepte le segment `W:` dans `SetMode`.
 | 6 | `COLORSTRIPES` | Stripes | 0 | 0 | non |
 | 27 | `TEXT` | Text | 2 | 4 | oui |
 | 9 | `THEATERCHASE` | TheaterChase | 0 | 0 | non |
+| 74 | `TRANQUILITY` | Tranquility | 0 | 0 | non |
 | 12 | `COLORFADE` | Transition | 0 | 0 | non |
 | 43 | `UPNDOWN` | UpDown | 0 | 0 | non |
 | 47 | `VOXELSLEFTBEHIND` | VoxelDrop | 0 | 0 | non |
