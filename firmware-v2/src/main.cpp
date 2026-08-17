@@ -393,8 +393,11 @@ Timer demoTimer(2*60*1000, advanceDemo);
 
 #include "core/legacy_state.h"
 #include "animations/animations.h"
+#include "diagnostics/runtime_diagnostics.h"
 
 void setup() {
+    diagnosticsSetupEarly();
+
     Particle.function("Function",     FnRouter);
     Particle.function("SetMode",      SetMode);
     Particle.function("SetText",      SetText);
@@ -455,11 +458,14 @@ void setup() {
 	//populate the shuffle order array
 	for(int i=0;i<(int)(sizeof modeStruct / sizeof modeStruct[0]);i++)
 		modeShuffleOrder[i] = i;
+
+    diagnosticsSetupComplete(currentModeID);
 }
 
 #include "cloud/metadata.cpp"
 
 void loop() {
+	diagnosticsProcessRequests();
 
     if(run) {
 		stop = FALSE;
@@ -483,7 +489,8 @@ void loop() {
         previousMillis = currentMillis;
         hour = Time.hour();    //used to check for correct time zone
         wifi = WiFi.RSSI();
-		makeDeviceInfo();	
+		if(diagnosticsMayRefreshDeviceInfo(currentMillis))
+			makeDeviceInfo();
 
         //Put other timing stuff in here to speed up main loop
         //Time sync interval: 24 hours
@@ -578,4 +585,6 @@ void loop() {
 #include "animations/slideshow.cpp"
 
 #include "cloud/command_parser.cpp"
+
+#include "diagnostics/runtime_diagnostics.cpp"
 

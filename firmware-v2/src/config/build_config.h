@@ -25,4 +25,11 @@
 #define MAX_PUBLISHED_STRING_SIZE	622	//Max character length for a Cloud String Variable
 #define TEXT_LENGTH					64	//Max character length passed to a Cloud Function
 
+// Runtime diagnostics can be removed completely for release-size comparisons.
+#ifndef L3D_DIAGNOSTICS_ENABLED
+#define L3D_DIAGNOSTICS_ENABLED 1
+#endif
+
+#define DIAGNOSTICS_TEXT_LENGTH 256
+
 

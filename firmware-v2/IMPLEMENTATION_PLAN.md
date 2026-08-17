@@ -255,35 +255,39 @@ optimisation, correction fonctionnelle ou réécriture d'algorithme.
 
 ### Mesures runtime
 
-- [ ] Remplacer la mesure unique de `deviceInfo` par une mesure actualisable à la demande.
-- [ ] Mesurer `System.freeMemory()` au démarrage après initialisation complète.
-- [ ] Suivre le minimum de mémoire libre observé depuis le démarrage.
-- [ ] Mesurer la mémoire avant l'entrée et après la sortie de chaque animation.
-- [ ] Enregistrer le nombre de changements de mode.
-- [ ] Enregistrer l'uptime et la cause du dernier reset si disponible.
-- [ ] Ajouter un handler `out_of_memory` minimal et sûr.
-- [ ] Ne jamais publier, allouer ou redémarrer directement depuis le handler mémoire.
+- [x] Remplacer la mesure unique de `deviceInfo` par une mesure actualisable à la demande.
+- [x] Mesurer `System.freeMemory()` au démarrage après initialisation complète.
+- [x] Suivre le minimum de mémoire libre observé depuis le démarrage.
+- [x] Mesurer la mémoire avant l'entrée et après la sortie de chaque animation.
+- [x] Enregistrer le nombre de changements de mode.
+- [x] Enregistrer l'uptime et la cause du dernier reset si disponible.
+- [x] Ajouter un handler `out_of_memory` minimal et sûr.
+- [x] Ne jamais publier, allouer ou redémarrer directement depuis le handler mémoire.
 
 ### Mesures de rendu
 
-- [ ] Mesurer la durée de calcul d'une frame.
-- [ ] Mesurer les FPS moyens et le pire temps de frame.
-- [ ] Rendre les diagnostics détaillés désactivables à la compilation.
-- [ ] Éviter toute construction dynamique de chaîne dans la boucle de rendu.
-- [ ] Exposer les diagnostics via une réponse compacte générée à la demande.
+- [x] Mesurer la durée de calcul d'une frame.
+- [x] Mesurer les FPS moyens et le pire temps de frame.
+- [x] Rendre les diagnostics détaillés désactivables à la compilation.
+- [x] Éviter toute construction dynamique de chaîne dans la boucle de rendu.
+- [x] Exposer les diagnostics via une réponse compacte générée à la demande.
 
 ### Tests de stabilité
+
+> En attente à la demande du mainteneur le 2026-08-17 : ces essais matériels
+> longs seront repris après les travaux de code de la phase 2. Toute reprise
+> devra imposer `B:1` (luminosité 1 %) aux commandes de démonstration.
 
 - [ ] Exécuter chaque mode pendant au moins 10 minutes.
 - [ ] Alterner rapidement les modes pendant au moins 30 minutes.
 - [ ] Tester une déconnexion et une reconnexion Wi-Fi.
 - [ ] Tester une déconnexion et une reconnexion Particle Cloud.
-- [ ] Vérifier que les diagnostics ne réduisent pas la marge sous 10 Kio.
+- [ ] Vérifier que les diagnostics ne réduisent pas la marge sous 10 Kio (la référence historique mesurée à 10 200 octets est déjà sous 10 Kio).
 
 ### Critère de sortie
 
-- [ ] Les minima mémoire et temps de frame sont observables par mode.
-- [ ] Aucun diagnostic ne réalise d'allocation dans le chemin chaud.
+- [x] Les minima mémoire et temps de frame sont observables par mode.
+- [x] Aucun diagnostic ne réalise d'allocation dans le chemin chaud.
 
 ## Phase 3 — Sécurisation de la pile et des buffers
 

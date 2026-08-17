@@ -35,10 +35,30 @@ particle compile photon firmware-v2 --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Source upstream + pilote corrigé, projet temporaire | 2.3.1 | 114 328 | 39 852 | 114 332 | 16 744 |
 | 2026-08-17 | Import initial `firmware-v2` | 2.3.1 | 114 328 | 39 852 | 114 332 | 16 744 |
 | 2026-08-17 | Phase 1, découpage mécanique unity build | 2.3.1 | 114 328 | 39 852 | 114 332 | 16 744 |
+| 2026-08-17 | Phase 2, diagnostics désactivés | 2.3.1 | 114 328 | 39 852 | 114 332 | 16 744 |
+| 2026-08-17 | Phase 2, diagnostics activés et endpoints historiques réutilisés | 2.3.1 | 115 368 | 39 932 | 115 372 | 15 704 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
 mesuré par le compilateur cloud.
+
+La compilation de phase 2 avec `L3D_DIAGNOSTICS_ENABLED=0` retrouve exactement
+la référence de phase 1. L'instrumentation activée coûte 1 040 octets de flash
+et 80 octets de RAM statique. Aucun endpoint Particle supplémentaire n'est
+enregistré : les commandes passent par `Function` et la réponse par
+`deviceInfo`. Cette simplification n'a pas changé la mesure runtime de 9 144
+octets libres ; la cause du Kio manquant reste à isoler.
+
+## Mesure runtime de phase 2
+
+| Variante | Démarrage | Frame stabilisée observée | Minimum observé | OOM |
+| --- | ---: | ---: | ---: | ---: |
+| Diagnostics activés, réponse via `deviceInfo` | 9 144 | 11 656 | 9 144 | 0 |
+
+La mesure a été obtenue sur `chicken_turkey`, Device OS 2.3.1, après flash OTA.
+La réponse compacte a confirmé un reset de mise à jour normal (`r=70`, `d=0`).
+Le seuil de 10 Kio n'est pas validé au démarrage, même si la marge observée
+entre les frames est supérieure.
 
 ## Mesure sur le Photon stable
 

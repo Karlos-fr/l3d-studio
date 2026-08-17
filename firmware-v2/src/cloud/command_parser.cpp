@@ -181,10 +181,19 @@ int FnRouter(String command) {
     // Convert it to upper-case for easier matching
     command.toUpperCase();
 	
-    int beginIdx = 0;
+	int beginIdx = 0;
 	int colonIdx = command.indexOf(':');
+
+#if L3D_DIAGNOSTICS_ENABLED
+    // Reuse the historical Cloud function and deviceInfo variable instead of
+    // extending the public Particle endpoint set during the refactor.
+    if(command == "GETDIAG")
+        return GetDiagnostics("");
+    if(command == "RESETDIAG")
+        return GetDiagnostics("RESET");
+#endif
 	
-    // Set time zone offset
+	// Set time zone offset
     if(command.substring(beginIdx, colonIdx)=="SETTIMEZONE") {
 		//Expect a string like this: SETTIMEZONE:-6
         timeZone = command.substring(colonIdx+1).toInt();
@@ -308,7 +317,10 @@ int setNewMode(int newModeIndex) {
     if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY) 
         previousModeID = currentModeID;
 
+    int oldModeID = currentModeID;
     currentModeID = modeStruct[newModeIndex].modeId;
+	if(currentModeID != oldModeID)
+		diagnosticsModeChanged(currentModeID);
 			
     // Update the EEPROM storage area
     if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY) 

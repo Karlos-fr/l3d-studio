@@ -51,6 +51,10 @@ void runDemo() {
         if(textMode == 3) {endOfMessage = strlen(message)*8;}	// Show Welcome Message
         if(textMode >= 4) {endOfMessage = SIDE*map(strlen(message), 1, 63, 1, SIDE)+(strlen(message))*8;}
         cubeGreeting(textMode, frameCount, pos);
+        // The greeting owns the loop for several frames. Service a deferred
+        // diagnostic request here, after rendering has unwound, so Cloud
+        // callers do not have to wait for the entire sequence.
+        diagnosticsProcessRequests();
 
         frameCount++;
         pos += posInc;
@@ -150,6 +154,7 @@ void runMode() {
 			demoTimer.start(); 
 		}
 	}
+	diagnosticsBeginFrame(currentModeID);
     switch (currentModeID) {
         case STANDBY:
             transitionAll(black,LINEAR);	
@@ -351,7 +356,8 @@ void runMode() {
 		    //colorAll(defaultColor, demo);
 		    run = FALSE;
 			break;
-    }    
+    }
+	diagnosticsEndFrame();
 }
 
 
