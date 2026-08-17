@@ -1,4 +1,11 @@
-﻿#ifdef L3D_UNITY_BUILD
+﻿// ============================================================================
+// Crumble - Implementation de l'effondrement par plans
+// ----------------------------------------------------------------------------
+// Ce fichier conserve l'algorithme historique et son vector temporaire. Le
+// remplacement du conteneur dynamique appartient a la phase 7.
+// ============================================================================
+
+#ifdef L3D_UNITY_BUILD
 
 void crumble() {
 	if( shift() )
@@ -37,8 +44,18 @@ bool shift() {
 	return ++Coffset<8;
 }
 
+// ----------------------------------------------------------------------------
+// Retire aleatoirement une position encore disponible dans le plan.
+//
+// Retour :
+// - index de la position choisie entre 0 et 63.
+//
+// Effet de bord :
+// - retire la position et reinitialise le cycle lorsque le plan est vide.
+// ----------------------------------------------------------------------------
 int draw() {
-	int random = ( ( ( double )rand()/( RAND_MAX ) )*( remaining.size()-1 ) );
+	uint64_t scaledRandom = static_cast<uint64_t>(rand()) * (remaining.size() - 1);
+	int random = static_cast<int>(scaledRandom / RAND_MAX);
 	int pick = remaining.at( random );
 	remaining.erase( remaining.begin()+random );
 	if( remaining.empty() )

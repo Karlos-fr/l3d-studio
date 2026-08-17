@@ -317,35 +317,35 @@ optimisation, correction fonctionnelle ou réécriture d'algorithme.
 
 ### Types
 
-- [ ] Conserver `Color` sur trois octets RGB.
-- [ ] Créer un type de coordonnées discrètes signé pour les valeurs `-1..8`.
-- [ ] Utiliser `uint8_t` uniquement pour les coordonnées garanties `0..7`.
-- [ ] Utiliser `int8_t` ou `int16_t` pour les sentinelles et calculs intermédiaires.
-- [ ] Créer un type fixed-point documenté pour les positions et vitesses fractionnaires.
-- [ ] Conserver un type flottant séparé uniquement pour les animations géométriques qui l'exigent.
-- [ ] Ajouter des assertions statiques sur la taille des structures critiques.
+- [x] Conserver `Color` sur trois octets RGB.
+- [x] Créer un type de coordonnées discrètes signé pour les valeurs `-1..8`.
+- [x] Utiliser `uint8_t` uniquement pour les coordonnées garanties `0..7`.
+- [x] Utiliser `int8_t` ou `int16_t` pour les sentinelles et calculs intermédiaires.
+- [x] Créer un type fixed-point documenté pour les positions et vitesses fractionnaires.
+- [x] Conserver un type flottant séparé uniquement pour les animations géométriques qui l'exigent.
+- [x] Ajouter des assertions statiques sur la taille des structures critiques.
 
 ### Rendu et hardware
 
-- [ ] Séparer les coordonnées logiques du mapping physique NeoPixel.
-- [ ] Centraliser la validation et la conversion `x,y,z` vers l'index LED.
-- [ ] Définir une interface de rendu sans classe virtuelle ni allocation dynamique.
-- [ ] Éviter d'ajouter un second framebuffer permanent de 1 536 octets.
-- [ ] Utiliser le buffer NeoPixel comme framebuffer principal quand c'est possible.
+- [x] Séparer les coordonnées logiques du mapping physique NeoPixel.
+- [x] Centraliser la validation et la conversion `x,y,z` vers l'index LED.
+- [x] Définir une interface de rendu sans classe virtuelle ni allocation dynamique.
+- [x] Éviter d'ajouter un second framebuffer permanent de 1 536 octets.
+- [x] Utiliser le buffer NeoPixel comme framebuffer principal quand c'est possible.
 - [ ] Vérifier l'ordre RGB et le mapping physique sur les 512 LED.
-- [ ] Ajouter des tests hôte du mapping pour les coins, arêtes et plans.
+- [x] Ajouter des tests hôte du mapping pour les coins, arêtes et plans.
 
 ### Calculs
 
-- [ ] Remplacer les `double` inutiles par des entiers, fixed-point ou `float`.
-- [ ] Éviter `pow()` pour les carrés et petits exposants entiers.
-- [ ] Remplacer les divisions constantes fréquentes par des calculs précomputés si mesuré utile.
-- [ ] Ne remplacer les fonctions trigonométriques qu'après comparaison visuelle et mesure flash/temps.
+- [x] Remplacer les `double` inutiles par des entiers, fixed-point ou `float`.
+- [x] Éviter `pow()` pour les carrés et petits exposants entiers.
+- [x] Remplacer les divisions constantes fréquentes par des calculs précomputés si mesuré utile (aucun remplacement retenu sans gain mesuré).
+- [x] Ne remplacer les fonctions trigonométriques qu'après comparaison visuelle et mesure flash/temps (fonctions conservées pendant cette phase).
 
 ### Critère de sortie
 
-- [ ] Le mapping logique et physique est indépendant des animations.
-- [ ] Chaque remplacement de flottant possède une comparaison avant/après.
+- [x] Le mapping logique et physique est indépendant des animations.
+- [x] Chaque remplacement de flottant possède une comparaison avant/après.
 
 ## Phase 5 — Refonte prioritaire de Rain et GoldRain
 

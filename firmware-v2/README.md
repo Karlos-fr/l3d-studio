@@ -47,5 +47,6 @@ optimisation ou d'une nouvelle architecture d'exécution.
 - `docs/ANIMATION_INDEX.md` : correspondance IDs, noms et modules ;
 - `docs/DIAGNOSTICS.md` : format et garanties des mesures runtime ;
 - `docs/SAFETY.md` : pile, buffers bornes et validation des commandes ;
+- `docs/RENDERING_TYPES.md` : types compacts, mapping et comparaisons de phase 4 ;
 - `docs/ROLLBACK.md` : retour au firmware stable ;
 - `docs/VISUAL_VALIDATION.md` : comparaison sur le cube réel.

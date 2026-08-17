@@ -1,4 +1,11 @@
-﻿#ifdef L3D_UNITY_BUILD
+﻿// ============================================================================
+// Spectrum - Implementation de la visualisation FFT du microphone
+// ----------------------------------------------------------------------------
+// Ce fichier echantillonne et affiche le spectre historique. Il ne modifie pas
+// le mapping logique du cube ni le protocole Particle.
+// ============================================================================
+
+#ifdef L3D_UNITY_BUILD
 
 // ----------------------------------------------------------------------------
 // Calcule puis affiche une frame du spectre audio historique.
@@ -10,7 +17,7 @@
 void FFTJoy() {
     run = TRUE;
     
-    for(int i=0; i<pow(2,M); i++) {
+    for(int i=0; i<ARRAY_SIZE; i++) {
         real[i]=analogRead(MICROPHONE)-SAMPLES;
         delayMicroseconds(120);  /* 210 this sets our 'sample rate'.  I went through a bunch of trial and error to 
                                   * find a good sample rate to put a soprano's vocal range in the spectrum of the cube
@@ -27,9 +34,9 @@ void FFTJoy() {
      * We do that by means of slightly 'shifting' the array index in
      * both imaginary[] and real[] arrays - the greater the index,
      * the more our 'window' will shift towards high frequencies. */
-    for(int i=0; i<pow(2,M); i++) {
+    for(int i=0; i<ARRAY_SIZE; i++) {
 		int ii = (i+1) < ARRAY_SIZE ? i+1 : i;
-        imaginary[i]=sqrt(pow(imaginary[ii],2)+pow(real[ii],2));
+        imaginary[i]=sqrt(imaginary[ii] * imaginary[ii] + real[ii] * real[ii]);
         //imaginary[i]=sqrt(pow(imaginary[i+1],2)+pow(real[i+1],2));
         if(imaginary[i]>maxVal)
             maxVal=imaginary[i];
@@ -43,14 +50,18 @@ void FFTJoy() {
     if(maxVal<650 && maxVal>450) maxVal-=0.3;   // This is the range where audio capture and display is optimal
     if(maxVal<=450) maxVal+=0.5;                // We cutoff maxVal to keep from clipping due to excess peaking
 
-    for(int i=0; i<pow(2,M)/2; i++) {
+    for(int i=0; i<ARRAY_SIZE/2; i++) {
         imaginary[i]=SIDE*imaginary[i]/maxVal;
         Color pixelColor;
         int y, pixIdx, pixUppIdx, pixLowIdx;
-    	for(y=0; y<=imaginary[i]; y++) {
+        for(y=0; y<=imaginary[i]; y++) {
             pixelColor=y<SIDE-1 ? getColorFromInteger(colorMap(y,0,SIDE+2)) : Color(191,0,15);
           	//pixelColor=getColorFromInteger(colorMap(y,0,SIDE+2));
-          	pixIdx=(((SIDE-1)*SIDE*SIDE) + (i*SIDE) + y);
+            uint16_t mappedIndex;
+            if (!tryVoxelIndex(i, y, SIDE - 1, &mappedIndex)) {
+                break;
+            }
+            pixIdx=mappedIndex;
             strip.setPixelColor(pixIdx, strip.Color(pixelColor.red, pixelColor.green, pixelColor.blue));
     		if(switch2) {
     		    //Down-top fade/blanking
@@ -95,7 +106,7 @@ void FFTJoy() {
     for(int x=0; x<SIDE; x++)
         for(int y=0; y<SIDE; y++)
             for(int z=0; z<SIDE-1; z++) {
-                int pixIdx=((z+1)*SIDE*SIDE) + (x*SIDE) + y;
+                uint16_t pixIdx=voxelIndexUnchecked(x, y, z + 1);
                 Color trailColor=getPixelColor(pixIdx);
                 if(switch1) {
                   	//This is responsible for the 'meteors' shooting towards the back of 
@@ -104,7 +115,8 @@ void FFTJoy() {
                     if(trailColor.green > 0) trailColor.green-=trailColor.green*(map(z%SIDE, 0, SIDE-1, 1, SIDE-1)*.05); //.125;
                     if(trailColor.blue > 0) trailColor.blue-=trailColor.blue*(map(z%SIDE, 0, SIDE-1, 1, SIDE-1)*.05); //.125;
                 }
-                strip.setPixelColor((z*SIDE*SIDE) + (x*SIDE) + y, strip.Color(trailColor.red, trailColor.green, trailColor.blue));
+                uint16_t destinationIndex=voxelIndexUnchecked(x, y, z);
+                strip.setPixelColor(destinationIndex, strip.Color(trailColor.red, trailColor.green, trailColor.blue));
                 if(stop || stopDemo) {return;}
                 delayMicroseconds(speed);  //introducing a little bit of delay to 'smoothen-out' transitions
             }

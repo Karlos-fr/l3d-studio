@@ -1,4 +1,11 @@
-﻿#pragma once
+﻿// ============================================================================
+// LegacyState - Declaration de l'etat global historique du firmware
+// ----------------------------------------------------------------------------
+// Ce fichier conserve provisoirement les etats partages du unity build. Leur
+// mutualisation et la suppression des conteneurs dynamiques viennent plus tard.
+// ============================================================================
+
+#pragma once
 
 // État et déclarations historiques conservés tels quels pendant la phase 1.
 // Leur redistribution par responsabilité appartient aux phases d'optimisation.
@@ -614,9 +621,9 @@ int SNframeCount;
 int initialSnakeLength;
 
 struct voxel {
-  int j;
-  int k;
-  int l;
+  CubeCoordinate j;
+  CubeCoordinate k;
+  CubeCoordinate l;
   
   voxel(int j=0, int k=0, int l=0) 
     : j(j), k(k), l(l)
@@ -633,14 +640,27 @@ struct voxel {
       return (v.j != j || v.k != k || v.l != l);
   };
 
-  double distance(const voxel& v) const {
-    return sqrt(
-      pow((v.j - j), 2) +
-      pow((v.k - k), 2) +
-      pow((v.l - l), 2)
-    );
+  // --------------------------------------------------------------------------
+  // Calcule la distance euclidienne au carre vers un autre voxel.
+  //
+  // Parametres :
+  // - v : voxel cible dont les coordonnees restent dans la plage du cube.
+  //
+  // Retour :
+  // - somme entiere des carres, suffisante pour classer les directions.
+  // --------------------------------------------------------------------------
+  int16_t distanceSquared(const voxel& v) const {
+    // Ecart signe sur l'axe j, conserve sur 16 bits avant multiplication.
+    const int16_t deltaJ = static_cast<int16_t>(v.j) - j;
+    // Ecart signe sur l'axe k, conserve sur 16 bits avant multiplication.
+    const int16_t deltaK = static_cast<int16_t>(v.k) - k;
+    // Ecart signe sur l'axe l, conserve sur 16 bits avant multiplication.
+    const int16_t deltaL = static_cast<int16_t>(v.l) - l;
+    return deltaJ * deltaJ + deltaK * deltaK + deltaL * deltaL;
   };
 };
+
+static_assert(sizeof(voxel) == 3, "Un voxel Snake doit tenir sur trois octets signes");
     
 voxel operator+(const voxel& v1, const voxel& v2) {
   return voxel(v1.j + v2.j, v1.k + v2.k, v1.l + v2.l);    

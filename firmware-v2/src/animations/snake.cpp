@@ -1,4 +1,11 @@
-﻿#ifdef L3D_UNITY_BUILD
+﻿// ============================================================================
+// Snake - Implementation de l'animation du serpent autonome
+// ----------------------------------------------------------------------------
+// Ce fichier gere le serpent et ses cibles historiques. Les conteneurs
+// dynamiques restent provisoires jusqu'a la phase 7.
+// ============================================================================
+
+#ifdef L3D_UNITY_BUILD
 
 void snake() {
   Color segmentColor;
@@ -85,6 +92,12 @@ void addTreat() {
   }
 }
 
+// ----------------------------------------------------------------------------
+// Conserve ou choisit la direction valide la plus proche de la cible.
+//
+// Effet de bord :
+// - actualise snakeDirection, ou le place a NULL lorsque le serpent est bloque.
+// ----------------------------------------------------------------------------
 void updateDirection() {
   if (canMove(snakeDirection) && random(0, 100) < 80) {
     return;
@@ -99,12 +112,12 @@ void updateDirection() {
     snakeDirection = NULL;
     return;
   }
-  double leastDistance = 65536.0;
-  double SNdistance;
+  int16_t leastDistance = INT16_MAX;
+  int16_t SNdistance;
   voxel next;
   for(auto it = allowedDirections.begin(); it != allowedDirections.end(); ++it) {
     next = SNsnake[0] + **it;
-    SNdistance = next.distance(treats[0]);
+    SNdistance = next.distanceSquared(treats[0]);
     if (SNdistance < leastDistance) {
       leastDistance = SNdistance;
       snakeDirection = *it;

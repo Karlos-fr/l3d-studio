@@ -23,5 +23,6 @@ node --test firmware-v2/test/host/*.test.mjs
 ```
 
 Ces tests couvrent les fixtures historiques, les commandes vides, maximales,
-tronquées et malformées, les bornes CubePainter et les invariants statiques des
-buffers partagés. La compilation cloud reste le test autoritatif du C++ Particle.
+tronquées et malformées, les bornes CubePainter, les invariants statiques des
+buffers partagés, le mapping des 512 voxels et les comparaisons numériques de
+phase 4. La compilation cloud reste le test autoritatif du C++ Particle.

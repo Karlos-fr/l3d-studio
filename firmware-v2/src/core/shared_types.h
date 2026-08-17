@@ -1,4 +1,13 @@
-﻿#pragma once
+﻿// ============================================================================
+// SharedTypes - Declaration des structures historiques partagees
+// ----------------------------------------------------------------------------
+// Ce fichier regroupe les types utilises par plusieurs animations. Les
+// representations numeriques elementaires restent definies dans NumericTypes.
+// ============================================================================
+
+#pragma once
+
+#include "numeric_types.h"
 
 #define MAX_NUM_COLORS    6
 #define MAX_NUM_SWITCHES  4
@@ -29,7 +38,7 @@ typedef struct auxSwitchParams {
 
 /** An RGB color. */
 typedef struct Color {
-  unsigned char red, green, blue;
+  uint8_t red, green, blue;
 
   Color(int r, int g, int b) : red(r), green(g), blue(b) {}
   Color() : red(0), green(0), blue(0) {}
@@ -37,18 +46,18 @@ typedef struct Color {
 
 /** A point in 3D space. */
 typedef struct Point {
-  float x;
-  float y;
-  float z;
+  GeometryScalar x;
+  GeometryScalar y;
+  GeometryScalar z;
   Point() : x(0), y(0), z(0) {}
-  Point(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+  Point(GeometryScalar _x, GeometryScalar _y, GeometryScalar _z) : x(_x), y(_y), z(_z) {}
 } Point;
 
 /** Point entier compact reserve aux etats temporaires bornes des animations. */
 typedef struct PackedPoint {
-  int8_t x;
-  int8_t y;
-  int8_t z;
+  CubeCoordinate x;
+  CubeCoordinate y;
+  CubeCoordinate z;
 } PackedPoint;
 
 /** A 3D RGB voxel. */
@@ -57,6 +66,11 @@ typedef struct Voxel {
     Color color;        // 3 Bytes
     Voxel() : coordinates(), color() {}
 } Voxel;
+
+static_assert(sizeof(Color) == 3, "Color doit rester un triplet RGB compact");
+static_assert(sizeof(Point) == 12, "Point doit contenir trois float 32 bits");
+static_assert(sizeof(PackedPoint) == 3, "PackedPoint doit rester compact");
+static_assert(sizeof(Voxel) == 16, "Voxel ne doit pas gagner de padding supplementaire");
 
 /** Overloaded != operator. */
 bool operator!= (const Color& a, const Color& b) {

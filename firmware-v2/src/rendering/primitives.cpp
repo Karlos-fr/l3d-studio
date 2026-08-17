@@ -1,4 +1,13 @@
-﻿#ifdef L3D_UNITY_BUILD
+﻿// ============================================================================
+// RenderingPrimitives - Implementation des primitives de dessin du cube
+// ----------------------------------------------------------------------------
+// Ce fichier dessine dans le buffer NeoPixel via le mapping logique centralise.
+// Il ne gere ni selection de mode ni protocole Particle.
+// ============================================================================
+
+#ifdef L3D_UNITY_BUILD
+
+#include "voxel_mapping.h"
 
 void drawLine(Point p1, Point p2, Color col) {
   // thanks to Anthony Thyssen for the original write of Bresenham's line
@@ -130,12 +139,22 @@ Color getPixelColor(int index) {
     return getColorFromInteger(col);
 }
 
-/** Get the color of a voxel at a position.
-  @param x, y, z Coordinate of the LED to set.
-  @return The Color for the given pixel.
-  */
+// ----------------------------------------------------------------------------
+// Lit la couleur RGB d'un voxel logique apres validation de sa position.
+//
+// Parametres :
+// - x : colonne logique candidate.
+// - y : hauteur logique candidate.
+// - z : plan logique candidat.
+//
+// Retour :
+// - couleur du voxel, ou noir lorsque la position est hors du cube.
+// ----------------------------------------------------------------------------
 Color getPixelColor(int x, int y, int z) {
-    int index = (z*64) + (x*8) + y;
+    uint16_t index;
+    if (!tryVoxelIndex(x, y, z, &index)) {
+      return black;
+    }
     uint32_t col = strip.getPixelColor(index);
     return getColorFromInteger(col);
 }
@@ -148,14 +167,21 @@ Color getPixelColor(Point p) {
     return getPixelColor(p.x, p.y, p.z);
 }
 
-/** Set a voxel at a position to a color.
-  @param x, y, z Coordinate of the LED to set.
-  @param col Color to set the LED to.
-  */
+// ----------------------------------------------------------------------------
+// Ecrit une couleur RGB dans un voxel logique valide.
+//
+// Parametres :
+// - x : colonne logique candidate.
+// - y : hauteur logique candidate.
+// - z : plan logique candidat.
+// - col : couleur RGB a transmettre au pilote.
+//
+// Effet de bord :
+// - modifie le framebuffer NeoPixel uniquement si la position est valide.
+// ----------------------------------------------------------------------------
 void setPixelColor(int x, int y, int z, Color col) {
-  if(x >= 0 && y >= 0 && z >= 0 && 
-     x < SIDE && y < SIDE && z < SIDE) {
-    int index = (z*64) + (x*8) + y;
+  uint16_t index;
+  if (tryVoxelIndex(x, y, z, &index)) {
     strip.setPixelColor(index, strip.Color(col.red, col.green, col.blue));
   }
 }

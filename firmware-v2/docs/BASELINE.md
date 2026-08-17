@@ -38,6 +38,7 @@ particle compile photon firmware-v2 --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Phase 2, diagnostics désactivés | 2.3.1 | 114 328 | 39 852 | 114 332 | 16 744 |
 | 2026-08-17 | Phase 2, diagnostics activés et endpoints historiques réutilisés | 2.3.1 | 115 368 | 39 932 | 115 372 | 15 704 |
 | 2026-08-17 | Phase 3, pile et commandes sécurisées | 2.3.1 | 115 896 | 39 932 | 115 900 | 15 176 |
+| 2026-08-17 | Phase 4, types compacts et mapping centralisé | 2.3.1 | 115 944 | 39 932 | 115 948 | 15 128 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
@@ -60,6 +61,11 @@ La mesure a été obtenue sur `chicken_turkey`, Device OS 2.3.1, après flash OT
 La réponse compacte a confirmé un reset de mise à jour normal (`r=70`, `d=0`).
 Le seuil de 10 Kio n'est pas validé au démarrage, même si la marge observée
 entre les frames est supérieure.
+
+La phase 4 conserve la RAM statique et ajoute 48 octets de flash pour borner les
+accès Spectrum et centraliser leur mapping. Le gain du voxel Snake, réduit de
+12 à 3 octets, concerne le heap de ses `vector` et n'apparait donc pas dans la
+RAM statique du rapport de compilation.
 
 ## Mesure sur le Photon stable
 
@@ -96,6 +102,9 @@ sources.
   `auxSwtchList` identiques aux fixtures.
 - Flash OTA de la phase 1 réalisé le 2026-08-17 : Photon revenu en ligne et
   contrat Cloud de nouveau vérifié après redémarrage.
+- Flash OTA de la phase 4 réalisé le 2026-08-17 : Photon revenu en ligne avec
+  les fonctions et variables historiques ; mode `Off` rétabli avec `B:1`
+  (`brightness=2` dans la représentation interne historique).
 - Comparaison visuelle sur le matériel : validée par l'utilisateur le 2026-08-17.
 - Rollback matériel OTA : exécuté et validé le 2026-08-17 avec Spark Pixels
   Mega 1.4 ; la voie USB n'a pas été nécessaire.
