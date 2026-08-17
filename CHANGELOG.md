@@ -6,6 +6,20 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Nettoyage de la documentation firmware
+
+- Suppression des rapports d'optimisation détaillés animation par animation,
+  devenus redondants avec la baseline, le changelog et l'historique Git.
+- Conservation des documents fonctionnels, architecturaux et opérationnels du
+  firmware.
+
+### Correction de la saisie des textes
+
+- Conservation du focus et de la position du curseur pendant la saisie du
+  message persistant et du paramètre texte de l'animation `Text`.
+- Mise à jour et sauvegarde de ces valeurs sans reconstruction complète du DOM
+  à chaque caractère.
+
 ### Réorganisation du dépôt
 
 - Fusion de `firmware/` et de l'ancien répertoire de refactor dans un unique

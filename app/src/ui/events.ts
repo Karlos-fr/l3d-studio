@@ -339,7 +339,8 @@ function handleExpiredSession(context: UiEventContext): void {
 // - fieldElement : champ DOM modifie par l'utilisateur.
 //
 // Effet de bord :
-// - modifie l'etat applicatif puis relance le rendu.
+// - modifie l'etat applicatif et persiste les préférences ;
+// - relance le rendu uniquement pour les champs qui modifient la structure UI.
 // ----------------------------------------------------------------------------
 function handleFieldChange(
   context: UiEventContext,
@@ -375,6 +376,14 @@ function handleFieldChange(
   }
 
   saveAppPreferences(context.storage, context.state);
+
+  // Les champs texte doivent conserver leur nœud DOM pendant la saisie. Un
+  // rendu complet à chaque caractère remplacerait l'input et ferait perdre le
+  // focus ainsi que la position du curseur.
+  if (fieldName === "text" || fieldName === "persistent-text") {
+    return;
+  }
+
   context.rerender();
 }
 
