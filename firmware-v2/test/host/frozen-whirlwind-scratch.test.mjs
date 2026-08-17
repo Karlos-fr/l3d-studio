@@ -62,13 +62,13 @@ test("Frozen place ses positions dans le scratch partagé", () => {
 // ----------------------------------------------------------------------------
 // Vérifie la taille et l'intégration de l'état Whirlwind.
 // ----------------------------------------------------------------------------
-test("Whirlwind place ses 288 octets temporaires dans le scratch", () => {
+test("Whirlwind place tout son etat temporaire dans le scratch", () => {
   // État global et définition du scratch partagé.
   const legacyState = readFirmwareSource("src/core/legacy_state.h");
-  assert.match(legacyState, /WhirlwindScratch whirlwind;/u);
+  assert.match(legacyState, /WhirlwindState whirlwind;/u);
   assert.match(
     legacyState,
-    /sizeof\(WhirlwindScratch\) == 288/u,
+    /sizeof\(WhirlwindState\) >= 288/u,
   );
   assert.doesNotMatch(legacyState, /^float (?:angle|radi|y)\[/mu);
   assert.equal(

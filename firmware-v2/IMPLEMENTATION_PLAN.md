@@ -377,27 +377,27 @@ optimisation, correction fonctionnelle ou réécriture d'algorithme.
 
 ### Cycle de vie
 
-- [ ] Définir l'interface légère `enter`, `tick` et `exit` d'une animation.
-- [ ] Garantir que `enter` initialise entièrement son état.
-- [ ] Garantir que `exit` ferme les sockets et libère les ressources logiques.
-- [ ] Interdire les pointeurs vers l'état d'une animation après sa sortie.
-- [ ] Ajouter une réinitialisation contrôlée lors d'un changement de mode.
+- [x] Définir l'interface légère `enter`, `tick` et `exit` d'une animation.
+- [x] Garantir que `enter` initialise entièrement son état.
+- [x] Garantir que `exit` ferme les sockets et libère les ressources logiques.
+- [x] Interdire les pointeurs vers l'état d'une animation après sa sortie.
+- [x] Ajouter une réinitialisation contrôlée lors d'un changement de mode.
 
 ### Zone mémoire partagée
 
-- [ ] Inventorier la taille finale de chaque état d'animation.
-- [ ] Définir une union ou zone scratch alignée couvrant le plus gros état actif.
-- [ ] Mutualiser les états de Matrix, Squarral, Collide, Whirlwind et modes similaires.
-- [ ] Mutualiser les buffers CubePainter, UDP Listener et transition quand leurs durées de vie ne se chevauchent pas.
-- [ ] Recharger CubePainter depuis l'EEPROM à l'entrée si cela évite un buffer résident.
-- [ ] Ajouter des assertions statiques sur l'alignement et la taille de la zone partagée.
-- [ ] Effacer seulement la portion nécessaire lors d'un changement de mode.
+- [x] Inventorier la taille finale de chaque état d'animation.
+- [x] Définir une union ou zone scratch alignée couvrant le plus gros état actif.
+- [x] Mutualiser les états de Matrix, Squarral, Collide, Whirlwind et modes similaires.
+- [x] Mutualiser les buffers CubePainter, UDP Listener et transition quand leurs durées de vie ne se chevauchent pas.
+- [x] Recharger CubePainter depuis l'EEPROM à l'entrée si cela évite un buffer résident.
+- [x] Ajouter des assertions statiques sur l'alignement et la taille de la zone partagée.
+- [x] Effacer seulement la portion nécessaire lors d'un changement de mode.
 
 ### Critère de sortie
 
-- [ ] Une seule zone d'état volumineuse est résidente à la fois.
-- [ ] Les changements rapides de modes ne laissent aucun état invalide.
-- [ ] Le gain RAM est mesuré et documenté.
+- [x] Une seule zone d'état volumineuse est résidente à la fois.
+- [x] Les changements rapides de modes ne laissent aucun état invalide.
+- [x] Le gain RAM est mesuré et documenté.
 
 ## Phase 7 — Suppression des allocations dynamiques applicatives
 

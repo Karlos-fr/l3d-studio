@@ -19,8 +19,8 @@ void whirlWind() {
     const int arcs = 180;
     run = TRUE;
 
-    if (millis() - lastSwap > CYCLE_INTERVAL) {
-        lastSwap = millis();
+    if (millis() - whirlwindLastSwap > CYCLE_INTERVAL) {
+        whirlwindLastSwap = millis();
         for (int i = 0; i < MAX_DOTS; i++) {
             whirlwindHeights[i] = random(SIDE);
             whirlwindRadii[i] =
@@ -37,9 +37,9 @@ void whirlWind() {
         // Dessine tous les points avec leur position courante.
         for (int i = 0; i < MAX_DOTS; i++) {
             setPixelColor(
-                center.x + whirlwindRadii[i] * cos(whirlwindAngles[i]),
+                whirlwindCenterX + whirlwindRadii[i] * cos(whirlwindAngles[i]),
                 whirlwindHeights[i],
-                center.z + whirlwindRadii[i] * sin(whirlwindAngles[i]),
+                whirlwindCenterZ + whirlwindRadii[i] * sin(whirlwindAngles[i]),
                 Color{
                     whirlwindColors[i].red,
                     whirlwindColors[i].green,
@@ -86,7 +86,7 @@ void randomColor(struct Color* color) {
     int randomFamily;
     do {
         randomFamily = random(7);
-    } while (randomFamily == lastRand || randomFamily == lastLastRand);
+    } while (randomFamily == whirlwindLastRand || randomFamily == whirlwindLastLastRand);
 
     switch (randomFamily) {
         case 0:
@@ -125,8 +125,8 @@ void randomColor(struct Color* color) {
             color->blue = random(2);
             break;
     }
-    lastLastRand = lastRand;
-    lastRand = randomFamily;
+    whirlwindLastLastRand = whirlwindLastRand;
+    whirlwindLastRand = randomFamily;
 }
 
 // ----------------------------------------------------------------------------

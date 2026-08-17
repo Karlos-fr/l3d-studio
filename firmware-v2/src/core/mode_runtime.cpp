@@ -111,7 +111,7 @@ void runDemo() {
             }
         }
     }
-    runMode();
+    animationTick();
 }
 
 
@@ -132,6 +132,7 @@ void setRandomMode(void) {
 	switch3 = random(2);
 	switch4 = random(2);
 	
+	int selectedModeID;
 	do {
         //int randomModeIdx = random(0, (int)(sizeof(modeStruct) / sizeof(modeStruct[0])));
         //    currentModeID = modeStruct[randomModeIdx].modeId;
@@ -141,23 +142,23 @@ void setRandomMode(void) {
 		  */
 		if(shuffleIdx >= sizeof modeShuffleOrder / sizeof modeShuffleOrder[0])
 			resetShuffleMode();
-		currentModeID = modeStruct[modeShuffleOrder[shuffleIdx]].modeId; 
+		selectedModeID = modeStruct[modeShuffleOrder[shuffleIdx]].modeId;
 		shuffleIdx++;
-    }while((currentModeID == previousModeID)    || 
-           (currentModeID == NORMAL)            || 
-           (currentModeID == STANDBY)           ||    
-           (currentModeID == CHEERLIGHTS)       || 
-		   (currentModeID == COLORALL)          ||
-           (currentModeID == CUBE_PAINTER)      ||
-           (currentModeID == IFTTTWEATHER)      ||
-		   (currentModeID == POLICELIGHTS)     	||
-		   (currentModeID == SHUFFLE) 	     	||
-		   (currentModeID == TEXT)              || 
-           (currentModeID == LISTENER));
+    }while((selectedModeID == previousModeID)    ||
+           (selectedModeID == NORMAL)            ||
+           (selectedModeID == STANDBY)           ||
+           (selectedModeID == CHEERLIGHTS)       ||
+		   (selectedModeID == COLORALL)          ||
+           (selectedModeID == CUBE_PAINTER)      ||
+           (selectedModeID == IFTTTWEATHER)      ||
+		   (selectedModeID == POLICELIGHTS)     	||
+		   (selectedModeID == SHUFFLE) 	     	||
+		   (selectedModeID == TEXT)              ||
+           (selectedModeID == LISTENER));
 	
 	//sprintf(debug, "currentModeID: %d", currentModeID);
 	//Particle.publish(debug);
-	setNewMode(getModeIndexFromID(currentModeID));
+	setNewMode(getModeIndexFromID(selectedModeID));
 }
 
 // ----------------------------------------------------------------------------
@@ -437,6 +438,8 @@ void resetVariables(int modeIndex) {
     switch (modeIndex) {
         case ACIDRAIN:
         case GOLDRAIN:
+            ledColor = 0;
+            timeAboveThreshhold = 0;
             fadingMax=25;
             initSalvos();
             transitionAll(black, LINEAR);
@@ -611,21 +614,18 @@ void resetVariables(int modeIndex) {
 			snakeResetCube();	
 		    break;
 		case SQUARRAL:
-            frame = 0;
-            bound = 0;
-            axis = 0;
-            boundInc = 1;
-            squarral_zInc = 1;
-            position = {0,0,0};
-            increment = {1,0,0};
 			transitionAll(black,LINEAR);	
+			sharedAnimationState.squarrel = {};
+			sharedAnimationState.squarrel.boundInc = 1;
+			sharedAnimationState.squarrel.zIncrement = 1;
+			sharedAnimationState.squarrel.increment = {1,0,0};
 			break;
 		case WHIRLWIND:
 			// La transition doit libérer le scratch avant l'état Whirlwind.
             transitionAll(black,LINEAR);
-			center = { 4.5, 4.5, 4.5 };
-            lastRand = lastLastRand = 0;
-            lastSwap = millis();
+			whirlwindCenterX = whirlwindCenterY = whirlwindCenterZ = 4.5;
+            whirlwindLastRand = whirlwindLastLastRand = 0;
+            whirlwindLastSwap = millis();
             for (int i=0; i<MAX_DOTS; i++) {
                 whirlwindHeights[i] = random(SIDE);
                 whirlwindRadii[i] = random(MIN_RADI,MAX_RADI) + randomDecimal();

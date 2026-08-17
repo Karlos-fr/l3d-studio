@@ -72,7 +72,7 @@ test("la trainee Squarrel compacte occupe exactement 150 octets", () => {
   assert.match(legacyState, /const uint8_t SQUARREL_TRAIL_LENGTH = 50;/);
   assert.match(legacyState, /sizeof\(SquarrelPosition\) == 3/);
   assert.match(legacyState, /sizeof\(SquarrelIncrement\) == 3/);
-  assert.match(legacyState, /sizeof\(trailPoints\) == 150/);
+  assert.match(legacyState, /sizeof\(\(\(SquarrelState\*\)0\)->trailPoints\) == 150/);
   assert.equal(SQUARREL_TRAIL_LENGTH * 3, 150);
   assert.doesNotMatch(legacyState, /Point trailPoints|Point position, increment, pixel/u);
 });

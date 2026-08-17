@@ -391,6 +391,7 @@ Timer demoTimer(2*60*1000, advanceDemo);
 #include "cloud/command_validation.h"
 
 #include "core/legacy_state.h"
+#include "core/animation_lifecycle.h"
 #include "animations/animations.h"
 #include "diagnostics/runtime_diagnostics.h"
 
@@ -465,6 +466,7 @@ void setup() {
 	for(uint8_t i=0;i<sizeof modeStruct / sizeof modeStruct[0];i++)
 		modeShuffleOrder[i] = i;
 
+    animationLifecycleStart(currentModeID);
     diagnosticsSetupComplete(currentModeID);
 }
 
@@ -483,7 +485,7 @@ void loop() {
     if(run) {
 		stop = FALSE;
         if(demo) { runDemo(); }
-		else { runMode(); }
+		else { animationTick(); }
     }
 	
 	if(currentModeID == STANDBY) {
@@ -532,6 +534,8 @@ void loop() {
 
 //Disable random seed from the cloud
 #include "core/mode_runtime.cpp"
+
+#include "core/animation_lifecycle.cpp"
 
 #include "animations/cube_greeting.cpp"
 

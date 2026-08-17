@@ -88,8 +88,7 @@ void iftttWeather(uint32_t c) {
         brightness = lastBrightness;
         switch1 = lastSwitchState[0];
         demo = lastDemo;    // restore demo state
-        currentModeID = previousModeID;
-        setNewMode(getModeIndexFromID(currentModeID));
+        setNewMode(getModeIndexFromID(previousModeID));
     }
     run = true;
 }

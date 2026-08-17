@@ -40,6 +40,7 @@ test("IFTTT mutualise la longueur de son message fixe", () => {
 // ----------------------------------------------------------------------------
 test("IFTTT reste un affichage sans client réseau propre", () => {
   assert.doesNotMatch(iftttSource, /TCPClient|UDP|new|malloc|String\s/u);
-  assert.match(iftttSource, /currentModeID = previousModeID;/u);
+  assert.match(iftttSource, /setNewMode\(getModeIndexFromID\(previousModeID\)\);/u);
+  assert.doesNotMatch(iftttSource, /currentModeID = previousModeID;/u);
   assert.match(iftttSource, /brightness = lastBrightness;/u);
 });

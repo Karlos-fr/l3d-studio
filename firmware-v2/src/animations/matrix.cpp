@@ -8,12 +8,21 @@
 #ifdef L3D_UNITY_BUILD
 
 // ----------------------------------------------------------------------------
-// Initialise les huit positions X/Z de chacun des quatre flux Matrix.
+// Initialise les compteurs et les huit positions X/Z des quatre flux Matrix.
 //
 // Effet de bord :
-// - consomme 64 tirages rand dans leur ordre historique et remplit les tableaux.
+// - remet l'etat entier dans sa configuration historique puis consomme 64
+//   tirages rand dans leur ordre d'origine.
 // ----------------------------------------------------------------------------
 void matrix_setup() {
+  voxelXw1[0] = voxelZw1[0] = 0;
+  voxelXw2[0] = voxelZw2[0] = 0;
+  voxelXw3[0] = voxelZw3[0] = 0;
+  voxelXw4[0] = voxelZw4[0] = 0;
+  wave01 = 7;
+  wave02 = 10;
+  wave03 = 15;
+  wave04 = 19;
   for(int i=8;i>0;i--) {
       voxelXw1[i]=rand()%8;
       voxelZw1[i]=rand()%8;

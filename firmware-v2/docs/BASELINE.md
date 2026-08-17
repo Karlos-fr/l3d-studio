@@ -62,6 +62,7 @@ particle compile photon firmware-v2 --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Passe animations, durée de vie du scratch Whirlwind corrigée | 2.3.1 | 109 360 | 18 732 | 109 364 | 21 712 |
 | 2026-08-17 | Quatre imports CubeTube et métadonnées constantes | 2.3.1 | 111 856 | 16 228 | 111 860 | 19 216 |
 | 2026-08-17 | Nouveau mode GyrophareFR | 2.3.1 | 112 624 | 16 236 | 112 628 | 18 448 |
+| 2026-08-17 | Phase 6, etats d'animations mutualises | 2.3.1 | 112 608 | 13 780 | 112 612 | 18 464 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
@@ -136,4 +137,8 @@ sources.
   `Off` rétabli avec la valeur interne `brightness=2`.
 - Flash OTA de GyrophareFR réalisé le 2026-08-17 : bleu seul, bicolore avec
   traînée et bicolore réactif au son acceptés à `B:1`, puis mode `Off` rétabli
+  avec `brightness=2`.
+- Flash OTA de la phase 6 réalisé le 2026-08-17 : huit changements rapides
+  entre GoldRain, Matrix, Squarrel, Collide2, Whirlwind et CubePainter acceptés
+  à `B:1`, minimum libre de 35 408 octets, aucun OOM, puis retour sur `Off`
   avec `brightness=2`.

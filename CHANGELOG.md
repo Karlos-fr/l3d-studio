@@ -6,6 +6,20 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Etats d'animations mutualises
+
+- Ajout du cycle de vie central `enter`, `tick` et `exit` pour encadrer chaque
+  changement de mode et fermer les sockets CheerLights ou Listener.
+- Mutualisation de Rain, du scratch historique, de Matrix, Squarrel, Collide2,
+  Whirlwind, CubePainter, Spectrum, Snake, transitions et Listener dans une
+  union unique de 8 220 octets.
+- Rechargement de CubePainter depuis l'EEPROM a son entree et inspection directe
+  de la persistance au demarrage, sans conserver son buffer resident.
+- RAM statique reduite de 16 236 a 13 780 octets, soit 2 456 octets liberes ;
+  Flash reduite de 16 octets sur Photon Device OS 2.3.1.
+- Flash OTA et changements rapides entre six familles d'etats valides a `B:1`,
+  sans reset ni OOM, puis retour du cube sur `Off`.
+
 ### Gyrophare français
 
 - Ajout de `GyrophareFR` (ID 75), un double faisceau vertical tournant sur huit

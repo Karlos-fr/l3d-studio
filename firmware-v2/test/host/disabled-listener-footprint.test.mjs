@@ -46,7 +46,7 @@ test("Listener retire son buffer UDP du build actif", () => {
   assert.match(buildConfig, /#define L3D_LISTENER_ENABLED 0/u);
   assert.match(
     legacyState,
-    /#if L3D_LISTENER_ENABLED[\s\S]*char data\[CUBE_PACKET_SIZE\];[\s\S]*#endif/u,
+    /#if L3D_LISTENER_ENABLED[\s\S]*char listenerData\[CUBE_PACKET_SIZE\];[\s\S]*#endif/u,
   );
   assert.match(
     listenerSource,

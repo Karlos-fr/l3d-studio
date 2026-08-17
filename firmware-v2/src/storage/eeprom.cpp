@@ -1,4 +1,11 @@
-﻿#ifdef L3D_UNITY_BUILD
+// ============================================================================
+// EepromStorage - Initialisation de la persistance historique
+// ----------------------------------------------------------------------------
+// Ce fichier charge les reglages persistants. Le buffer CubePainter reste dans
+// la zone d'animation et n'est recharge que lors de l'entree dans ce mode.
+// ============================================================================
+
+#ifdef L3D_UNITY_BUILD
 
 /***************************************************************
  * NOTE ON MY USE OF THE 'inline' QUALIFIER IN BELOW FUNCTIONS:
@@ -17,11 +24,13 @@ inline void clearEEPROM(void) {
         EEPROM.write(i, 0xFF);
 }
 
-/* Check EEPROM area and initialize globals (if values were previoulsy set);
- * otherwise, initializes the respective EEPROM storage area with defaults.
- * Variables covered: speed, brightness, currentModeID, color1/2/3/4, 
- * switch1/2/3/4, drawingBuffer[]
- */
+// ----------------------------------------------------------------------------
+// Charge les reglages persistants et initialise les zones EEPROM vierges.
+//
+// Effet de bord :
+// - initialise texte, vitesse, luminosite, mode, couleurs et switches ;
+// - inspecte et initialise la zone CubePainter sans conserver son image en RAM.
+// ----------------------------------------------------------------------------
 inline void initEEPROM(void) {
 	//Initialize local flags
     bool colorsStored, switchesStored, clearBuffer;
@@ -31,10 +40,9 @@ inline void initEEPROM(void) {
 	// Initialize textInputString variable
 	SetText("");
     
-    // Initialize drawingBuffer variable
-    EEPROM.get(PAINTER_START_ADDR, drawingBuffer);
+    // Inspecte directement l'EEPROM sans monopoliser la zone d'animation.
     for(int i=0; i<(PIXEL_CNT*BPP); i++) {
-        if(drawingBuffer[i] != 0xFF) {
+        if(EEPROM.read(PAINTER_START_ADDR + i) != 0xFF) {
             clearBuffer = FALSE;
             break;
         }
@@ -43,9 +51,7 @@ inline void initEEPROM(void) {
     // (EEPROM.get() returns an array filled with 255, so we need to fill it with 0's)
     if(clearBuffer) {
         for(int i=0; i<(PIXEL_CNT*BPP); i++)
-            drawingBuffer[i] = 0;
-        // Initialize EEPROM storage area
-        EEPROM.put(PAINTER_START_ADDR, drawingBuffer);
+            EEPROM.write(PAINTER_START_ADDR + i, 0);
     }
 
 	// Initialize speed variable

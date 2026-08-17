@@ -34,7 +34,7 @@ const runtimeSource = fs.readFileSync(
 // ----------------------------------------------------------------------------
 test("Le scratch reste borné à un framebuffer de 1 536 octets", () => {
   // Tailles décimales imposées par les assertions C++.
-  const expectedSizes = [1536, 1024, 1200, 243, 1536, 64, 128, 288];
+  const expectedSizes = [1536, 1024, 1200, 243, 1536, 64, 128];
   // Taille individuelle recherchée dans les contrats de compilation.
   for (const expectedSize of expectedSizes) {
     assert.match(
@@ -46,6 +46,7 @@ test("Le scratch reste borné à un framebuffer de 1 536 octets", () => {
     legacyState,
     /sizeof\(SharedAnimationScratch\) == PIXEL_CNT \* BPP/u,
   );
+  assert.match(legacyState, /sizeof\(WhirlwindState\) >= 288/u);
 });
 
 // ----------------------------------------------------------------------------

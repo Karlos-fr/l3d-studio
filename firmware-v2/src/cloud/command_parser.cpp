@@ -451,7 +451,8 @@ int SetText(String command) {
 // - index applique ou COMMAND_ERROR_OUT_OF_RANGE.
 //
 // Effet de bord :
-// - met a jour l'EEPROM, les diagnostics et l'etat runtime du mode.
+// - quitte l'ancien mode, met a jour l'EEPROM et les diagnostics, puis initialise
+//   entierement le nouvel etat avant sa premiere frame.
 // ----------------------------------------------------------------------------
 int setNewMode(int newModeIndex) {
     //sprintf(debug,"%i", newModeIndex);
@@ -467,6 +468,7 @@ int setNewMode(int newModeIndex) {
         previousModeID = currentModeID;
 
     int oldModeID = currentModeID;
+    animationExit(oldModeID);
     currentModeID = modeStruct[newModeIndex].modeId;
 	if(currentModeID != oldModeID)
 		diagnosticsModeChanged(currentModeID);
@@ -476,7 +478,7 @@ int setNewMode(int newModeIndex) {
         EEPROM.write(LASTMODE_START_ADDR, currentModeID);
     
     boundedTextCopy(currentModeName, sizeof(currentModeName), modeStruct[newModeIndex].modeName);
-	resetVariables(modeStruct[newModeIndex].modeId);
+	animationEnter(currentModeID);
 
 	return newModeIndex;
 }

@@ -45,25 +45,28 @@ void updateAcidRainColor(CompactRainDrop& drop) {
 
   if (ledColor < 200) {
     switch (logicalY) {
-      case 6: drop.color = Color(0, 10, 90); break;
-      case 5: drop.color = Color(0, 0, 100); break;
-      case 4: drop.color = Color(10, 0, 110); break;
-      case 3: drop.color = Color(30, 0, 120); break;
-      case 2: drop.color = Color(100, 0, 150); break;
-      case 1: drop.color = Color(100, 0, 100); break;
-      case 0: drop.color = Color(random(100, 161), 0, 10); break;
+      case 6: drop.color = {0, 10, 90}; break;
+      case 5: drop.color = {0, 0, 100}; break;
+      case 4: drop.color = {10, 0, 110}; break;
+      case 3: drop.color = {30, 0, 120}; break;
+      case 2: drop.color = {100, 0, 150}; break;
+      case 1: drop.color = {100, 0, 100}; break;
+      case 0: drop.color = {static_cast<uint8_t>(random(100, 161)), 0, 10}; break;
     }
     return;
   }
 
   switch (logicalY) {
-    case 6: drop.color = Color(100, 100, 0); break;
-    case 5: drop.color = Color(150, 50, 0); break;
-    case 4: drop.color = Color(150, 20, 0); break;
-    case 3: drop.color = Color(150, 10, 0); break;
-    case 2: drop.color = Color(150, 0, 0); break;
-    case 1: drop.color = Color(120, 0, 0); break;
-    case 0: drop.color = Color(random(100, 160), random(0, 21), 0); break;
+    case 6: drop.color = {100, 100, 0}; break;
+    case 5: drop.color = {150, 50, 0}; break;
+    case 4: drop.color = {150, 20, 0}; break;
+    case 3: drop.color = {150, 10, 0}; break;
+    case 2: drop.color = {150, 0, 0}; break;
+    case 1: drop.color = {120, 0, 0}; break;
+    case 0: drop.color = {
+        static_cast<uint8_t>(random(100, 160)),
+        static_cast<uint8_t>(random(0, 21)),
+        0}; break;
   }
 }
 
@@ -204,13 +207,13 @@ void launchRain(int amplitude) {
         uint8_t red = random(95, 128);
         uint8_t green = random(80, 96);
         uint8_t blue = random(16, 26);
-        drop.color = Color(red, green, blue);
+        drop.color = {red, green, blue};
         break;
       }
       case ACIDRAIN:
         drop.color = ledColor < 200
-          ? Color(0, 50, 150)
-          : Color(150, 150, 0);
+          ? PackedColor{0, 50, 150}
+          : PackedColor{150, 150, 0};
         break;
     }
   }
@@ -261,7 +264,11 @@ void drawSalvos() {
         }
       }
 
-      setPixelColor(drop.x, rainLogicalY(drop), drop.z, drop.color);
+      setPixelColor(
+        drop.x,
+        rainLogicalY(drop),
+        drop.z,
+        Color(drop.color.red, drop.color.green, drop.color.blue));
     }
   }
 }

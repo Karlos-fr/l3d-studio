@@ -259,7 +259,6 @@ Color snowFlakeColor;
 //#define TPM2NET_PACKET_TIMEOUT  0xFA	// 1/4 of a second
 UDP Udp;			//an UDP instance to let us receive packets over UDP
 uint8_t countdown;	// Keep a watchdog count to 100 max failed UDP buffer read attempts
-char data[CUBE_PACKET_SIZE];
 long maximum_received_packet = 0; // we haven't seen a packet yet
 void listen(void);
 #endif
@@ -595,19 +594,24 @@ static_assert(sizeof(SquarrelPosition) == 3,
 static_assert(sizeof(SquarrelIncrement) == 3,
     "Un incrément Squarrel doit tenir sur trois octets");
 
-int frame;
-uint8_t bound;
-int8_t boundInc;
-int8_t squarral_zInc;
-bool rainbowColor;
-uint8_t axis;
-SquarrelPosition trailPoints[SQUARREL_TRAIL_LENGTH];
-SquarrelPosition position;
-SquarrelIncrement increment;
-SquarrelPosition pixel;
+// Etat complet de Squarrel, actif uniquement pendant ce mode.
+struct SquarrelState {
+    int frame;
+    uint8_t bound;
+    int8_t boundInc;
+    int8_t zIncrement;
+    bool rainbowColor;
+    uint8_t axis;
+    SquarrelPosition trailPoints[SQUARREL_TRAIL_LENGTH];
+    SquarrelPosition position;
+    SquarrelIncrement increment;
+    SquarrelPosition pixel;
+};
 
-static_assert(sizeof(trailPoints) == 150,
+static_assert(sizeof(((SquarrelState*)0)->trailPoints) == 150,
     "La traînée Squarrel doit occuper exactement 150 octets");
+static_assert(sizeof(SquarrelState) == 168,
+    "L'etat Squarrel complet doit occuper exactement 168 octets");
 
 void squarral(void);
 void add(SquarrelPosition& position, const SquarrelIncrement& increment);
@@ -676,19 +680,21 @@ int16_t getTransitionStep(
 #define                         MAX_RADI 5
 
 // État temporaire Whirlwind regroupé pour rejoindre le scratch partagé.
-struct WhirlwindScratch {
+struct WhirlwindState {
     PackedColor colors[MAX_DOTS];
     float angles[MAX_DOTS];
     float radii[MAX_DOTS];
     float heights[MAX_DOTS];
+    int lastRand;
+    int lastLastRand;
+    unsigned long lastSwap;
+    GeometryScalar center[3];
 };
 
-static_assert(sizeof(WhirlwindScratch) == 288,
-    "L'état temporaire Whirlwind doit occuper exactement 288 octets");
-
-int lastRand, lastLastRand;
-unsigned long lastSwap;
-Point center;
+static_assert(sizeof(WhirlwindState) >= 288,
+    "L'état Whirlwind doit contenir ses quatre tableaux historiques");
+static_assert(sizeof(WhirlwindState) == 312,
+    "L'etat Whirlwind complet doit occuper exactement 312 octets");
 void whirlWind(void);
 void randomColor(struct Color* color);
 void randomPackedColor(PackedColor* color);
@@ -822,40 +828,30 @@ float HCtoFloat(int x);
 // Nombre de cases conservant les index historiques 1 à 8 de chaque flux.
 const uint8_t MATRIX_COORDINATE_SLOTS = SIDE + 1;
 
-// Coordonnées du premier flux Matrix, bornées à un axe logique.
-CubeAxisIndex voxelXw1[MATRIX_COORDINATE_SLOTS];
-CubeAxisIndex voxelZw1[MATRIX_COORDINATE_SLOTS];
-
-// Coordonnées du deuxième flux Matrix, bornées à un axe logique.
-CubeAxisIndex voxelXw2[MATRIX_COORDINATE_SLOTS];
-CubeAxisIndex voxelZw2[MATRIX_COORDINATE_SLOTS];
-
-// Coordonnées du troisième flux Matrix, bornées à un axe logique.
-CubeAxisIndex voxelXw3[MATRIX_COORDINATE_SLOTS];
-CubeAxisIndex voxelZw3[MATRIX_COORDINATE_SLOTS];
-
-// Coordonnées du quatrième flux Matrix, bornées à un axe logique.
-CubeAxisIndex voxelXw4[MATRIX_COORDINATE_SLOTS];
-CubeAxisIndex voxelZw4[MATRIX_COORDINATE_SLOTS];
+// Etat complet de Matrix, actif uniquement pendant ce mode.
+struct MatrixState {
+    CubeAxisIndex voxelXw1[MATRIX_COORDINATE_SLOTS];
+    CubeAxisIndex voxelZw1[MATRIX_COORDINATE_SLOTS];
+    CubeAxisIndex voxelXw2[MATRIX_COORDINATE_SLOTS];
+    CubeAxisIndex voxelZw2[MATRIX_COORDINATE_SLOTS];
+    CubeAxisIndex voxelXw3[MATRIX_COORDINATE_SLOTS];
+    CubeAxisIndex voxelZw3[MATRIX_COORDINATE_SLOTS];
+    CubeAxisIndex voxelXw4[MATRIX_COORDINATE_SLOTS];
+    CubeAxisIndex voxelZw4[MATRIX_COORDINATE_SLOTS];
+    int8_t wave01;
+    int8_t wave02;
+    int8_t wave03;
+    int8_t wave04;
+};
 
 static_assert(
-    sizeof(voxelXw1) + sizeof(voxelZw1) +
-    sizeof(voxelXw2) + sizeof(voxelZw2) +
-    sizeof(voxelXw3) + sizeof(voxelZw3) +
-    sizeof(voxelXw4) + sizeof(voxelZw4) == 72,
+    sizeof(((MatrixState*)0)->voxelXw1) + sizeof(((MatrixState*)0)->voxelZw1) +
+    sizeof(((MatrixState*)0)->voxelXw2) + sizeof(((MatrixState*)0)->voxelZw2) +
+    sizeof(((MatrixState*)0)->voxelXw3) + sizeof(((MatrixState*)0)->voxelZw3) +
+    sizeof(((MatrixState*)0)->voxelXw4) + sizeof(((MatrixState*)0)->voxelZw4) == 72,
     "Les coordonnées Matrix doivent occuper exactement 72 octets");
-
-// Position verticale du premier flux, comprise entre -10 et 7 après amorçage.
-int8_t wave01(7);
-
-// Position verticale du deuxième flux, comprise entre -10 et 10.
-int8_t wave02(10);
-
-// Position verticale du troisième flux, comprise entre -10 et 15.
-int8_t wave03(15);
-
-// Position verticale du quatrième flux, comprise entre -10 et 19.
-int8_t wave04(19);
+static_assert(sizeof(MatrixState) == 76,
+    "L'etat Matrix complet doit occuper exactement 76 octets");
 Color brightLine01 = Color(244, 241, 250);
 Color brightLine02 = Color(98, 193, 97);
 Color brightLine03 = Color(30, 131, 30);
@@ -914,15 +910,18 @@ typedef struct CompactCollideDot {
     int8_t directionX;
     int8_t directionY;
     int8_t directionZ;
-    Color color;
+    PackedColor color;
 } CompactCollideDot;
 
 static_assert(sizeof(CompactCollideDot) == 9,
     "Un point Collide2 compact doit tenir sur neuf octets");
 
-CompactCollideDot collideDots[COLLIDE_DOT_COUNT];
+// Etat complet de Collide2, actif uniquement pendant ce mode.
+struct CollideState {
+    CompactCollideDot dots[COLLIDE_DOT_COUNT];
+};
 
-static_assert(sizeof(collideDots) == 648,
+static_assert(sizeof(CollideState) == 648,
     "Les 72 points Collide2 doivent occuper 648 octets");
 
 void initCollide(void);
@@ -1000,45 +999,27 @@ union SharedAnimationScratch {
     voxel snakeVoxels[SNAKE_CAPACITY];
     uint8_t crumbleRemaining[SIDE * SIDE];
     float spectrumSamples[2][ARRAY_SIZE];
-    WhirlwindScratch whirlwind;
+    WhirlwindState whirlwind;
 };
-SharedAnimationScratch sharedAnimationScratch;
 static_assert(sizeof(uint16_t) * (int)(PIXEL_CNT * 0.1) <=
-    sizeof(sharedAnimationScratch.pixelOrder),
+    sizeof(((SharedAnimationScratch*)0)->pixelOrder),
     "Les positions Frozen doivent tenir dans l'ordre de pixels partagé");
-static_assert(sizeof(sharedAnimationScratch.bytes) == 1536,
+static_assert(sizeof(((SharedAnimationScratch*)0)->bytes) == 1536,
     "Le buffer CubePainter doit occuper exactement 1 536 octets");
-static_assert(sizeof(sharedAnimationScratch.pixelOrder) == 1024,
+static_assert(sizeof(((SharedAnimationScratch*)0)->pixelOrder) == 1024,
     "L'ordre complet des pixels doit occuper exactement 1 024 octets");
-static_assert(sizeof(sharedAnimationScratch.particles) == 1200,
+static_assert(sizeof(((SharedAnimationScratch*)0)->particles) == 1200,
     "Les particules Fireworks doivent occuper exactement 1 200 octets");
-static_assert(sizeof(sharedAnimationScratch.puckDude) == 243,
+static_assert(sizeof(((SharedAnimationScratch*)0)->puckDude) == 243,
     "Les sprites PacMan doivent occuper exactement 243 octets du scratch");
-static_assert(sizeof(sharedAnimationScratch.snakeVoxels) == 1536,
+static_assert(sizeof(((SharedAnimationScratch*)0)->snakeVoxels) == 1536,
     "Le corps Snake complet doit occuper exactement 1 536 octets");
-static_assert(sizeof(sharedAnimationScratch.crumbleRemaining) == 64,
+static_assert(sizeof(((SharedAnimationScratch*)0)->crumbleRemaining) == 64,
     "L'ordre CrumblingPlane doit occuper exactement 64 octets");
-static_assert(sizeof(sharedAnimationScratch.spectrumSamples) == 128,
+static_assert(sizeof(((SharedAnimationScratch*)0)->spectrumSamples) == 128,
     "Les deux tableaux FFT Spectrum doivent occuper 128 octets du scratch");
-static_assert(sizeof(sharedAnimationScratch.whirlwind) == 288,
-    "L'état Whirlwind doit occuper exactement 288 octets du scratch");
 static_assert(sizeof(SharedAnimationScratch) == PIXEL_CNT * BPP,
     "Le scratch partage ne doit pas ajouter un second framebuffer");
-#define drawingBuffer sharedAnimationScratch.bytes
-#define snakeVoxels sharedAnimationScratch.snakeVoxels
-#define crumbleRemaining sharedAnimationScratch.crumbleRemaining
-#define spectrumReal sharedAnimationScratch.spectrumSamples[0]
-#define spectrumImaginary sharedAnimationScratch.spectrumSamples[1]
-// Alias des positions de flocons Frozen dans l'ordre de pixels partagé.
-#define randomFlakes sharedAnimationScratch.pixelOrder
-// Alias des couleurs Whirlwind dans son état partagé.
-#define whirlwindColors sharedAnimationScratch.whirlwind.colors
-// Alias des angles Whirlwind dans son état partagé.
-#define whirlwindAngles sharedAnimationScratch.whirlwind.angles
-// Alias des rayons Whirlwind dans son état partagé.
-#define whirlwindRadii sharedAnimationScratch.whirlwind.radii
-// Alias des hauteurs Whirlwind dans son état partagé.
-#define whirlwindHeights sharedAnimationScratch.whirlwind.heights
 int CubePainter(String command);
 
 
@@ -1222,7 +1203,7 @@ typedef struct CompactRainDrop {
     uint8_t speedTwentieths;
     CubeAxisIndex x;
     CubeAxisIndex z;
-    Color color;
+    PackedColor color;
 } CompactRainDrop;
 
 // Salve compacte ; un compteur nul indique que la salve est inactive.
@@ -1236,14 +1217,76 @@ static_assert(sizeof(CompactRainDrop) == 8,
 static_assert(sizeof(CompactRainSalvo) == 1026,
     "Une salve Rain compacte doit tenir sur 1 026 octets");
 
-CompactRainSalvo salvos[SIDE];
+// Etat complet des modes AcidRain et GoldRain.
+struct RainSalvosState {
+    CompactRainSalvo salvos[SIDE];
+    int fadingMax;
+    uint16_t ledColor;
+    uint32_t timeAboveThreshhold;
+};
 
-static_assert(sizeof(salvos) == 8208,
+static_assert(sizeof(((RainSalvosState*)0)->salvos) == 8208,
     "Les huit salves Rain doivent conserver 1 024 emplacements compacts");
+static_assert(sizeof(RainSalvosState) == 8220,
+    "L'etat Rain complet doit occuper exactement 8 220 octets");
 
-int fadingMax;
-uint16_t ledColor;
-uint32_t timeAboveThreshhold;
+// Zone unique couvrant le plus gros état d'animation actif.
+union SharedAnimationState {
+    RainSalvosState rain;
+    SharedAnimationScratch scratch;
+    MatrixState matrix;
+    SquarrelState squarrel;
+    CollideState collide;
+#if L3D_LISTENER_ENABLED
+    char listenerData[CUBE_PACKET_SIZE];
+#endif
+};
+
+SharedAnimationState sharedAnimationState;
+
+static_assert(alignof(SharedAnimationState) >= alignof(float),
+    "La zone d'animation partagée doit rester alignée pour les flottants");
+static_assert(sizeof(SharedAnimationState) == sizeof(RainSalvosState),
+    "Rain doit rester le plus gros état de la zone partagée");
+
+// Alias historiques limitant la modification des animations déjà auditées.
+#define sharedAnimationScratch sharedAnimationState.scratch
+#define drawingBuffer sharedAnimationScratch.bytes
+#define snakeVoxels sharedAnimationScratch.snakeVoxels
+#define crumbleRemaining sharedAnimationScratch.crumbleRemaining
+#define spectrumReal sharedAnimationScratch.spectrumSamples[0]
+#define spectrumImaginary sharedAnimationScratch.spectrumSamples[1]
+#define randomFlakes sharedAnimationScratch.pixelOrder
+#define whirlwindColors sharedAnimationScratch.whirlwind.colors
+#define whirlwindAngles sharedAnimationScratch.whirlwind.angles
+#define whirlwindRadii sharedAnimationScratch.whirlwind.radii
+#define whirlwindHeights sharedAnimationScratch.whirlwind.heights
+#define whirlwindLastRand sharedAnimationScratch.whirlwind.lastRand
+#define whirlwindLastLastRand sharedAnimationScratch.whirlwind.lastLastRand
+#define whirlwindLastSwap sharedAnimationScratch.whirlwind.lastSwap
+#define whirlwindCenterX sharedAnimationScratch.whirlwind.center[0]
+#define whirlwindCenterY sharedAnimationScratch.whirlwind.center[1]
+#define whirlwindCenterZ sharedAnimationScratch.whirlwind.center[2]
+#define voxelXw1 sharedAnimationState.matrix.voxelXw1
+#define voxelZw1 sharedAnimationState.matrix.voxelZw1
+#define voxelXw2 sharedAnimationState.matrix.voxelXw2
+#define voxelZw2 sharedAnimationState.matrix.voxelZw2
+#define voxelXw3 sharedAnimationState.matrix.voxelXw3
+#define voxelZw3 sharedAnimationState.matrix.voxelZw3
+#define voxelXw4 sharedAnimationState.matrix.voxelXw4
+#define voxelZw4 sharedAnimationState.matrix.voxelZw4
+#define wave01 sharedAnimationState.matrix.wave01
+#define wave02 sharedAnimationState.matrix.wave02
+#define wave03 sharedAnimationState.matrix.wave03
+#define wave04 sharedAnimationState.matrix.wave04
+#define collideDots sharedAnimationState.collide.dots
+#define salvos sharedAnimationState.rain.salvos
+#define fadingMax sharedAnimationState.rain.fadingMax
+#define ledColor sharedAnimationState.rain.ledColor
+#define timeAboveThreshhold sharedAnimationState.rain.timeAboveThreshhold
+#if L3D_LISTENER_ENABLED
+#define data sharedAnimationState.listenerData
+#endif
 void acidRain(void);
 void initSalvos(void);
 void drawSalvos(void);

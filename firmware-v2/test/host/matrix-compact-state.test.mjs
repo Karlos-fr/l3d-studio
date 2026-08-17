@@ -65,12 +65,17 @@ test("les positions verticales Matrix tiennent dans int8_t", () => {
   for (let index = 0; index < MATRIX_INITIAL_WAVES.length; index += 1) {
     // Numero historique du flux inspecte.
     const streamNumber = index + 1;
-    // Expression attendue pour le compteur et son decalage initial.
-    const declaration = new RegExp(
-      `int8_t wave0${streamNumber}\\(${MATRIX_INITIAL_WAVES[index]}\\);`,
+    // Expression attendue pour l'initialisation d'entree du compteur.
+    const initialization = new RegExp(
+      `wave0${streamNumber} = ${MATRIX_INITIAL_WAVES[index]};`,
       "u",
     );
-    assert.match(legacyState, declaration);
+    // Implementation Matrix contenant l'initialisation complete d'entree.
+    const matrixSource = fs.readFileSync(
+      path.join(firmwareRoot, "src/animations/matrix.cpp"),
+      "utf8",
+    );
+    assert.match(matrixSource, initialization);
   }
   assert.doesNotMatch(legacyState, /\bvoxDelay\b/u);
 });

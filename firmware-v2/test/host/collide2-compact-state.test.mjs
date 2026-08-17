@@ -58,7 +58,7 @@ test("les points Collide2 compacts occupent exactement 648 octets", () => {
   assert.match(legacyState, /CubeAxisIndex x;/);
   assert.match(legacyState, /int8_t directionX;/);
   assert.match(legacyState, /sizeof\(CompactCollideDot\) == 9/);
-  assert.match(legacyState, /sizeof\(collideDots\) == 648/);
+  assert.match(legacyState, /sizeof\(CollideState\) == 648/);
   assert.equal(COLLIDE_DOT_COUNT * COMPACT_DOT_BYTES, 648);
   assert.doesNotMatch(legacyState, /\bCO(?:dots|dir|clr)\b/u);
 });
@@ -129,7 +129,7 @@ test("l'initialisation Collide2 conserve l'ordre des tirages", () => {
     "dot.x = rand() % SIDE;",
     "dot.y = rand() % SIDE;",
     "dot.z = rand() % SIDE;",
-    "randomColor(&dot.color);",
+    "randomPackedColor(&dot.color);",
     "randomizeCollideDirection(dot);",
   ];
   // Position de recherche apres la derniere operation retrouvee.

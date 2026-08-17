@@ -177,7 +177,7 @@ test("Spectrum place ses deux tableaux FFT dans le scratch partage", () => {
     "utf8",
   );
   assert.match(legacyState, /float spectrumSamples\[2\]\[ARRAY_SIZE\];/u);
-  assert.match(legacyState, /sizeof\(sharedAnimationScratch\.spectrumSamples\) == 128/u);
+  assert.match(legacyState, /sizeof\(\(\(SharedAnimationScratch\*\)0\)->spectrumSamples\) == 128/u);
   assert.doesNotMatch(legacyState, /^float (?:real|imaginary)\[ARRAY_SIZE\];/mu);
   assert.equal(2 * SPECTRUM_SAMPLE_COUNT * 4, 128);
 });

@@ -43,7 +43,7 @@ void initCollide() {
     dot.x = rand() % SIDE;
     dot.y = rand() % SIDE;
     dot.z = rand() % SIDE;
-    randomColor(&dot.color);
+    randomPackedColor(&dot.color);
     randomizeCollideDirection(dot);
   }
 }
@@ -95,7 +95,7 @@ void collide2() {
     // Collision détectée dès qu'un canal du voxel cible est non nul.
     const bool collision =
       occupiedColor.red != 0 || occupiedColor.green != 0 || occupiedColor.blue != 0;
-    Color renderedColor = dot.color;
+    Color renderedColor(dot.color.red, dot.color.green, dot.color.blue);
     if (collision) {
       renderedColor = Color(128, 128, 128);
       sphere(Point(dot.x, dot.y, dot.z), 1, Color(4, 4, 4));

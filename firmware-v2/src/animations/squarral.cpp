@@ -7,6 +7,18 @@
 
 #ifdef L3D_UNITY_BUILD
 
+// Alias locaux vers l'etat Squarrel mutualise ; ils sont retires avant les helpers.
+#define frame sharedAnimationState.squarrel.frame
+#define bound sharedAnimationState.squarrel.bound
+#define boundInc sharedAnimationState.squarrel.boundInc
+#define squarral_zInc sharedAnimationState.squarrel.zIncrement
+#define rainbowColor sharedAnimationState.squarrel.rainbowColor
+#define axis sharedAnimationState.squarrel.axis
+#define trailPoints sharedAnimationState.squarrel.trailPoints
+#define position sharedAnimationState.squarrel.position
+#define increment sharedAnimationState.squarrel.increment
+#define pixel sharedAnimationState.squarrel.pixel
+
 // ----------------------------------------------------------------------------
 // Dessine une frame du parcours Squarrel et décale sa traînée.
 //
@@ -125,6 +137,17 @@ void squarral() {
     showPixels();
     delay(speed * .5);
 }
+
+#undef frame
+#undef bound
+#undef boundInc
+#undef squarral_zInc
+#undef rainbowColor
+#undef axis
+#undef trailPoints
+#undef position
+#undef increment
+#undef pixel
 
 // ----------------------------------------------------------------------------
 // Applique un incrément signé à une position Squarrel compacte.
