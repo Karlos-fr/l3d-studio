@@ -585,6 +585,8 @@ void loop() {
 
 #include "animations/tranquility.cpp"
 
+#include "animations/gyrophare_fr.cpp"
+
 #include "animations/text.cpp"
 
 #include "animations/squarral.cpp"

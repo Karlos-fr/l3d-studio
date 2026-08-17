@@ -529,6 +529,7 @@ void checkBrightness(void) {
 		case FLICKER:
 		case NORMAL:
 		case TRANQUILITY:
+		case GYROPHARE_FR:
 			maxBright = 37;
 			break;	
 		

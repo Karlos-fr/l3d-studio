@@ -161,7 +161,7 @@ void setRandomMode(void) {
 }
 
 // ----------------------------------------------------------------------------
-// Repart du premier index et mélange les 66 entrées actives du registre.
+// Repart du premier index et mélange les 67 entrées actives du registre.
 //
 // Effet de bord :
 // - remet l'index global à zéro et consomme un tirage par entrée.
@@ -209,9 +209,12 @@ void runMode() {
 		    cycleLerp();
 		    break;    
         case ACIDRAIN:
-        case GOLDRAIN:
+		case GOLDRAIN:
             acidRain();
             break;
+		case GYROPHARE_FR:
+			runGyrophareFr();
+			break;
      	case CHASER:
 		    colorChaser(color1);
 			break;
@@ -467,6 +470,10 @@ void resetVariables(int modeIndex) {
 		case TRANQUILITY:
 			transitionAll(black, LINEAR);
 			resetTranquility();
+			break;
+		case GYROPHARE_FR:
+			transitionAll(black, LINEAR);
+			resetGyrophareFr();
 			break;
 		case COLLIDE2:
 		    transitionAll(black, LINEAR);

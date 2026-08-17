@@ -89,7 +89,7 @@ Compilation Photon 2.3.1 :
 powershell -ExecutionPolicy Bypass -File firmware-v2/tools/compile.ps1
 ```
 
-Les tests hôte verrouillent les IDs, le registre de 66 modes, la taille de la
+Les tests hôte verrouillent les IDs, le registre actuel de 67 modes, la taille de la
 liste Cloud, le dispatcher, les resets, l'absence d'allocation dynamique, le
 scratch FFT commun, les bornes des palettes et l'orientation des deux spectres.
 

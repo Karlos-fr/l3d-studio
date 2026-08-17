@@ -49,6 +49,7 @@ optimisation ou d'une nouvelle architecture d'exécution.
 - `docs/ANIMATION_OPTIMIZATION_TRACKER.md` : inventaire et suivi de passage ;
 - `docs/ANIMATION_OPTIMIZATION_SUMMARY.md` : bilan mémoire et validations restantes ;
 - `docs/CUBETUBE_IMPORTS.md` : portage et optimisation des quatre animations CubeTube ;
+- `docs/GYROPHARE_FR.md` : conception, switches et validation du gyrophare tournant ;
 - `docs/DIAGNOSTICS.md` : format et garanties des mesures runtime ;
 - `docs/SAFETY.md` : pile, buffers bornes et validation des commandes ;
 - `docs/RENDERING_TYPES.md` : types compacts, mapping et comparaisons de phase 4 ;

@@ -38,6 +38,7 @@ version 1.4 ; leurs interfaces navigables sont dans les fichiers .h voisins.
 | 68 | `FOLDER` | Folder | `src/animations/cube_classics.cpp` |
 | 10 | `FROZEN` | Frozen | `src/animations/classic_color_effects.cpp` |
 | 40 | `GOLDRAIN` | GoldRain | `src/animations/rain_salvos.cpp` |
+| 75 | `GYROPHARE_FR` | GyrophareFR | `src/animations/gyrophare_fr.cpp` |
 | 35 | `IFTTTWEATHER` | IFTTT | `src/network/ifttt_weather.cpp` |
 | 71 | `LIGHTNING_BOX` | LightningBox | `src/animations/lightning_in_a_box.cpp` |
 | 52 | `LINESPIN` | LineSpin | `src/animations/cube_classics.cpp` |

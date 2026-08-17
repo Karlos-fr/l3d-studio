@@ -71,3 +71,15 @@ statique et 19 216 octets de marge Flash. Les 106 tests hôte réussissent. Le
 détail du portage et des compromis est consigné dans `CUBETUBE_IMPORTS.md`.
 Le binaire a été flashé et les quatre modes ont passé un smoke test à `B:1` ;
 leur comparaison visuelle avec les exports reste ouverte.
+
+## Évolution GyrophareFR
+
+Le mode GyrophareFR (75) ajoute deux faisceaux verticaux opposés tournant sur
+huit orientations entières. Il reste bleu par défaut et propose les switches
+`Bicolore`, `Reactif au son` et `Trainee`. La réaction sonore repose sur quatre
+lectures d'amplitude et une enveloppe entière, sans FFT.
+
+Cette évolution porte le firmware à 112 624 octets de Flash et 16 236 octets de
+RAM statique, soit respectivement +768 et +8 octets. La marge Flash reste de
+18 448 octets et les 112 tests hôte réussissent. Les trois combinaisons de
+switches ont passé un smoke test à `B:1` ; l'appréciation visuelle reste ouverte.

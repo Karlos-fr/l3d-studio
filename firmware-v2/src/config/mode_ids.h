@@ -76,6 +76,7 @@
 #define FFT_METEORS_RAINBOW          72 //credit: Werner Moecke, CubeTube Library
 #define FFT_JOY_LEGACY               73 //credit: CubeTube Library
 #define TRANQUILITY                  74 //credit: CubeTube Library
+#define GYROPHARE_FR                 75 //credit: L3D Studio
 
 /* ======================= ADD NEW AUX SWITCH ID HERE. ======================= */
 // AUX SWITCH ID Defines

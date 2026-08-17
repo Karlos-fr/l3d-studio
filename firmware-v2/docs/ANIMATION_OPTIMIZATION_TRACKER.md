@@ -32,9 +32,9 @@ Les priorités sont des hypothèses d'ordre de passage. L'audit peut les modifie
 
 ## État du passage code
 
-Les 74 modes et les sept éléments partagés ont terminé les jalons `Audit`,
-`Opt.`, `Hôte`, `Build` et `Com./Doc`. La suite complète compte 106 tests hôte
-et le binaire courant mesure 111 856 octets de Flash pour 16 228 octets de RAM
+Les 75 modes et les sept éléments partagés ont terminé les jalons `Audit`,
+`Opt.`, `Hôte`, `Build` et `Com./Doc`. La suite complète compte 112 tests hôte
+et le binaire courant mesure 112 624 octets de Flash pour 16 236 octets de RAM
 statique.
 
 Les baselines longues, validations visuelles et commits encore décochés restent
@@ -76,6 +76,7 @@ validation physique complète. Le détail quantifié se trouve dans
 | P2 | 68 | Folder | `src/animations/cube_classics.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Aucun état à réduire ; baseline longue et visuel en attente |
 | P1 | 10 | Frozen | `src/animations/classic_color_effects.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | −102 RAM attendue via scratch ; frame longue, visuel restant |
 | P0 | 40 | GoldRain | `src/animations/rain_salvos.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | −16 400 RAM statique, +16 400 libres ; flash/runtime `B:1` validés, visuel restant |
+| P2 | 75 | GyrophareFR | `src/animations/gyrophare_fr.cpp` | [x] | N/A | [x] | [x] | [x] | [ ] | [x] | [ ] | Nouveau mode entier ; trois variantes au smoke `B:1`, validation visuelle restante |
 | P2 | 35 | IFTTT | `src/network/ifttt_weather.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Longueur C bornée mutualisée ; smoke `B:1`, cycle et visuel restants |
 | P2 | 71 | LightningBox | `src/animations/lightning_in_a_box.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Points/couleur compacts ; smoke `B:1` réussi, visuel restant |
 | P2 | 52 | LineSpin | `src/animations/cube_classics.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | 8→1 sinus invariant/frame ; baseline longue et visuel en attente |
@@ -138,7 +139,7 @@ affecter plusieurs lignes du tableau principal.
 | P1 | Transitions | `src/rendering/transitions.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [x] | Scratch partagé ; facteurs polaires mutualisés et équivalence exhaustive |
 | P1 | CubeGreeting | `src/animations/cube_greeting.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Aucun état propre à réduire ; cycle complet de démonstration reporté |
 | P0 | Scratch partagé | `src/core/legacy_state.h` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | 1 536 octets nécessaires ; contrats par vue, durée Whirlwind corrigée |
-| P1 | Registre et dispatcher | `src/core/mode_runtime.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | 62 modes historiques préservés, 4 imports ajoutés et permutations validées ; visuel restant |
+| P1 | Registre et dispatcher | `src/core/mode_runtime.cpp` | [x] | [x] | [x] | [x] | [x] | [ ] | [x] | [ ] | 62 modes historiques préservés, 5 évolutions ajoutées et permutations validées ; visuel restant |
 | P1 | Primitives FFT CubeTube | `src/animations/cubetube_fft_common.cpp` | [x] | [ ] | [x] | [x] | [x] | [ ] | [x] | [ ] | Capture 16 points et palette entière mutualisées entre les deux imports FFT |
 
 ## Ordre de démarrage proposé

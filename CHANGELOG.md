@@ -6,6 +6,17 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Gyrophare français
+
+- Ajout de `GyrophareFR` (ID 75), un double faisceau vertical tournant sur huit
+  orientations entières autour de l'axe du cube.
+- Bleu seul par défaut, avec switches `Bicolore`, `Reactif au son` et `Trainee`.
+- Réaction sonore par enveloppe d'amplitude sur quatre lectures, sans FFT,
+  trigonométrie runtime, allocation dynamique ni attente bloquante.
+- Coût mesuré : +768 octets de Flash et +8 octets de RAM statique.
+- Flash OTA et smoke tests des trois variantes réussis à `B:1` ; cube replacé
+  sur `Off` avec la luminosité interne `2`.
+
 ### Imports CubeTube
 
 - Ajout de `LightningBox` (ID 71), `FFTMeteors` (ID 72), `FFTJoy` (ID 73)

@@ -61,6 +61,7 @@ particle compile photon firmware-v2 --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Passe animations, Listener retiré du build actif | 2.3.1 | 109 344 | 18 732 | 109 348 | 21 728 |
 | 2026-08-17 | Passe animations, durée de vie du scratch Whirlwind corrigée | 2.3.1 | 109 360 | 18 732 | 109 364 | 21 712 |
 | 2026-08-17 | Quatre imports CubeTube et métadonnées constantes | 2.3.1 | 111 856 | 16 228 | 111 860 | 19 216 |
+| 2026-08-17 | Nouveau mode GyrophareFR | 2.3.1 | 112 624 | 16 236 | 112 628 | 18 448 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
@@ -133,3 +134,6 @@ sources.
 - Flash OTA des quatre imports CubeTube réalisé le 2026-08-17 : commandes
   LightningBox, FFTMeteors, FFTJoy et Tranquility acceptées à `B:1`, puis mode
   `Off` rétabli avec la valeur interne `brightness=2`.
+- Flash OTA de GyrophareFR réalisé le 2026-08-17 : bleu seul, bicolore avec
+  traînée et bicolore réactif au son acceptés à `B:1`, puis mode `Off` rétabli
+  avec `brightness=2`.

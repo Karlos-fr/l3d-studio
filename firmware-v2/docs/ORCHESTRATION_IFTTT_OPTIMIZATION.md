@@ -17,7 +17,7 @@ mode précédent sont conservés.
 - l'index permanent du prochain mode passe de quatre à un octet ;
 - l'assertion statique imposait exactement 62 entrées actives afin qu'un ajout
   de mode oblige à réexaminer la représentation compacte. Elle impose maintenant
-  66 entrées après l'ajout explicite des quatre imports CubeTube ;
+  67 entrées après les quatre imports CubeTube et le mode GyrophareFR ;
 - `arrayShuffle` mélange désormais des index `uint8_t` et reste commun à
   `Shuffle`, `CubeClassics` et `SlideShow` ;
 - le buffer de débogage local mort de la primitive de mélange est retiré ;

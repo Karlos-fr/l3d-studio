@@ -53,14 +53,14 @@ function applyShuffle(values, randomIndexes) {
 }
 
 // ----------------------------------------------------------------------------
-// Vérifie que les 66 index actifs occupent un octet chacun.
+// Vérifie que les 67 index actifs occupent un octet chacun.
 // ----------------------------------------------------------------------------
 test("Shuffle conserve un octet par entrée après les imports CubeTube", () => {
   // État global portant l'ordre mélangé.
   const legacyState = readFirmwareSource("src/core/legacy_state.h");
   // Initialisation de l'ordre au démarrage.
   const mainSource = readFirmwareSource("src/main.cpp");
-  assert.match(legacyState, /modeStruct\[0\] == 66/u);
+  assert.match(legacyState, /modeStruct\[0\] == 67/u);
   assert.match(legacyState, /uint8_t shuffleIdx;/u);
   assert.match(legacyState, /uint8_t modeShuffleOrder\[/u);
   assert.match(legacyState, /static_assert\(sizeof modeShuffleOrder < 256/u);
@@ -74,13 +74,13 @@ test("Shuffle conserve chaque échange et chaque tirage", () => {
   // Valeurs initiales de la représentation historique.
   const legacyValues = [];
   // Valeurs initiales de la représentation compacte.
-  const compactValues = new Uint8Array(66);
+  const compactValues = new Uint8Array(67);
   // Suite déterministe couvrant les deux extrémités du registre.
   const randomIndexes = [];
-  for (let index = 0; index < 66; index += 1) {
+  for (let index = 0; index < 67; index += 1) {
     legacyValues.push(index);
     compactValues[index] = index;
-    randomIndexes.push((index * 31 + 65) % 66);
+    randomIndexes.push((index * 31 + 66) % 67);
   }
   // Permutation obtenue avec les anciens entiers.
   const legacyResult = applyShuffle(legacyValues, randomIndexes);

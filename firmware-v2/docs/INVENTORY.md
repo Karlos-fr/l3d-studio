@@ -40,6 +40,7 @@ mode accepte le segment `W:` dans `SetMode`.
 | 68 | `FOLDER` | Folder | 0 | 0 | non |
 | 10 | `FROZEN` | Frozen | 0 | 0 | non |
 | 40 | `GOLDRAIN` | GoldRain | 0 | 1 | non |
+| 75 | `GYROPHARE_FR` | GyrophareFR | 0 | 3 | non |
 | 35 | `IFTTTWEATHER` | IFTTT | 0 | 0 | non |
 | 71 | `LIGHTNING_BOX` | LightningBox | 0 | 0 | non |
 | 52 | `LINESPIN` | LineSpin | 0 | 0 | non |
