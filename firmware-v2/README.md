@@ -51,6 +51,7 @@ optimisation ou d'une nouvelle architecture d'exécution.
 - `docs/CUBETUBE_IMPORTS.md` : portage et optimisation des quatre animations CubeTube ;
 - `docs/GYROPHARE_FR.md` : conception, switches et validation du gyrophare tournant ;
 - `docs/SHARED_ANIMATION_STATE.md` : cycle de vie et union d'etats de la phase 6 ;
+- `docs/DYNAMIC_ALLOCATION_REMOVAL.md` : parsing fixe et bilan de la phase 7 ;
 - `docs/DIAGNOSTICS.md` : format et garanties des mesures runtime ;
 - `docs/SAFETY.md` : pile, buffers bornes et validation des commandes ;
 - `docs/RENDERING_TYPES.md` : types compacts, mapping et comparaisons de phase 4 ;

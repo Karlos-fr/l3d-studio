@@ -8,6 +8,8 @@
 #pragma once
 
 #include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 
 // ----------------------------------------------------------------------------
 // Indique si un caractere est un chiffre ASCII decimal.
@@ -54,6 +56,66 @@ inline bool isHexText(const char* text, size_t length) {
         if(!isAsciiHexDigit(text[index]))
             return false;
     }
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Compare une tranche non terminee avec une chaine C complete.
+//
+// Parametres :
+// - text : debut de la tranche a comparer.
+// - length : longueur exacte de la tranche.
+// - expected : chaine C attendue.
+//
+// Retour :
+// - vrai si les longueurs et tous les caracteres sont identiques.
+// ----------------------------------------------------------------------------
+inline bool textRangeEquals(
+        const char* text,
+        size_t length,
+        const char* expected) {
+    if(text == NULL || expected == NULL)
+        return false;
+    size_t expectedLength = strlen(expected);
+    return length == expectedLength && memcmp(text, expected, length) == 0;
+}
+
+// ----------------------------------------------------------------------------
+// Convertit une tranche hexadecimale en entier non signe.
+//
+// Parametres :
+// - text : debut de la tranche hexadecimale.
+// - length : nombre exact de caracteres, limite a huit.
+// - result : destination de la valeur convertie.
+//
+// Retour :
+// - vrai si toute la tranche est valide et tient dans 32 bits.
+//
+// Effet de bord :
+// - ecrit `result` uniquement lorsque la conversion reussit.
+// ----------------------------------------------------------------------------
+inline bool parseHexText(
+        const char* text,
+        size_t length,
+        uint32_t* result) {
+    if(text == NULL || result == NULL || length == 0 || length > 8)
+        return false;
+
+    uint32_t value = 0;
+    for(size_t index = 0; index < length; index++) {
+        char character = text[index];
+        uint8_t digit;
+        if(character >= '0' && character <= '9')
+            digit = static_cast<uint8_t>(character - '0');
+        else if(character >= 'A' && character <= 'F')
+            digit = static_cast<uint8_t>(character - 'A' + 10);
+        else if(character >= 'a' && character <= 'f')
+            digit = static_cast<uint8_t>(character - 'a' + 10);
+        else
+            return false;
+        value = (value << 4) | digit;
+    }
+    *result = value;
     return true;
 }
 

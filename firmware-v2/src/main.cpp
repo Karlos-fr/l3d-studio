@@ -455,7 +455,6 @@ void setup() {
     initEEPROM();		 //Check EEPROM area and initialize globals (if values were previoulsy set)
     
     //Get Threads ready
-    //cheerlightsThread = new Thread("Get CheerLights Color", LoopgetCheerLightsColor);
     Time.zone(timeZone);
     wifi = WiFi.RSSI();
     

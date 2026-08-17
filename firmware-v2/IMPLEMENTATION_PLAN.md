@@ -403,24 +403,24 @@ optimisation, correction fonctionnelle ou réécriture d'algorithme.
 
 ### Conteneurs
 
-- [ ] Remplacer `std::vector` dans Snake par un tableau à capacité fixe et un compteur.
-- [ ] Remplacer `std::vector` dans Crumble par un tableau à capacité fixe et un compteur.
-- [ ] Remplacer les listes temporaires de pointeurs par des indices bornés.
-- [ ] Définir explicitement le comportement lorsque la capacité est atteinte.
-- [ ] Vérifier que les opérations insertion, suppression et mélange restent correctes.
+- [x] Remplacer `std::vector` dans Snake par un tableau à capacité fixe et un compteur.
+- [x] Remplacer `std::vector` dans Crumble par un tableau à capacité fixe et un compteur.
+- [x] Remplacer les listes temporaires de pointeurs par des indices bornés.
+- [x] Définir explicitement le comportement lorsque la capacité est atteinte.
+- [x] Vérifier que les opérations insertion, suppression et mélange restent correctes.
 
 ### Chaînes
 
-- [ ] Conserver `String` uniquement aux frontières imposées par Particle Cloud.
-- [ ] Parser les commandes via `c_str()` sans créer de sous-chaînes dynamiques.
-- [ ] Remplacer les `std::string` internes par des buffers fixes ou calculs directs.
-- [ ] Remplacer les `String` globales CheerLights par des constantes et buffers bornés.
-- [ ] Vérifier qu'aucune animation n'alloue après son `enter`.
+- [x] Conserver `String` uniquement aux frontières imposées par Particle Cloud.
+- [x] Parser les commandes via `c_str()` sans créer de sous-chaînes dynamiques.
+- [x] Remplacer les `std::string` internes par des buffers fixes ou calculs directs.
+- [x] Remplacer les `String` globales CheerLights par des constantes et buffers bornés.
+- [x] Vérifier qu'aucune animation n'alloue après son `enter`.
 
 ### Critère de sortie
 
-- [ ] Aucun `std::vector`, `std::string`, `new`, `malloc` ou `realloc` dans le code applicatif.
-- [ ] Les allocations internes inévitables de Device OS et NeoPixel sont documentées.
+- [x] Aucun `std::vector`, `std::string`, `new`, `malloc` ou `realloc` dans le code applicatif.
+- [x] Les allocations internes inévitables de Device OS et NeoPixel sont documentées.
 - [ ] Le minimum de mémoire libre reste stable pendant 24 h.
 
 ## Phase 8 — Registre léger et scheduler non bloquant

@@ -6,6 +6,18 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Allocations dynamiques applicatives supprimees
+
+- Suppression des dernieres sous-chaines `String` temporaires du parseur Cloud ;
+  les commandes sont lues directement dans le buffer fourni par Particle.
+- Conversion bornee des nombres, couleurs, noms de modes et textes sans copie
+  dynamique, y compris pour Shuffle et l'initialisation EEPROM.
+- Ajout d'un garde-fou interdisant `vector`, `std::string`, `new`, `malloc`,
+  `realloc` et `substring` dans le code applicatif.
+- Flash reduite de 112 608 a 111 600 octets sans augmentation de RAM statique.
+- Smoke test du protocole complet réussi sur le Photon à `B:1`, sans OOM, puis
+  retour du cube sur `Off`.
+
 ### Etats d'animations mutualises
 
 - Ajout du cycle de vie central `enter`, `tick` et `exit` pour encadrer chaque

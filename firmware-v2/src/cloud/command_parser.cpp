@@ -24,6 +24,7 @@ static int validateSetModeCommand(const String& command) {
     if(command.charAt(command.length() - 1) != ',')
         return COMMAND_ERROR_MALFORMED;
 
+    const char* commandText = command.c_str();
     int beginIdx = 0;
     int endIdx = command.indexOf(',');
     while(endIdx != -1) {
@@ -33,26 +34,33 @@ static int validateSetModeCommand(const String& command) {
         char type = command.charAt(beginIdx);
         if(type == 'M') {
             if(command.charAt(beginIdx + 1) != ':' || endIdx <= beginIdx + 2 ||
-               getModeIndexFromName(command.substring(beginIdx + 2, endIdx)) < 0)
+               getModeIndexFromName(
+                   commandText + beginIdx + 2,
+                   endIdx - beginIdx - 2) < 0)
                 return COMMAND_ERROR_MALFORMED;
         }
         else if(type == 'S' || type == 'B') {
             if(command.charAt(beginIdx + 1) != ':')
                 return COMMAND_ERROR_MALFORMED;
-            String value = command.substring(beginIdx + 2, endIdx);
             int parsed = 0;
             int maximum = type == 'S'
                 ? (int)(sizeof(speedPresets) / sizeof(speedPresets[0])) - 1
                 : 100;
-            if(!parseUnsignedText(value.c_str(), value.length(), 0, maximum, &parsed))
+            if(!parseUnsignedText(
+                    commandText + beginIdx + 2,
+                    endIdx - beginIdx - 2,
+                    0,
+                    maximum,
+                    &parsed))
                 return COMMAND_ERROR_OUT_OF_RANGE;
         }
         else if(type == 'C') {
             if(beginIdx + 3 > endIdx || command.charAt(beginIdx + 2) != ':' ||
                command.charAt(beginIdx + 1) < '1' || command.charAt(beginIdx + 1) > '6')
                 return COMMAND_ERROR_MALFORMED;
-            String color = command.substring(beginIdx + 3, endIdx);
-            if(color.length() != 6 || !isHexText(color.c_str(), color.length()))
+            size_t colorLength = endIdx - beginIdx - 3;
+            if(colorLength != 6 ||
+               !isHexText(commandText + beginIdx + 3, colorLength))
                 return COMMAND_ERROR_MALFORMED;
         }
         else if(type == 'T') {
@@ -75,6 +83,39 @@ static int validateSetModeCommand(const String& command) {
         endIdx = command.indexOf(',', beginIdx);
     }
     return 0;
+}
+
+// ----------------------------------------------------------------------------
+// Met a jour un switch auxiliaire deja valide.
+//
+// Parametres :
+// - id : identifiant historique du switch auxiliaire.
+// - state : nouvel etat booleen.
+//
+// Retour :
+// - resultat historique de updateAuxSwitches ou une erreur hors plage.
+//
+// Effet de bord :
+// - persiste le switch, regenere sa liste Cloud et actualise les flags runtime.
+// ----------------------------------------------------------------------------
+static int setAuxSwitchState(int id, bool state) {
+    int auxSwitchIndex = getAuxSwitchIndexFromID(id);
+    if(auxSwitchIndex < 0)
+        return COMMAND_ERROR_OUT_OF_RANGE;
+
+    auxSwitchStruct[auxSwitchIndex].auxSwitchState = state;
+    int startAddress = AUXSW_START_ADDR + (id * (sizeof(uint8_t) + 1));
+    if(EEPROM.length() >= (startAddress + (int)sizeof(uint8_t)))
+        EEPROM.write(startAddress, state ? 1 : 0);
+    else
+        boundedTextFormat(
+            debug,
+            sizeof(debug),
+            "Warning: EEPROM has reached max size limit; %s not updated",
+            auxSwitchStruct[auxSwitchIndex].auxSwitchTitle);
+
+    makeAuxSwitchList();
+    return updateAuxSwitches(id);
 }
 
 // ----------------------------------------------------------------------------
@@ -109,6 +150,7 @@ int SetMode(String command) {
     if(validationResult != 0)
         return validationResult;
     idx = command.indexOf(',');
+    const char* commandText = command.c_str();
     // Convert it to upper-case for easier matching
     //command.toUpperCase();	//Don't do this if the mode names are not all uppercase
     
@@ -121,20 +163,26 @@ int SetMode(String command) {
 	while(idx != -1) {
 		if(command.charAt(beginIdx) == 'M') {
 			//set the new mode from modeStruct array index
-			returnValue = setNewMode(getModeIndexFromName(command.substring(beginIdx+2, idx).c_str())); 
+			returnValue = setNewMode(getModeIndexFromName(
+                commandText + beginIdx + 2,
+                idx - beginIdx - 2));
 			if(currentModeID == IFTTTWEATHER) { lastDemo = demo; }
 			
 			//Handle Shuffle stuff here
 			if(currentModeID == SHUFFLE) { stopDemo = shuffleMode = TRUE; }
 			else { stopDemo = shuffleMode = FALSE;  }
-			char tempBuf[20];
-			boundedTextFormat(tempBuf, sizeof(tempBuf), "SETAUXSWITCH:%i,%i;", SHFL, shuffleMode ? 1 : 0);
-			FnRouter(tempBuf);  //update to reflect on or off states of shuffle
+			setAuxSwitchState(SHFL, shuffleMode ? TRUE : FALSE);
 			
 			isNewMode = TRUE;
 		}
 		else if(command.charAt(beginIdx) == 'S') {
-		    int receivedSpeedValue = command.substring(beginIdx+2, idx).toInt();
+		    int receivedSpeedValue = 0;
+            parseUnsignedText(
+                commandText + beginIdx + 2,
+                idx - beginIdx - 2,
+                0,
+                (int)(sizeof(speedPresets) / sizeof(speedPresets[0])) - 1,
+                &receivedSpeedValue);
 		    if (speedIndex != receivedSpeedValue) {
 		        //we don't update the speed when currently in LISTENER mode
 				if(currentModeID != LISTENER) isNewSpeed = TRUE;
@@ -147,7 +195,14 @@ int SetMode(String command) {
 			}
 		}
 		else if(command.charAt(beginIdx) == 'B') {
-		    int newBrightness = command.substring(beginIdx+2, idx).toInt() * (255 * .01);	//Scale 0-100 to 0-255
+		    int brightnessPercent = 0;
+            parseUnsignedText(
+                commandText + beginIdx + 2,
+                idx - beginIdx - 2,
+                0,
+                100,
+                &brightnessPercent);
+		    int newBrightness = brightnessPercent * (255 * .01);	//Scale 0-100 to 0-255
 			if(brightness != newBrightness) {isNewBrightness = TRUE;}
 			if(isNewBrightness) {
 			    brightness = newBrightness > 0 ? newBrightness : 1;
@@ -161,37 +216,42 @@ int SetMode(String command) {
 			checkBrightness();
 		}
         else if(command.charAt(beginIdx) == 'C') {
-            char * p;
 			isNewColor = TRUE;
+            uint32_t parsedColor = 0;
+            parseHexText(commandText + beginIdx + 3, 6, &parsedColor);
             switch(command.charAt(beginIdx+1)) {
                 case '1':
-                    color1 = strtoul( command.substring(beginIdx+3, idx).c_str(), & p, 16 );  //Convert hex string to int
+                    color1 = parsedColor;
 					lastColors[0] = color1;
                     break;
                 case '2':
-                    color2 = strtoul( command.substring(beginIdx+3, idx).c_str(), & p, 16 );  //Convert hex string to int
+                    color2 = parsedColor;
 					lastColors[1] = color2;
                     break;
                 case '3':
-                    color3 = strtoul( command.substring(beginIdx+3, idx).c_str(), & p, 16 );  //Convert hex string to int
+                    color3 = parsedColor;
 					lastColors[2] = color3;
                     break;
                 case '4':
-                    color4 = strtoul( command.substring(beginIdx+3, idx).c_str(), & p, 16 );  //Convert hex string to int
+                    color4 = parsedColor;
 					lastColors[3] = color4;
                     break;
                 case '5':
-                    color5 = strtoul( command.substring(beginIdx+3, idx).c_str(), & p, 16 );  //Convert hex string to int
+                    color5 = parsedColor;
 					lastColors[4] = color5;
                     break;
                 case '6':
-                    color6 = strtoul( command.substring(beginIdx+3, idx).c_str(), & p, 16 );  //Convert hex string to int
+                    color6 = parsedColor;
 					lastColors[5] = color6;
                     break;
             }
 		}
 		else if(command.charAt(beginIdx) == 'W') {
-		    boundedTextCopy(message, sizeof(message), command.substring(beginIdx+2, idx).c_str());
+		    boundedTextCopyRange(
+                message,
+                sizeof(message),
+                commandText + beginIdx + 2,
+                idx - beginIdx - 2);
             isNewText = TRUE;
 		}
 
@@ -201,19 +261,19 @@ int SetMode(String command) {
             isNewSwitch = TRUE;
             switch(command.charAt(beginIdx+1)) {
                 case '1':
-                    switch1 = command.substring(beginIdx+3, idx).toInt() & 1;
+                    switch1 = commandText[beginIdx + 3] == '1';
                     lastSwitchState[0] = switch1;
                     break;
                 case '2':
-                    switch2 = command.substring(beginIdx+3, idx).toInt() & 1;
+                    switch2 = commandText[beginIdx + 3] == '1';
                     lastSwitchState[1] = switch2;
                     break;
                 case '3':
-                    switch3 = command.substring(beginIdx+3, idx).toInt() & 1;
+                    switch3 = commandText[beginIdx + 3] == '1';
                     lastSwitchState[2] = switch3;
                     break;
                 case '4':
-                    switch4 = command.substring(beginIdx+3, idx).toInt() & 1;
+                    switch4 = commandText[beginIdx + 3] == '1';
                     lastSwitchState[3] = switch4;
                     break;
             }
@@ -280,39 +340,47 @@ int FnRouter(String command) {
         return COMMAND_ERROR_TOO_LONG;
     // Convert it to upper-case for easier matching
     command.toUpperCase();
-	
+	const char* commandText = command.c_str();
 	int beginIdx = 0;
 	int colonIdx = command.indexOf(':');
 
 #if L3D_DIAGNOSTICS_ENABLED
     // Reuse the historical Cloud function and deviceInfo variable instead of
     // extending the public Particle endpoint set during the refactor.
-    if(command == "GETDIAG")
-        return GetDiagnostics("");
-    if(command == "RESETDIAG")
-        return GetDiagnostics("RESET");
+    if(strcmp(commandText, "GETDIAG") == 0)
+        return GetDiagnostics(FALSE);
+    if(strcmp(commandText, "RESETDIAG") == 0)
+        return GetDiagnostics(TRUE);
 #endif
 
     if(colonIdx <= 0)
         return COMMAND_ERROR_MALFORMED;
 	
 	// Set time zone offset
-    if(command.substring(beginIdx, colonIdx)=="SETTIMEZONE") {
+    if(textRangeEquals(commandText, colonIdx, "SETTIMEZONE")) {
 		//Expect a string like this: SETTIMEZONE:-6
-        String value = command.substring(colonIdx + 1);
         int parsedTimeZone = 0;
-        if(!parseSignedText(value.c_str(), value.length(), -14, 14, &parsedTimeZone))
+        if(!parseSignedText(
+                commandText + colonIdx + 1,
+                command.length() - colonIdx - 1,
+                -14,
+                14,
+                &parsedTimeZone))
             return COMMAND_ERROR_OUT_OF_RANGE;
         timeZone = parsedTimeZone;
         Time.zone(timeZone);
         hour = Time.hour();
         return timeZone;
     }
-    else if(command.substring(beginIdx, colonIdx)=="GETSWITCHSTATE") {
+    else if(textRangeEquals(commandText, colonIdx, "GETSWITCHSTATE")) {
 		//Expect a string like this: GETSWITCHSTATE:1
-        String value = command.substring(colonIdx + 1);
         int id = 0;
-        if(!parseUnsignedText(value.c_str(), value.length(), 1, 4, &id))
+        if(!parseUnsignedText(
+                commandText + colonIdx + 1,
+                command.length() - colonIdx - 1,
+                1,
+                4,
+                &id))
             return COMMAND_ERROR_OUT_OF_RANGE;
         switch(id) {
             case 1:
@@ -327,11 +395,15 @@ int FnRouter(String command) {
                 return -1;
         }
     }
-    else if(command.substring(beginIdx, colonIdx)=="GETCOLOR") {
+    else if(textRangeEquals(commandText, colonIdx, "GETCOLOR")) {
 		//Expect a string like this: GETCOLOR:1
-        String value = command.substring(colonIdx + 1);
         int id = 0;
-        if(!parseUnsignedText(value.c_str(), value.length(), 1, 6, &id))
+        if(!parseUnsignedText(
+                commandText + colonIdx + 1,
+                command.length() - colonIdx - 1,
+                1,
+                6,
+                &id))
             return COMMAND_ERROR_OUT_OF_RANGE;
         switch(id) {
             case 1:
@@ -350,45 +422,38 @@ int FnRouter(String command) {
                 return -1;
         }
     }
-	else if(command.substring(beginIdx, colonIdx)=="SETAUXSWITCH") {
+	else if(textRangeEquals(commandText, colonIdx, "SETAUXSWITCH")) {
 		//Expect a string like this: SETAUXSWITCH:1,0;
 		//That breaks down to: SwitchID,state;
 		beginIdx = colonIdx+1;
 		int id = 0;
+		int lastUpdateResult = -1;
 		while(beginIdx < command.length()) {
 			int commaIdx = command.indexOf(',', beginIdx);
 			int semiColonIdx = command.indexOf(';', beginIdx);
 			if(commaIdx <= beginIdx || semiColonIdx != commaIdx + 2)
 				return COMMAND_ERROR_MALFORMED;
-			String idText = command.substring(beginIdx, commaIdx);
-			if(!parseUnsignedText(idText.c_str(), idText.length(), 0, 255, &id))
+			if(!parseUnsignedText(
+                    commandText + beginIdx,
+                    commaIdx - beginIdx,
+                    0,
+                    255,
+                    &id))
 				return COMMAND_ERROR_OUT_OF_RANGE;
 			char stateText = command.charAt(commaIdx + 1);
 			if(stateText != '0' && stateText != '1')
 				return COMMAND_ERROR_MALFORMED;
-			int auxSwitchIndex = getAuxSwitchIndexFromID(id);
-			if(auxSwitchIndex < 0)
-				return COMMAND_ERROR_OUT_OF_RANGE;
 			bool state = stateText == '1' ? TRUE : FALSE;
-			auxSwitchStruct[auxSwitchIndex].auxSwitchState = state;
-			
-			// Update EEPROM storage area
-			int START_ADDRESS = AUXSW_START_ADDR + (id * (sizeof(uint8_t) + 1));
-			if(EEPROM.length() >= (START_ADDRESS + sizeof(uint8_t)))
-			    EEPROM.write(START_ADDRESS, state ? 1 : 0);
-            else 
-				boundedTextFormat(debug, sizeof(debug), "Warning: EEPROM has reached max size limit; %s not updated", auxSwitchStruct[auxSwitchIndex].auxSwitchTitle);
+			lastUpdateResult = setAuxSwitchState(id, state);
+			if(lastUpdateResult < 0)
+				return lastUpdateResult;
 			
 			beginIdx = semiColonIdx + 1;
 		}
 		
-		//Update the list
-		makeAuxSwitchList();
-		
-		//Update Switch flags
-		return updateAuxSwitches(id);
+		return lastUpdateResult;
 	}
-    else if(command.substring(beginIdx, colonIdx)=="REBOOT") {
+    else if(textRangeEquals(commandText, colonIdx, "REBOOT")) {
         //System.reset();
         reboot = TRUE;
         stop = TRUE;
@@ -399,10 +464,11 @@ int FnRouter(String command) {
  }
 
 // ----------------------------------------------------------------------------
-// Met a jour le texte persistant utilise par les animations textuelles.
+// Met a jour le texte persistant depuis un buffer fixe.
 //
 // Parametres :
-// - command : texte de moins de TEXT_LENGTH octets.
+// - text : debut du texte a appliquer.
+// - textLength : longueur exacte, inferieure a TEXT_LENGTH.
 //
 // Retour :
 // - un en cas de succes ou COMMAND_ERROR_TOO_LONG si le texte depasse.
@@ -410,8 +476,8 @@ int FnRouter(String command) {
 // Effet de bord :
 // - lit puis met a jour la zone de texte dans l'EEPROM si necessaire.
 // ----------------------------------------------------------------------------
-int SetText(String command) {
-    if(command.length() >= TEXT_LENGTH)
+int setTextFromBuffer(const char* text, size_t textLength) {
+    if(text == NULL || textLength >= TEXT_LENGTH)
         return COMMAND_ERROR_TOO_LONG;
     bool isTextSet = FALSE;
     /** DEBUG **/
@@ -427,18 +493,44 @@ int SetText(String command) {
         }
     }
     if(isTextSet) {
-        if(strcmp(textInputString, command.c_str()) != 0 && strlen(command.c_str()) > 0) {
-            boundedTextCopy(textInputString, sizeof(textInputString), command.c_str());
+        size_t storedLength = strnlen(textInputString, sizeof(textInputString));
+        if(textLength > 0 &&
+           (storedLength != textLength || memcmp(textInputString, text, textLength) != 0)) {
+            boundedTextCopyRange(
+                textInputString,
+                sizeof(textInputString),
+                text,
+                textLength);
             // Update the EEPROM storage area with EEPROM.put();
             EEPROM.put(TEXT_START_ADDR, textInputString);
         }
     }
     else {
-        boundedTextCopy(textInputString, sizeof(textInputString), command.c_str());
+        boundedTextCopyRange(
+            textInputString,
+            sizeof(textInputString),
+            text,
+            textLength);
         // Update the EEPROM storage area with EEPROM.put();
         EEPROM.put(TEXT_START_ADDR, textInputString);
     }
 	return 1;
+}
+
+// ----------------------------------------------------------------------------
+// Adapte la frontiere Particle Cloud au buffer fixe du stockage texte.
+//
+// Parametres :
+// - command : texte fourni par Device OS.
+//
+// Retour :
+// - un en cas de succes ou COMMAND_ERROR_TOO_LONG si le texte depasse.
+//
+// Effet de bord :
+// - delegue la lecture et l'ecriture EEPROM a setTextFromBuffer().
+// ----------------------------------------------------------------------------
+int SetText(String command) {
+    return setTextFromBuffer(command.c_str(), command.length());
 }
 
 // ----------------------------------------------------------------------------
@@ -483,9 +575,19 @@ int setNewMode(int newModeIndex) {
 	return newModeIndex;
 }
 
-int getModeIndexFromName(String name) {
+// ----------------------------------------------------------------------------
+// Recherche un mode depuis une tranche de texte non terminee.
+//
+// Parametres :
+// - name : debut du nom historique a rechercher.
+// - nameLength : longueur exacte du nom.
+//
+// Retour :
+// - index dans modeStruct ou moins un lorsque le nom est inconnu.
+// ----------------------------------------------------------------------------
+int getModeIndexFromName(const char* name, size_t nameLength) {
     for(int i=0;i<(int)(sizeof modeStruct / sizeof modeStruct[0]); i++) {
-        if(name.equals(String(modeStruct[i].modeName)))
+        if(textRangeEquals(name, nameLength, modeStruct[i].modeName))
             return i;
     }
     return -1;

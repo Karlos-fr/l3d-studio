@@ -167,8 +167,20 @@ bool diagnosticsMayRefreshDeviceInfo(uint32_t currentMillis) {
         (int32_t)(currentMillis - diagnosticsTextValidUntil) >= 0;
 }
 
-int GetDiagnostics(String command) {
-    diagnosticsResetRequested = command.equalsIgnoreCase("RESET");
+// ----------------------------------------------------------------------------
+// Programme la production differee des diagnostics compacts.
+//
+// Parametres :
+// - resetRequested : vrai pour remettre les minimums a zero avant la mesure.
+//
+// Retour :
+// - numero de sequence associe a la future reponse.
+//
+// Effet de bord :
+// - positionne les drapeaux lus ensuite hors du callback Particle Cloud.
+// ----------------------------------------------------------------------------
+int GetDiagnostics(bool resetRequested) {
+    diagnosticsResetRequested = resetRequested;
     if(diagnosticsRequestSequence >= 2147483647)
         diagnosticsRequestSequence = 1;
     else

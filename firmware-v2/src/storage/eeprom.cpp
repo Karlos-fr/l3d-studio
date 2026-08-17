@@ -38,7 +38,7 @@ inline void initEEPROM(void) {
     clearBuffer = TRUE;
 	
 	// Initialize textInputString variable
-	SetText("");
+	setTextFromBuffer("", 0);
     
     // Inspecte directement l'EEPROM sans monopoliser la zone d'animation.
     for(int i=0; i<(PIXEL_CNT*BPP); i++) {

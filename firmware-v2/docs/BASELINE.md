@@ -63,6 +63,7 @@ particle compile photon firmware-v2 --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Quatre imports CubeTube et métadonnées constantes | 2.3.1 | 111 856 | 16 228 | 111 860 | 19 216 |
 | 2026-08-17 | Nouveau mode GyrophareFR | 2.3.1 | 112 624 | 16 236 | 112 628 | 18 448 |
 | 2026-08-17 | Phase 6, etats d'animations mutualises | 2.3.1 | 112 608 | 13 780 | 112 612 | 18 464 |
+| 2026-08-17 | Phase 7, allocations applicatives supprimees | 2.3.1 | 111 600 | 13 780 | 111 604 | 19 472 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
@@ -142,3 +143,7 @@ sources.
   entre GoldRain, Matrix, Squarrel, Collide2, Whirlwind et CubePainter acceptés
   à `B:1`, minimum libre de 35 408 octets, aucun OOM, puis retour sur `Off`
   avec `brightness=2`.
+- Flash OTA de la phase 7 réalisé le 2026-08-17 : parsing direct validé pour
+  mode, vitesse, luminosité, six couleurs, quatre switches, texte et commandes
+  génériques à `B:1`. Minimum libre de 35 408 octets, aucun OOM, erreur
+  CubePainter hors plage `-103`, puis retour sur `Off` avec `brightness=2`.

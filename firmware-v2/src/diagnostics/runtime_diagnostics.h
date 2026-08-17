@@ -11,7 +11,7 @@ void diagnosticsBeginFrame(int modeId);
 void diagnosticsEndFrame(void);
 void diagnosticsModeChanged(int modeId);
 bool diagnosticsMayRefreshDeviceInfo(uint32_t currentMillis);
-int GetDiagnostics(String command);
+int GetDiagnostics(bool resetRequested);
 
 #else
 

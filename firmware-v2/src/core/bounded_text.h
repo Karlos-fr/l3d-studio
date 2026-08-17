@@ -60,6 +60,38 @@ inline bool boundedTextCopy(char* destination, size_t capacity, const char* sour
 }
 
 // ----------------------------------------------------------------------------
+// Copie une tranche non terminee dans un buffer fixe.
+//
+// Parametres :
+// - destination : buffer recevant la copie terminee par un caractere nul.
+// - capacity : taille totale du buffer de destination.
+// - source : debut de la tranche a copier.
+// - sourceLength : nombre exact de caracteres a copier.
+//
+// Retour :
+// - vrai si la tranche tient entierement dans le buffer.
+//
+// Effet de bord :
+// - remplace le contenu du buffer et garantit sa terminaison nulle.
+// ----------------------------------------------------------------------------
+inline bool boundedTextCopyRange(
+        char* destination,
+        size_t capacity,
+        const char* source,
+        size_t sourceLength) {
+    if(destination == NULL || source == NULL || capacity == 0)
+        return false;
+
+    size_t copyLength = sourceLength < capacity - 1
+        ? sourceLength
+        : capacity - 1;
+    if(copyLength > 0)
+        memcpy(destination, source, copyLength);
+    destination[copyLength] = '\0';
+    return sourceLength < capacity;
+}
+
+// ----------------------------------------------------------------------------
 // Ajoute une chaine a la fin d'un buffer fixe.
 //
 // Parametres :
