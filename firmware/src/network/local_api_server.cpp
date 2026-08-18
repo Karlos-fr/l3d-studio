@@ -2,7 +2,8 @@
 // LocalApiServer - Implementation du premier serveur HTTP local
 // ----------------------------------------------------------------------------
 // Ce module gere un seul TCPClient, ferme chaque transaction et expose la
-// sante et les diagnostics. Il ne route encore aucune commande du cube.
+// sante, les diagnostics et les commandes partagees avec Particle. Il ne
+// contient aucune logique metier propre au cube.
 // ============================================================================
 
 #ifdef L3D_UNITY_BUILD
@@ -89,6 +90,9 @@ static uint32_t localApiTransactionStartedMicros = 0;
 // Sequence monotone propre aux instantanes produits directement sur le LAN.
 static int32_t localApiDiagnosticsSequence = 0;
 
+// Indique qu'une commande metier synchrone utilise le corps de requete.
+static bool localApiCommandActive = false;
+
 // ----------------------------------------------------------------------------
 // Retourne la raison textuelle stable d'un statut HTTP pris en charge.
 //
@@ -108,6 +112,7 @@ static const char* localApiStatusText(int status) {
         case 408: return "Request Timeout";
         case 413: return "Content Too Large";
         case 415: return "Unsupported Media Type";
+        case 422: return "Unprocessable Content";
         case 503: return "Service Unavailable";
         default: return "Internal Server Error";
     }
@@ -498,13 +503,72 @@ static void localApiRouteAuxSwitches(void) {
 }
 
 // ----------------------------------------------------------------------------
-// Route la requete complete vers les capacites disponibles en phase 3.
+// Execute une commande locale complete et prepare son enveloppe commune.
+//
+// Parametres :
+// - handler : fonction metier a buffer fixe correspondant a la route.
+//
+// Retour :
+// - vrai apres preparation de la reponse ou de l'erreur de disponibilite.
+//
+// Effet de bord :
+// - peut modifier l'etat du cube selon la commande, puis memorise son resultat.
+// ----------------------------------------------------------------------------
+static bool localApiRouteCommand(
+        int (*handler)(const char*, size_t)) {
+    if(localApiCommandActive) {
+        localApiPrepareError(LOCAL_API_ERROR_BUSY);
+        return true;
+    }
+
+    localApiCommandActive = true;
+    // Longueur preservee avant que le buffer soit reutilise pour la reponse.
+    const size_t commandLength = localApiParser.bodyLength;
+    // Code historique commun memorise pour les lectures d'etat ulterieures.
+    const int commandResult = recordCommandResult(
+        handler(localApiParser.body, commandLength));
+    localApiCommandActive = false;
+
+    int bodyLength = snprintf(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        "v=1\nresult=%d\n",
+        commandResult);
+    if(bodyLength < 0 ||
+       static_cast<size_t>(bodyLength) >= sizeof(localApiParser.body) ||
+       !localApiPrepareResponse(
+            commandResult < 0 ? 422 : 200,
+            localApiParser.body,
+            static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Indique si le chemin designe une route de commande locale.
+//
+// Parametres :
+// - path : chemin HTTP termine par un caractere nul.
+//
+// Retour :
+// - vrai pour les quatre commandes exposees par la version 1.
+// ----------------------------------------------------------------------------
+static bool localApiIsCommandPath(const char* path) {
+    return strcmp(path, "/api/v1/command") == 0 ||
+        strcmp(path, "/api/v1/mode") == 0 ||
+        strcmp(path, "/api/v1/text") == 0 ||
+        strcmp(path, "/api/v1/cube-painter") == 0;
+}
+
+// ----------------------------------------------------------------------------
+// Route la requete complete vers les lectures et commandes disponibles.
 //
 // Retour :
 // - vrai si une reponse est preparee, faux si la lecture doit etre differee.
 //
 // Effet de bord :
-// - prepare une sante, un diagnostic, un preflight ou une erreur bornee.
+// - prepare une lecture, execute une commande complete ou produit une erreur.
 // ----------------------------------------------------------------------------
 static bool localApiRouteRequest(void) {
     if(localApiParser.method == LOCAL_HTTP_METHOD_OPTIONS) {
@@ -571,6 +635,20 @@ static bool localApiRouteRequest(void) {
         else
             localApiRouteAuxSwitches();
         return true;
+    }
+
+    if(localApiIsCommandPath(localApiParser.path)) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_POST) {
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+            return true;
+        }
+        if(strcmp(localApiParser.path, "/api/v1/command") == 0)
+            return localApiRouteCommand(routeCommandFromBuffer);
+        if(strcmp(localApiParser.path, "/api/v1/mode") == 0)
+            return localApiRouteCommand(setModeFromBuffer);
+        if(strcmp(localApiParser.path, "/api/v1/text") == 0)
+            return localApiRouteCommand(setTextFromBuffer);
+        return localApiRouteCommand(cubePainterFromBuffer);
     }
 
     localApiPrepareError(LOCAL_API_ERROR_NOT_FOUND);
@@ -693,17 +771,33 @@ static void localApiWriteResponse(uint32_t currentMillis) {
     }
 }
 
+// ----------------------------------------------------------------------------
+// Initialise le serveur local et ses etats durables au demarrage.
+//
+// Effet de bord :
+// - remet l'ecoute, le client, le verrou et les buffers a leur etat initial.
+// ----------------------------------------------------------------------------
 void localApiSetup(void) {
     localApiClientActive = false;
     localApiListening = false;
     localApiWiFiWasReady = false;
     localApiLastBeginAttemptMillis = 0;
     localApiDiagnosticsSequence = 0;
+    localApiCommandActive = false;
     localHttpParserReset(&localApiParser);
     memset(&localApiResponse, 0, sizeof(localApiResponse));
 }
 
+// ----------------------------------------------------------------------------
+// Fait progresser une tranche bornee du serveur local.
+//
+// Effet de bord :
+// - gere l'ecoute, la requete ou la reponse de l'unique client courant.
+// - ignore les rappels cooperatifs imbriques pendant une commande synchrone.
+// ----------------------------------------------------------------------------
 void localApiProcess(void) {
+    if(localApiCommandActive)
+        return;
     uint32_t currentMillis = millis();
     bool wifiReady = WiFi.ready();
     if(!wifiReady) {

@@ -224,26 +224,26 @@ dans l'application. Les valeurs brutes du firmware restent entières.
 
 ### Firmware
 
-- [ ] Ajouter `POST /api/v1/command` vers le routeur commun de `FnRouter`.
-- [ ] Ajouter `POST /api/v1/mode` vers le parseur commun de `SetMode`.
-- [ ] Ajouter `POST /api/v1/text` vers `setTextFromBuffer()`.
-- [ ] Ajouter `POST /api/v1/cube-painter` vers l'adaptateur borné CubePainter.
-- [ ] Retourner le code historique de chaque commande dans une enveloppe compacte commune.
-- [ ] Ne modifier aucun ID de mode, format de commande ou code de succès existant.
-- [ ] Refuser une seconde commande tant que la première n'est pas entièrement traitée.
-- [ ] Vérifier qu'un client déconnecté ne laisse aucune commande partielle applicable.
+- [x] Ajouter `POST /api/v1/command` vers le routeur commun de `FnRouter`.
+- [x] Ajouter `POST /api/v1/mode` vers le parseur commun de `SetMode`.
+- [x] Ajouter `POST /api/v1/text` vers `setTextFromBuffer()`.
+- [x] Ajouter `POST /api/v1/cube-painter` vers l'adaptateur borné CubePainter.
+- [x] Retourner le code historique de chaque commande dans une enveloppe compacte commune.
+- [x] Ne modifier aucun ID de mode, format de commande ou code de succès existant.
+- [x] Refuser une seconde commande tant que la première n'est pas entièrement traitée.
+- [x] Vérifier qu'un client déconnecté ne laisse aucune commande partielle applicable.
 
 ### Tests
 
-- [ ] Exécuter la même matrice de commandes via Particle et via le LAN.
-- [ ] Tester les commandes successives et les changements de mode rapides.
-- [ ] Tester les commandes pendant une animation et pendant une reconnexion Particle.
-- [ ] Tester les écritures EEPROM sans augmenter leur fréquence historique.
+- [x] Exécuter la même matrice de commandes via Particle et via le LAN.
+- [x] Tester les commandes successives et les changements de mode rapides.
+- [ ] Tester les commandes pendant une animation et pendant une reconnexion Particle — animation validée ; fenêtre LAN avec `Particle.connected()==false` non observée après reboot, reportée à la phase 9.
+- [x] Tester les écritures EEPROM sans augmenter leur fréquence historique.
 - [ ] Tester le rendu matériel avec `B:1` uniquement.
 
 ### Critère de sortie
 
-- [ ] Les fonctions historiques exposées dans la table API sont utilisables sur le LAN sans régression Particle.
+- [x] Les fonctions historiques exposées dans la table API sont utilisables sur le LAN sans régression Particle.
 
 ## Phase 6 — Client LAN et abstraction de transport dans L3D Studio
 

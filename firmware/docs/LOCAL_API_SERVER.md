@@ -151,3 +151,57 @@ La validation du 18 août 2026 a comparé les trois réponses aux variables
 Particle historiques, sans différence. Après 90 lectures, la mémoire libre est
 restée à 33 992 octets et le minimum à 31 896 octets. Le cube a été remis sur
 `M:Off,B:1,`.
+
+## Évolution de phase 5
+
+Les quatre fonctions historiques sont maintenant accessibles sur le LAN sans
+dupliquer leur logique métier :
+
+```text
+POST /api/v1/command
+POST /api/v1/mode
+POST /api/v1/text
+POST /api/v1/cube-painter
+```
+
+Chaque corps contient directement la commande historique. Une réussite renvoie
+`200` et un refus du parseur métier renvoie `422`, dans les deux cas avec le
+code d'origine :
+
+```text
+v=1
+result=-103
+```
+
+Exemples PowerShell, toujours avec `B:1` pour une commande visuelle :
+
+```powershell
+$base = "http://<adresse-ip-du-photon>:8080/api/v1"
+
+curl.exe -H "Content-Type: text/plain" `
+  --data-binary "GETSWITCHSTATE:1" "$base/command"
+
+curl.exe -H "Content-Type: text/plain" `
+  --data-binary "M:ColorAll,S:4,B:1,C1:0000FF," "$base/mode"
+
+curl.exe -X POST -H "Content-Type: text/plain" `
+  -H "Content-Length: 0" "$base/text"
+
+curl.exe -H "Content-Type: text/plain" `
+  --data-binary "I512,#FF0000," "$base/cube-painter"
+```
+
+Le verrou de commande empêche un rappel coopératif imbriqué du serveur pendant
+l'exécution synchrone du parseur. Cette protection est nécessaire car certaines
+commandes de mode servent volontairement le réseau pendant leurs attentes. Une
+requête interrompue avant son `Content-Length` complet est abandonnée sans
+appeler le parseur métier.
+
+Le 18 août 2026, la matrice `command`, `mode`, `text` et `cube-painter` a donné
+les mêmes codes via Particle et le LAN. Le refus du voxel 512 a rendu `-103`
+et HTTP 422 sans écriture. Huit changements rapides puis trente changements
+supplémentaires entre `ColorAll` et `Off` ont réussi à `B:1`. Une commande
+partielle fermée avant sa fin n'a changé ni le mode ni le dernier résultat.
+Après reboot, le LAN et Particle sont redevenus disponibles, mais aucune
+fenêtre avec Wi-Fi prêt et Particle encore déconnecté n'a été observée ; ce cas
+précis reste à provoquer pendant l'endurance de phase 9.

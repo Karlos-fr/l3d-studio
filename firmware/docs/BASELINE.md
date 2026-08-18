@@ -241,3 +241,18 @@ réponses LAN ont été comparées octet pour octet aux listes Particle. Une sé
 de 90 lectures `state`, `modes` et `aux-switches` a conservé 33 992 octets
 libres et un minimum stable de 31 896 octets. Le cube a été remis sur
 `M:Off,B:1,`.
+
+## Phase 5 — Commandes locales
+
+| Variante | Flash | RAM statique | Binaire | Marge Flash |
+| --- | ---: | ---: | ---: | ---: |
+| Phase 4 active | 117 288 | 15 196 | 117 292 | 13 784 |
+| Phase 5 active | 117 608 | 15 196 | 117 612 | 13 464 |
+| Écart phase 5 | +320 | 0 | +320 | -320 |
+
+Les quatre routes de commande réutilisent le corps HTTP existant et les
+fonctions métier de phase 1 ; elles n'ajoutent donc aucune RAM statique. Après
+un reboot et trente changements de mode à `B:1`, le diagnostic indiquait
+33 416 octets libres, un minimum global de 31 896 octets et aucun événement
+OOM. Particle Cloud répondait encore et le cube a été remis sur `M:Off,B:1,`
+avec une luminosité interne de 2.
