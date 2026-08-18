@@ -251,6 +251,17 @@ legend {
   color: #fecaca;
 }
 
+/* Alerte visible lorsqu'un minimum memoire ou compteur OOM se degrade. */
+.diagnostics-warning {
+  color: #fbbf24;
+  font-weight: 700;
+}
+
+/* Dernier echec conserve sans masquer le dernier echantillon valide. */
+.diagnostics-error {
+  color: #f87171;
+}
+
 .primary-action:disabled,
 .secondary-action:disabled {
   cursor: wait;

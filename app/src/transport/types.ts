@@ -6,6 +6,7 @@
 // ============================================================================
 
 import type { SparkPixelsAuxSwitch, SparkPixelsDeviceInfoEntry, SparkPixelsModeDefinition } from "../sparkpixels/types";
+import type { LanDiagnostics } from "../lan/types";
 
 export type TransportPreference = "automatic" | "lan" | "particle";
 
@@ -14,6 +15,7 @@ export type TransportKind = "lan" | "particle";
 export interface TransportResult<TValue> {
   source: TransportKind;
   value: TValue;
+  dataOperations?: number;
 }
 
 export interface SparkPixelsCommandResult {
@@ -57,6 +59,10 @@ export interface SparkPixelsTransport {
   readCube(): Promise<TransportResult<SparkPixelsCubeSnapshot>>;
   // Relit les switches auxiliaires apres une commande.
   readAuxSwitches(): Promise<TransportResult<SparkPixelsAuxSwitch[]>>;
+  // Lit un nouvel echantillon de diagnostics sans reinitialisation.
+  readDiagnostics(): Promise<TransportResult<LanDiagnostics>>;
+  // Reinitialise explicitement les minimums puis renvoie leur echantillon.
+  resetDiagnostics(): Promise<TransportResult<LanDiagnostics>>;
   // Appelle le routeur generique.
   sendCommand(command: string): Promise<TransportResult<SparkPixelsCommandResult>>;
   // Applique une commande de mode.

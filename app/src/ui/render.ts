@@ -161,6 +161,7 @@ function renderWorkspace(state: AppState): string {
     ${renderFirmwareStatePanel(state)}
     ${renderModePanel(state)}
     ${renderAdvancedPanel(state)}
+    ${renderDiagnosticsPanel(state)}
     ${renderDeviceInfoPanel(state)}
     ${renderResponsePanel(state)}
   `;
@@ -225,6 +226,160 @@ function renderDeviceSelect(state: AppState): string {
       </select>
     </label>
   `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend les controles et KPI instantanes de diagnostics.
+//
+// Parametres :
+// - state : etat applicatif et dernier echantillon valide.
+//
+// Retour :
+// - panneau distinct des informations Particle historiques.
+// ----------------------------------------------------------------------------
+function renderDiagnosticsPanel(state: AppState): string {
+  const diagnosticsState = state.diagnostics;
+  const disabled = state.isBusy || !hasAvailableConfiguredTransport(state) ? "disabled" : "";
+  return `
+    <section class="panel diagnostics-panel">
+      <div class="panel-heading">
+        <h2>Diagnostics</h2>
+        <button class="secondary-action" data-action="refresh-diagnostics" type="button" ${disabled}>
+          Actualiser maintenant
+        </button>
+        <button class="secondary-action danger-action" data-action="reset-diagnostics" type="button" ${disabled}>
+          Remettre les minimums a zero
+        </button>
+      </div>
+      <div class="form-grid diagnostics-controls">
+        <label>
+          <input data-field="diagnostics-enabled" type="checkbox" ${diagnosticsState.enabled ? "checked" : ""} ${disabled} />
+          Surveillance periodique
+        </label>
+        <label>
+          Intervalle
+          <select data-field="diagnostics-interval" ${state.isBusy ? "disabled" : ""}>
+            ${renderDiagnosticsIntervalOptions(diagnosticsState.intervalSeconds)}
+          </select>
+        </label>
+      </div>
+      ${renderDiagnosticsMessages(state)}
+      ${renderDiagnosticsSample(state)}
+    </section>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend les quatre intervalles de surveillance autorises.
+//
+// Parametres :
+// - selectedInterval : intervalle actuellement choisi.
+//
+// Retour :
+// - options HTML de 5, 10, 30 et 60 secondes.
+// ----------------------------------------------------------------------------
+function renderDiagnosticsIntervalOptions(selectedInterval: number): string {
+  return [5, 10, 30, 60]
+    .map((interval) => {
+      const selected = interval === selectedInterval ? "selected" : "";
+      return `<option value="${interval}" ${selected}>${interval} secondes</option>`;
+    })
+    .join("");
+}
+
+// ----------------------------------------------------------------------------
+// Rend les alertes et le dernier echec sans supprimer les KPI valides.
+//
+// Parametres :
+// - state : etat contenant messages et compteurs d'erreur.
+//
+// Retour :
+// - messages HTML bornes ou chaine vide.
+// ----------------------------------------------------------------------------
+function renderDiagnosticsMessages(state: AppState): string {
+  const warning = state.diagnostics.warningMessage;
+  const error = state.diagnostics.lastError;
+  return `
+    ${warning === null ? "" : `<p class="diagnostics-warning">${escapeHtml(warning)}</p>`}
+    ${
+      error === null
+        ? ""
+        : `<p class="diagnostics-error">Dernier echec (${state.diagnostics.consecutiveErrors}) : ${escapeHtml(error)}</p>`
+    }
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend le dernier echantillon de diagnostics dans ses unites d'affichage.
+//
+// Parametres :
+// - state : etat contenant le dernier echantillon eventuel.
+//
+// Retour :
+// - grille de KPI ou indication d'absence de lecture.
+// ----------------------------------------------------------------------------
+function renderDiagnosticsSample(state: AppState): string {
+  const sample = state.diagnostics.latestSample;
+  if (sample === null) return "<p>Aucun echantillon de diagnostics.</p>";
+  const values = sample.diagnostics;
+  const capturedAt = new Date(sample.capturedAtMilliseconds).toLocaleTimeString("fr-FR");
+  return `
+    <p>Dernier echantillon : ${escapeHtml(capturedAt)}, source ${sample.source}, latence ${sample.latencyMilliseconds.toFixed(0)} ms.</p>
+    <dl class="metrics-grid diagnostics-metrics">
+      <div><dt>Memoire libre</dt><dd>${formatMemory(values.freeMemory)}</dd></div>
+      <div><dt>Minimum global</dt><dd>${formatMemory(values.minimumFreeMemory)}</dd></div>
+      <div><dt>Minimum du mode</dt><dd>${formatMemory(values.modeMinimumFreeMemory)}</dd></div>
+      <div><dt>Avant / apres frame</dt><dd>${formatMemory(values.frameMemoryBefore)} / ${formatMemory(values.frameMemoryAfter)}</dd></div>
+      <div><dt>Frame derniere</dt><dd>${formatFrameMilliseconds(values.lastFrameMicros)}</dd></div>
+      <div><dt>Frame moyenne</dt><dd>${formatFrameMilliseconds(values.averageFrameMicros)}</dd></div>
+      <div><dt>Pire frame</dt><dd>${formatFrameMilliseconds(values.worstFrameMicros)}</dd></div>
+      <div><dt>FPS moyen</dt><dd>${(values.fpsTimesTen / 10).toFixed(1)}</dd></div>
+      <div><dt>Uptime</dt><dd>${values.uptimeSeconds} s</dd></div>
+      <div><dt>Mode / frames</dt><dd>${values.modeId} / ${values.frameCount}</dd></div>
+      <div><dt>Wi-Fi / Particle</dt><dd>${formatBooleanState(values.wifiReady)} / ${formatBooleanState(values.particleConnected)}</dd></div>
+      <div><dt>Reset / OOM</dt><dd>${values.resetReason} / ${values.outOfMemoryCount}</dd></div>
+    </dl>
+    <p>Data Operations Particle estimees pour les diagnostics : ${state.diagnostics.estimatedParticleDataOperations}.</p>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Formate une valeur memoire en octets et Kio.
+//
+// Parametres :
+// - value : nombre d'octets brut du firmware.
+//
+// Retour :
+// - representation double unite.
+// ----------------------------------------------------------------------------
+function formatMemory(value: number): string {
+  return `${value} octets (${(value / 1024).toFixed(1)} Kio)`;
+}
+
+// ----------------------------------------------------------------------------
+// Convertit des microsecondes firmware en millisecondes d'affichage.
+//
+// Parametres :
+// - value : duree brute en microsecondes.
+//
+// Retour :
+// - duree avec deux decimales.
+// ----------------------------------------------------------------------------
+function formatFrameMilliseconds(value: number): string {
+  return `${(value / 1000).toFixed(2)} ms`;
+}
+
+// ----------------------------------------------------------------------------
+// Formate un etat de connexion booleen.
+//
+// Parametres :
+// - value : etat brut valide.
+//
+// Retour :
+// - libelle lisible actif ou inactif.
+// ----------------------------------------------------------------------------
+function formatBooleanState(value: boolean): string {
+  return value ? "actif" : "inactif";
 }
 
 // ----------------------------------------------------------------------------

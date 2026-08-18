@@ -277,38 +277,38 @@ dans l'application. Les valeurs brutes du firmware restent entières.
 
 ### Contrôles
 
-- [ ] Ajouter un panneau `Diagnostics` distinct des informations historiques `Device Info`.
-- [ ] Ajouter un bouton `Actualiser maintenant`.
-- [ ] Ajouter un interrupteur `Surveillance périodique` désactivé par défaut.
-- [ ] Proposer des intervalles LAN raisonnables, par exemple 5, 10, 30 et 60 secondes.
-- [ ] Afficher l'heure du dernier échantillon, sa source et sa latence.
-- [ ] Ajouter un bouton explicite de remise à zéro des minimums.
-- [ ] Demander confirmation avant d'appeler la remise à zéro.
-- [ ] Afficher le dernier échec sans effacer le dernier échantillon valide.
+- [x] Ajouter un panneau `Diagnostics` distinct des informations historiques `Device Info`.
+- [x] Ajouter un bouton `Actualiser maintenant`.
+- [x] Ajouter un interrupteur `Surveillance périodique` désactivé par défaut.
+- [x] Proposer des intervalles LAN raisonnables, par exemple 5, 10, 30 et 60 secondes.
+- [x] Afficher l'heure du dernier échantillon, sa source et sa latence.
+- [x] Ajouter un bouton explicite de remise à zéro des minimums.
+- [x] Demander confirmation avant d'appeler la remise à zéro.
+- [x] Afficher le dernier échec sans effacer le dernier échantillon valide.
 
 ### Orchestration
 
-- [ ] Utiliser un `setTimeout` récursif afin d'interdire les appels superposés.
-- [ ] Annuler le timer au changement de transport, d'adresse, de device ou à la déconnexion.
-- [ ] Suspendre les appels lorsque l'onglet est masqué et reprendre sans rafale.
-- [ ] Ajouter un timeout borné et un ralentissement progressif après plusieurs échecs.
-- [ ] Pour Particle, appeler `GETDIAG`, puis relire `deviceInfo` jusqu'à la séquence attendue.
-- [ ] Pour le LAN, lire directement `/api/v1/diagnostics` sans séquence Particle.
-- [ ] Comptabiliser et afficher l'estimation des Data Operations lorsque Particle est utilisé.
-- [ ] Ne jamais appeler automatiquement `RESETDIAG`.
-- [ ] Conserver un historique circulaire borné en nombre d'échantillons.
+- [x] Utiliser un `setTimeout` récursif afin d'interdire les appels superposés.
+- [x] Annuler le timer au changement de transport, d'adresse, de device ou à la déconnexion.
+- [x] Suspendre les appels lorsque l'onglet est masqué et reprendre sans rafale.
+- [x] Ajouter un timeout borné et un ralentissement progressif après plusieurs échecs.
+- [x] Pour Particle, appeler `GETDIAG`, puis relire `deviceInfo` jusqu'à la séquence attendue.
+- [x] Pour le LAN, lire directement `/api/v1/diagnostics` sans séquence Particle.
+- [x] Comptabiliser et afficher l'estimation des Data Operations lorsque Particle est utilisé.
+- [x] Ne jamais appeler automatiquement `RESETDIAG`.
+- [x] Conserver un historique circulaire borné en nombre d'échantillons.
 
 ### KPI instantanés
 
-- [ ] Afficher la mémoire libre et les minimums en octets et Kio.
-- [ ] Afficher dernière, moyenne et pire durée de frame en millisecondes.
-- [ ] Afficher les FPS, l'uptime, le mode et le nombre de frames.
-- [ ] Afficher Wi-Fi, Particle, cause de reset et événements OOM.
-- [ ] Signaler visuellement une baisse du minimum mémoire ou une hausse du compteur OOM.
+- [x] Afficher la mémoire libre et les minimums en octets et Kio.
+- [x] Afficher dernière, moyenne et pire durée de frame en millisecondes.
+- [x] Afficher les FPS, l'uptime, le mode et le nombre de frames.
+- [x] Afficher Wi-Fi, Particle, cause de reset et événements OOM.
+- [x] Signaler visuellement une baisse du minimum mémoire ou une hausse du compteur OOM.
 
 ### Critère de sortie
 
-- [ ] La surveillance peut fonctionner durablement sans chevauchement, sans reset implicite et sans fuite de timers.
+- [x] La surveillance peut fonctionner durablement sans chevauchement, sans reset implicite et sans fuite de timers.
 
 ## Phase 8 — Graphiques de suivi des KPI
 

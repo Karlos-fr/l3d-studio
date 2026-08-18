@@ -108,6 +108,8 @@ function createTransport(source: TransportKind): SparkPixelsTransport {
   return {
     readCube: vi.fn(async () => ({ source, value: EMPTY_SNAPSHOT })),
     readAuxSwitches: vi.fn(async () => ({ source, value: [] })),
+    readDiagnostics: vi.fn(),
+    resetDiagnostics: vi.fn(),
     sendCommand: vi.fn(async () => ({ source, value: { result: 1 } })),
     sendMode: vi.fn(async () => ({ source, value: { result: 1 } })),
     sendText: vi.fn(async () => ({ source, value: { result: 1 } })),

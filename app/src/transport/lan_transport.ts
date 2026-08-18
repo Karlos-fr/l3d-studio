@@ -51,6 +51,14 @@ export function createLanTransport(client: LanClient): SparkPixelsTransport {
       return { source: "lan", value: response.switches };
     },
 
+    async readDiagnostics() {
+      return { source: "lan", value: await client.diagnostics(), dataOperations: 0 };
+    },
+
+    async resetDiagnostics() {
+      return { source: "lan", value: await client.resetDiagnostics(), dataOperations: 0 };
+    },
+
     sendCommand: (command) => mapLanCommand(client.command(command)),
     sendMode: (command) => mapLanCommand(client.mode(command)),
     sendText: (text) => mapLanCommand(client.text(text)),

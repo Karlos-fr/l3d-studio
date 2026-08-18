@@ -6,6 +6,7 @@
 // ============================================================================
 
 import type { ParticleDeviceSummary, ParticleStoredSession } from "../particle/types";
+import type { DiagnosticsMonitorState } from "../diagnostics/types";
 import type {
   SparkPixelsAuxSwitch,
   SparkPixelsDeviceInfoEntry,
@@ -22,6 +23,7 @@ export interface AppState {
   lanPort: number;
   lastTransportUsed: TransportKind | null;
   lanTestStatus: string | null;
+  diagnostics: DiagnosticsMonitorState;
   session: ParticleStoredSession | null;
   devices: ParticleDeviceSummary[];
   selectedDeviceId: string | null;
@@ -60,6 +62,9 @@ const INITIAL_LAN_HOST = "";
 
 // Port contractuel du premier serveur LAN.
 const INITIAL_LAN_PORT = 8080;
+
+// Intervalle de surveillance propose initialement, en secondes.
+const INITIAL_DIAGNOSTICS_INTERVAL_SECONDS = 10;
 
 // Luminosite initiale affichee tant que le firmware n'a pas ete lu.
 const INITIAL_BRIGHTNESS_PERCENT = 50;
@@ -101,6 +106,16 @@ export function createInitialState(
     lanPort: preferences?.lanPort ?? INITIAL_LAN_PORT,
     lastTransportUsed: null,
     lanTestStatus: null,
+    diagnostics: {
+      enabled: false,
+      intervalSeconds: INITIAL_DIAGNOSTICS_INTERVAL_SECONDS,
+      latestSample: null,
+      history: [],
+      lastError: null,
+      consecutiveErrors: 0,
+      estimatedParticleDataOperations: 0,
+      warningMessage: null,
+    },
     session,
     devices: [],
     selectedDeviceId: session?.deviceId ?? null,
@@ -246,4 +261,11 @@ export function resetFirmwareState(state: AppState): void {
   state.debugMessage = null;
   state.lastResponse = null;
   state.lastTransportUsed = null;
+  state.diagnostics.enabled = false;
+  state.diagnostics.latestSample = null;
+  state.diagnostics.history = [];
+  state.diagnostics.lastError = null;
+  state.diagnostics.consecutiveErrors = 0;
+  state.diagnostics.estimatedParticleDataOperations = 0;
+  state.diagnostics.warningMessage = null;
 }

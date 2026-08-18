@@ -31,6 +31,18 @@ export function createAutomaticTransport(
         () => lanTransport.readAuxSwitches(),
         () => requireParticle(particleTransport).readAuxSwitches(),
       ),
+    readDiagnostics: () =>
+      fallbackRead(
+        () => lanTransport.readDiagnostics(),
+        () => requireParticle(particleTransport).readDiagnostics(),
+      ),
+    resetDiagnostics: () =>
+      dispatchCommand(
+        lanClient,
+        lanTransport,
+        particleTransport,
+        (transport) => transport.resetDiagnostics(),
+      ),
     sendCommand: (command) =>
       dispatchCommand(lanClient, lanTransport, particleTransport, (transport) => transport.sendCommand(command)),
     sendMode: (command) =>

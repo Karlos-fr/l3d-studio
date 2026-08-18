@@ -6,6 +6,9 @@
 // ============================================================================
 
 import { createLanClient, LanClientError, normalizeLanHost, normalizeLanPort } from "../lan/client";
+import type { DiagnosticsMonitor } from "../diagnostics/monitor";
+import { appendDiagnosticsSample } from "../diagnostics/history";
+import { resetDiagnosticsSample } from "../diagnostics/reader";
 import { ParticleCloudError, type ParticleClient } from "../particle/client";
 import {
   clearParticleSession,
@@ -25,10 +28,8 @@ import {
   normalizeHexColor,
   validateSetText,
 } from "../sparkpixels/protocol";
-import { createConfiguredTransport } from "../transport/factory";
 import {
   SparkPixelsCommandRefusedError,
-  type SparkPixelsTransport,
   type TransportPreference,
 } from "../transport/types";
 import { saveAppPreferences } from "./preferences";
@@ -40,11 +41,13 @@ import {
   resetFirmwareState,
   type AppState,
 } from "./state";
+import { createTransportForState } from "./transport";
 
 export interface UiEventContext {
   rootElement: HTMLElement;
   state: AppState;
   particleClient: ParticleClient;
+  diagnosticsMonitor: DiagnosticsMonitor;
   storage: ParticleSessionStorage;
   rerender: () => void;
 }
@@ -66,6 +69,12 @@ const LOAD_FIRMWARE_STATE_ACTION = "load-firmware-state";
 
 // Nom de l'action qui teste uniquement la route de sante LAN.
 const TEST_LAN_ACTION = "test-lan";
+
+// Nom de l'action qui force un echantillon de diagnostics.
+const REFRESH_DIAGNOSTICS_ACTION = "refresh-diagnostics";
+
+// Nom de l'action explicite qui remet les minimums a zero.
+const RESET_DIAGNOSTICS_ACTION = "reset-diagnostics";
 
 // Nom de l'action qui envoie la commande SetMode.
 const SEND_SET_MODE_ACTION = "send-set-mode";
@@ -188,7 +197,9 @@ function attachStateFields(context: UiEventContext): void {
       if (
         fieldElement.dataset.field === "aux-switch" ||
         fieldElement.dataset.field === "lan-host" ||
-        fieldElement.dataset.field === "lan-port"
+        fieldElement.dataset.field === "lan-port" ||
+        fieldElement.dataset.field === "diagnostics-enabled" ||
+        fieldElement.dataset.field === "diagnostics-interval"
       ) {
         return;
       }
@@ -270,6 +281,19 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
     return;
   }
 
+  if (action === REFRESH_DIAGNOSTICS_ACTION) {
+    await refreshDiagnostics(context);
+    return;
+  }
+
+  if (
+    action === RESET_DIAGNOSTICS_ACTION &&
+    confirm("Remettre a zero les minimums et statistiques de diagnostics ?")
+  ) {
+    await resetDiagnostics(context);
+    return;
+  }
+
   if (action === SEND_SET_MODE_ACTION) {
     await sendSetMode(context);
     return;
@@ -310,6 +334,7 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
 // - supprime la session locale et remet l'application en etat initial.
 // ----------------------------------------------------------------------------
 function handleLogout(context: UiEventContext): void {
+  stopDiagnosticsMonitoring(context);
   clearParticleSession(context.storage);
   context.particleClient.setToken(null);
   Object.assign(context.state, {
@@ -334,6 +359,7 @@ function handleLogout(context: UiEventContext): void {
 // - efface le token local et force un nouveau login utilisateur.
 // ----------------------------------------------------------------------------
 function handleExpiredSession(context: UiEventContext): void {
+  stopDiagnosticsMonitoring(context);
   clearParticleSession(context.storage);
   context.particleClient.setToken(null);
   Object.assign(context.state, {
@@ -368,16 +394,31 @@ function handleFieldChange(
   if (fieldName === "device-id") {
     updateSelectedDevice(context, fieldElement.value);
   } else if (fieldName === "transport-preference") {
+    stopDiagnosticsMonitoring(context);
     context.state.transportPreference = fieldElement.value as TransportPreference;
     context.state.lastTransportUsed = null;
   } else if (fieldName === "lan-host") {
+    stopDiagnosticsMonitoring(context);
     context.state.lanHost = fieldElement.value.trim();
     context.state.lanTestStatus = null;
     context.state.lastTransportUsed = null;
   } else if (fieldName === "lan-port") {
+    stopDiagnosticsMonitoring(context);
     context.state.lanPort = Number.parseInt(fieldElement.value, 10);
     context.state.lanTestStatus = null;
     context.state.lastTransportUsed = null;
+  } else if (fieldName === "diagnostics-enabled" && fieldElement instanceof HTMLInputElement) {
+    context.state.diagnostics.enabled = fieldElement.checked;
+    if (fieldElement.checked) {
+      context.diagnosticsMonitor.start(context.state.diagnostics.intervalSeconds);
+    } else {
+      context.diagnosticsMonitor.stop();
+    }
+  } else if (fieldName === "diagnostics-interval") {
+    context.state.diagnostics.intervalSeconds = Number.parseInt(fieldElement.value, 10);
+    if (context.state.diagnostics.enabled) {
+      context.diagnosticsMonitor.start(context.state.diagnostics.intervalSeconds);
+    }
   } else if (fieldName === "mode-name") {
     context.state.selectedModeName = fieldElement.value;
   } else if (fieldName === "brightness") {
@@ -432,6 +473,12 @@ async function loadDevices(context: UiEventContext): Promise<void> {
     context.state.devices = devices;
     context.state.selectedDeviceId =
       devices.find((device) => device.id === previousDeviceId)?.id ?? devices[0]?.id ?? null;
+    if (
+      context.state.selectedDeviceId !== previousDeviceId ||
+      !isSelectedDeviceOnline(context.state)
+    ) {
+      stopDiagnosticsMonitoring(context);
+    }
     context.state.statusMessage =
       devices.length === 0 ? "Aucun device Particle visible." : `${devices.length} device(s) charge(s).`;
 
@@ -456,7 +503,7 @@ async function loadFirmwareState(context: UiEventContext): Promise<void> {
   }
 
   await runBusyTask(context, "Lecture du firmware SparkPixelsMega...", async () => {
-    const response = await createCurrentTransport(context).readCube();
+    const response = await createTransportForState(context.state, context.particleClient).readCube();
     const snapshot = response.value;
     context.state.lastTransportUsed = response.source;
     context.state.currentModeName = snapshot.modeName;
@@ -505,6 +552,67 @@ async function testLanConnection(context: UiEventContext): Promise<void> {
 }
 
 // ----------------------------------------------------------------------------
+// Demande un echantillon immediat sans superposer une lecture en cours.
+//
+// Parametres :
+// - context : moniteur et etat applicatif courants.
+//
+// Effet de bord :
+// - conserve le dernier echantillon valide lorsqu'une lecture echoue.
+// ----------------------------------------------------------------------------
+async function refreshDiagnostics(context: UiEventContext): Promise<void> {
+  context.state.statusMessage = "Lecture immediate des diagnostics...";
+  context.rerender();
+  const refreshed = await context.diagnosticsMonitor.refresh();
+  context.state.statusMessage = refreshed
+    ? "Diagnostics actualises."
+    : "Lecture ignoree ou echouee ; le dernier echantillon valide est conserve.";
+  context.rerender();
+}
+
+// ----------------------------------------------------------------------------
+// Execute la remise a zero confirmee puis conserve son nouvel echantillon.
+//
+// Parametres :
+// - context : transport et etat applicatif courants.
+//
+// Effet de bord :
+// - appelle l'unique endpoint de reset et ajoute sa reponse a l'historique.
+// ----------------------------------------------------------------------------
+async function resetDiagnostics(context: UiEventContext): Promise<void> {
+  if (context.diagnosticsMonitor.isBusy()) {
+    context.state.statusMessage = "Attends la fin de la lecture de diagnostics en cours.";
+    context.rerender();
+    return;
+  }
+  const restartMonitoring = context.state.diagnostics.enabled;
+  context.diagnosticsMonitor.stop();
+  await runBusyTask(context, "Remise a zero des diagnostics...", async () => {
+    const sample = await resetDiagnosticsSample(context.state, context.particleClient);
+    appendDiagnosticsSample(context.state.diagnostics, sample);
+    context.state.lastTransportUsed = sample.source;
+    context.state.statusMessage = `Diagnostics remis a zero via ${sample.source}.`;
+  });
+  if (restartMonitoring) {
+    context.diagnosticsMonitor.start(context.state.diagnostics.intervalSeconds);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Arrete la surveillance lors d'un changement de cible ou de transport.
+//
+// Parametres :
+// - context : moniteur et etat a synchroniser.
+//
+// Effet de bord :
+// - annule le timer futur et desactive l'interrupteur de surveillance.
+// ----------------------------------------------------------------------------
+function stopDiagnosticsMonitoring(context: UiEventContext): void {
+  context.diagnosticsMonitor.stop();
+  context.state.diagnostics.enabled = false;
+}
+
+// ----------------------------------------------------------------------------
 // Envoie le texte persistant via le transport configure.
 //
 // Parametres :
@@ -527,7 +635,7 @@ async function sendSetText(context: UiEventContext): Promise<void> {
   }
 
   await runBusyTask(context, "Envoi du texte persistant...", async () => {
-    const response = await createCurrentTransport(context).sendText(text);
+    const response = await createTransportForState(context.state, context.particleClient).sendText(text);
 
     context.state.lastTransportUsed = response.source;
     context.state.lastResponse = JSON.stringify(
@@ -579,7 +687,7 @@ async function callFnRouter(context: UiEventContext, command: string): Promise<v
   }
 
   await runBusyTask(context, "Appel FnRouter...", async () => {
-    const transport = createCurrentTransport(context);
+    const transport = createTransportForState(context.state, context.particleClient);
     const response = await transport.sendCommand(command);
 
     context.state.lastTransportUsed = response.source;
@@ -675,7 +783,7 @@ async function sendSetMode(context: UiEventContext): Promise<void> {
       switches: context.state.switchValues.slice(0, selectedMode.parameters.switchLabels.length),
       text: selectedMode.parameters.acceptsText ? context.state.textValue : undefined,
     });
-    const response = await createCurrentTransport(context).sendMode(command);
+    const response = await createTransportForState(context.state, context.particleClient).sendMode(command);
 
     context.state.lastTransportUsed = response.source;
     context.state.currentModeName = context.state.selectedModeName;
@@ -738,6 +846,7 @@ function handleSessionError(context: UiEventContext, error: unknown): void {
     return;
   }
 
+  stopDiagnosticsMonitoring(context);
   clearParticleSession(context.storage);
   context.particleClient.setToken(null);
   Object.assign(context.state, {
@@ -762,6 +871,7 @@ function handleSessionError(context: UiEventContext, error: unknown): void {
 // - modifie le device selectionne, persiste la session et vide l'etat firmware.
 // ----------------------------------------------------------------------------
 function updateSelectedDevice(context: UiEventContext, deviceId: string): void {
+  stopDiagnosticsMonitoring(context);
   context.state.selectedDeviceId = deviceId;
   resetFirmwareState(context.state);
   persistSelectedDevice(context);
@@ -869,26 +979,6 @@ function validateOrShowMessage<TValue>(
     context.rerender();
     return null;
   }
-}
-
-// ----------------------------------------------------------------------------
-// Construit le transport correspondant a l'etat courant.
-//
-// Parametres :
-// - context : clients et configuration utilisateur courante.
-//
-// Retour :
-// - transport LAN, Particle ou automatique pret a l'emploi.
-// ----------------------------------------------------------------------------
-function createCurrentTransport(context: UiEventContext): SparkPixelsTransport {
-  return createConfiguredTransport({
-    preference: context.state.transportPreference,
-    lanHost: context.state.lanHost,
-    lanPort: context.state.lanPort,
-    particleClient: context.particleClient,
-    particleDeviceId: context.state.selectedDeviceId,
-    particleAvailable: isSelectedDeviceOnline(context.state),
-  });
 }
 
 // ----------------------------------------------------------------------------

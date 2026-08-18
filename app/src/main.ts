@@ -6,6 +6,9 @@
 // ============================================================================
 
 import "./styles.css";
+import { appendDiagnosticsSample } from "./diagnostics/history";
+import { createDiagnosticsMonitor } from "./diagnostics/monitor";
+import { readDiagnosticsSample } from "./diagnostics/reader";
 import { createParticleClient } from "./particle/client";
 import { loadParticleSession } from "./particle/session";
 import { attachAppEvents, hydrateAuthenticatedSession } from "./ui/events";
@@ -30,12 +33,28 @@ function bootstrapApplication(): void {
     throw new Error("Le conteneur principal de l'application est introuvable.");
   }
 
+  const mountedRootElement = rootElement;
+
   const session = loadParticleSession(window.localStorage);
   const preferences = loadAppPreferences(window.localStorage);
   const particleClient = createParticleClient({
     token: session?.accessToken,
   });
   const state = createInitialState(session, preferences);
+  const diagnosticsMonitor = createDiagnosticsMonitor({
+    readSample: () => readDiagnosticsSample(state, particleClient),
+    onSample: (sample) => {
+      appendDiagnosticsSample(state.diagnostics, sample);
+      state.lastTransportUsed = sample.source;
+      rerender();
+    },
+    onError: (error, consecutiveErrors) => {
+      state.diagnostics.lastError = error instanceof Error ? error.message : "Erreur de diagnostic inconnue.";
+      state.diagnostics.consecutiveErrors = consecutiveErrors;
+      rerender();
+    },
+    isPageHidden: () => document.hidden,
+  });
 
   // ----------------------------------------------------------------------------
   // Relance le rendu et rebranche les evenements sur le DOM remplace.
@@ -43,22 +62,36 @@ function bootstrapApplication(): void {
   // Effet de bord :
   // - remplace l'interface courante et ajoute les gestionnaires d'evenements.
   // ----------------------------------------------------------------------------
-  const rerender = (): void => {
-    renderApp(rootElement, state);
+  function rerender(): void {
+    renderApp(mountedRootElement, state);
     attachAppEvents({
-      rootElement,
+      rootElement: mountedRootElement,
       state,
       particleClient,
+      diagnosticsMonitor,
       storage: window.localStorage,
       rerender,
     });
-  };
+  }
+
+  // ----------------------------------------------------------------------------
+  // Transmet les changements de visibilite au moniteur periodique.
+  //
+  // Effet de bord :
+  // - suspend ou reprogramme le prochain echantillon sans lancer de rafale.
+  // ----------------------------------------------------------------------------
+  function handleVisibilityChange(): void {
+    diagnosticsMonitor.pageVisibilityChanged();
+  }
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 
   rerender();
   void hydrateAuthenticatedSession({
-    rootElement,
+    rootElement: mountedRootElement,
     state,
     particleClient,
+    diagnosticsMonitor,
     storage: window.localStorage,
     rerender,
   });

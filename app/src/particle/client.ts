@@ -120,7 +120,11 @@ export interface ParticleClient {
   // Effet de bord :
   // - appelle l'API Particle Cloud.
   // ----------------------------------------------------------------------------
-  getVariable<TValue>(deviceId: string, variableName: string): Promise<TValue>;
+  getVariable<TValue>(
+    deviceId: string,
+    variableName: string,
+    signal?: AbortSignal,
+  ): Promise<TValue>;
 
   // ----------------------------------------------------------------------------
   // Appelle une fonction exposee par le firmware Particle.
@@ -140,6 +144,7 @@ export interface ParticleClient {
     deviceId: string,
     functionName: string,
     command: string,
+    signal?: AbortSignal,
   ): Promise<ParticleFunctionResponse>;
 }
 
@@ -178,11 +183,16 @@ export function createParticleClient(config: ParticleClientConfig = {}): Particl
       );
     },
 
-    async getVariable<TValue>(deviceId: string, variableName: string): Promise<TValue> {
+    async getVariable<TValue>(
+      deviceId: string,
+      variableName: string,
+      signal?: AbortSignal,
+    ): Promise<TValue> {
       const response = await requestJson<ParticleVariableResponse<TValue>>(
         fetchFn,
         `${baseUrl}/devices/${encodeURIComponent(deviceId)}/${encodeURIComponent(variableName)}`,
         token,
+        { signal },
       );
 
       return response.result;
@@ -192,6 +202,7 @@ export function createParticleClient(config: ParticleClientConfig = {}): Particl
       deviceId: string,
       functionName: string,
       command: string,
+      signal?: AbortSignal,
     ): Promise<ParticleFunctionResponse> {
       const body = new URLSearchParams();
       body.set("arg", command);
@@ -206,6 +217,7 @@ export function createParticleClient(config: ParticleClientConfig = {}): Particl
             "Content-Type": FORM_CONTENT_TYPE,
           },
           body,
+          signal,
         },
       );
     },
