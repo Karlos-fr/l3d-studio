@@ -10,6 +10,20 @@ import type {
   SparkPixelsModeDefinition,
 } from "../sparkpixels/types";
 
+export type LanErrorCategory = "connection" | "timeout" | "protocol" | "command-refused";
+
+export interface LanClientConfig {
+  host: string;
+  port?: number;
+  timeoutMilliseconds?: number;
+  fetchFn?: typeof fetch;
+}
+
+export interface LanCommandResponse {
+  protocolVersion: 1;
+  result: number;
+}
+
 export interface LanHealth {
   protocolVersion: 1;
   firmwareRevision: string;
@@ -68,4 +82,27 @@ export interface LanAuxSwitches {
   schemaVersion: 1;
   rawSwitches: string;
   switches: SparkPixelsAuxSwitch[];
+}
+
+export interface LanClient {
+  // Lit la sante legere du serveur.
+  health(): Promise<LanHealth>;
+  // Lit un instantane de diagnostics.
+  diagnostics(): Promise<LanDiagnostics>;
+  // Reinitialise les statistiques puis lit leur nouvel instantane.
+  resetDiagnostics(): Promise<LanDiagnostics>;
+  // Lit l'etat courant du cube.
+  state(): Promise<LanState>;
+  // Lit le catalogue des modes.
+  modes(): Promise<LanModes>;
+  // Lit les switches auxiliaires.
+  auxSwitches(): Promise<LanAuxSwitches>;
+  // Appelle le routeur generique.
+  command(command: string): Promise<LanCommandResponse>;
+  // Applique une commande de mode.
+  mode(command: string): Promise<LanCommandResponse>;
+  // Persiste le texte du firmware.
+  text(text: string): Promise<LanCommandResponse>;
+  // Applique une commande CubePainter.
+  cubePainter(command: string): Promise<LanCommandResponse>;
 }

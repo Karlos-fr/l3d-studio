@@ -249,29 +249,29 @@ dans l'application. Les valeurs brutes du firmware restent entières.
 
 ### Modules
 
-- [ ] Créer `app/src/lan/client.ts` pour les appels HTTP LAN uniquement.
-- [ ] Créer `app/src/lan/types.ts` pour les contrats réseau LAN.
-- [ ] Créer une interface de transport Spark Pixels indépendante de Particle et du DOM.
-- [ ] Fournir un adaptateur Particle conservant le comportement actuel.
-- [ ] Fournir un adaptateur LAN utilisant les nouvelles routes.
-- [ ] Ajouter un mode `Automatique` essayant le LAN puis Particle sans dupliquer une commande incertaine.
-- [ ] Séparer les erreurs de connexion, timeout, protocole et commande refusée.
-- [ ] Ajouter des tests avec `fetch` simulé pour chaque route et chaque erreur.
-- [ ] Documenter toutes les fonctions, callbacks et constantes en français.
+- [x] Créer `app/src/lan/client.ts` pour les appels HTTP LAN uniquement.
+- [x] Créer `app/src/lan/types.ts` pour les contrats réseau LAN.
+- [x] Créer une interface de transport Spark Pixels indépendante de Particle et du DOM.
+- [x] Fournir un adaptateur Particle conservant le comportement actuel.
+- [x] Fournir un adaptateur LAN utilisant les nouvelles routes.
+- [x] Ajouter un mode `Automatique` essayant le LAN puis Particle sans dupliquer une commande incertaine.
+- [x] Séparer les erreurs de connexion, timeout, protocole et commande refusée.
+- [x] Ajouter des tests avec `fetch` simulé pour chaque route et chaque erreur.
+- [x] Documenter toutes les fonctions, callbacks et constantes en français.
 
 ### Configuration utilisateur
 
-- [ ] Ajouter le choix de transport `Automatique`, `LAN` ou `Particle`.
-- [ ] Ajouter un champ d'adresse ou de nom local du Photon et le port.
-- [ ] Normaliser l'adresse sans accepter de chemin arbitraire.
-- [ ] Ajouter un bouton de test appelant uniquement `/api/v1/health`.
-- [ ] Enregistrer localement le transport et l'adresse, jamais un identifiant personnel dans le dépôt.
-- [ ] Afficher clairement le transport réellement utilisé pour la dernière opération.
-- [ ] Ne pas imposer une connexion Particle lorsque le mode LAN est explicitement sélectionné.
+- [x] Ajouter le choix de transport `Automatique`, `LAN` ou `Particle`.
+- [x] Ajouter un champ d'adresse ou de nom local du Photon et le port.
+- [x] Normaliser l'adresse sans accepter de chemin arbitraire.
+- [x] Ajouter un bouton de test appelant uniquement `/api/v1/health`.
+- [x] Enregistrer localement le transport et l'adresse, jamais un identifiant personnel dans le dépôt.
+- [x] Afficher clairement le transport réellement utilisé pour la dernière opération.
+- [x] Ne pas imposer une connexion Particle lorsque le mode LAN est explicitement sélectionné.
 
 ### Critère de sortie
 
-- [ ] L3D Studio peut lire et commander le cube par LAN, Particle ou fallback automatique.
+- [x] L3D Studio peut lire et commander le cube par LAN, Particle ou fallback automatique.
 
 ## Phase 7 — Interface de surveillance des diagnostics
 

@@ -12,10 +12,16 @@ import type {
   SparkPixelsModeDefinition,
 } from "../sparkpixels/types";
 import type { AppPreferences } from "./preferences";
+import type { TransportKind, TransportPreference } from "../transport/types";
 
 export interface AppState {
   applicationName: string;
   connectionStatus: string;
+  transportPreference: TransportPreference;
+  lanHost: string;
+  lanPort: number;
+  lastTransportUsed: TransportKind | null;
+  lanTestStatus: string | null;
   session: ParticleStoredSession | null;
   devices: ParticleDeviceSummary[];
   selectedDeviceId: string | null;
@@ -45,6 +51,15 @@ const APPLICATION_NAME = "L3D Studio";
 
 // Statut initial affiche avant toute connexion Particle.
 const INITIAL_CONNECTION_STATUS = "Non connecte";
+
+// Transport initial qui privilegie le LAN lorsque son adresse est configuree.
+const INITIAL_TRANSPORT_PREFERENCE: TransportPreference = "automatic";
+
+// Adresse LAN initialement vide afin de ne pas versionner une configuration personnelle.
+const INITIAL_LAN_HOST = "";
+
+// Port contractuel du premier serveur LAN.
+const INITIAL_LAN_PORT = 8080;
 
 // Luminosite initiale affichee tant que le firmware n'a pas ete lu.
 const INITIAL_BRIGHTNESS_PERCENT = 50;
@@ -81,6 +96,11 @@ export function createInitialState(
   return {
     applicationName: APPLICATION_NAME,
     connectionStatus: session === null ? INITIAL_CONNECTION_STATUS : "Session restauree",
+    transportPreference: preferences?.transportPreference ?? INITIAL_TRANSPORT_PREFERENCE,
+    lanHost: preferences?.lanHost ?? INITIAL_LAN_HOST,
+    lanPort: preferences?.lanPort ?? INITIAL_LAN_PORT,
+    lastTransportUsed: null,
+    lanTestStatus: null,
     session,
     devices: [],
     selectedDeviceId: session?.deviceId ?? null,
@@ -167,8 +187,7 @@ export function isSelectedDeviceOnline(state: AppState): boolean {
 export function canSendSetModeCommand(state: AppState): boolean {
   return (
     state.isBusy === false &&
-    state.selectedDeviceId !== null &&
-    isSelectedDeviceOnline(state) &&
+    hasAvailableConfiguredTransport(state) &&
     getSelectedModeDefinition(state) !== null
   );
 }
@@ -183,7 +202,24 @@ export function canSendSetModeCommand(state: AppState): boolean {
 // - `true` si un device Particle online est selectionne et aucune action ne tourne.
 // ----------------------------------------------------------------------------
 export function canCallAdvancedFunction(state: AppState): boolean {
-  return state.isBusy === false && state.selectedDeviceId !== null && isSelectedDeviceOnline(state);
+  return state.isBusy === false && hasAvailableConfiguredTransport(state);
+}
+
+// ----------------------------------------------------------------------------
+// Indique si la preference courante possede au moins une destination possible.
+//
+// Parametres :
+// - state : etat applicatif courant.
+//
+// Retour :
+// - vrai pour un LAN configure ou un device Particle online compatible.
+// ----------------------------------------------------------------------------
+export function hasAvailableConfiguredTransport(state: AppState): boolean {
+  const lanAvailable = state.lanHost.trim().length > 0;
+  const particleAvailable = state.selectedDeviceId !== null && isSelectedDeviceOnline(state);
+  if (state.transportPreference === "lan") return lanAvailable;
+  if (state.transportPreference === "particle") return particleAvailable;
+  return lanAvailable || particleAvailable;
 }
 
 // ----------------------------------------------------------------------------
@@ -209,4 +245,5 @@ export function resetFirmwareState(state: AppState): void {
   state.wifiRssi = null;
   state.debugMessage = null;
   state.lastResponse = null;
+  state.lastTransportUsed = null;
 }

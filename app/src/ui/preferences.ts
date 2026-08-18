@@ -6,9 +6,13 @@
 // ============================================================================
 
 import type { ParticleSessionStorage } from "../particle/session";
+import type { TransportPreference } from "../transport/types";
 import type { AppState } from "./state";
 
 export interface AppPreferences {
+  transportPreference?: TransportPreference;
+  lanHost?: string;
+  lanPort?: number;
   selectedModeName: string | null;
   brightnessPercent: number;
   speedIndex: number;
@@ -58,6 +62,9 @@ export function loadAppPreferences(storage: ParticleSessionStorage): AppPreferen
 // ----------------------------------------------------------------------------
 export function saveAppPreferences(storage: ParticleSessionStorage, state: AppState): void {
   const preferences: AppPreferences = {
+    transportPreference: state.transportPreference,
+    lanHost: state.lanHost,
+    lanPort: state.lanPort,
     selectedModeName: state.selectedModeName,
     brightnessPercent: state.currentBrightnessPercent,
     speedIndex: state.currentSpeedIndex,

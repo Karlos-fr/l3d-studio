@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 import {
   parseLanAuxSwitches,
+  parseLanCommandResponse,
   parseLanDiagnostics,
   parseLanHealth,
   parseLanModes,
@@ -35,6 +36,16 @@ const AUX_RESPONSE = "v=1\nswitches=2,Shuffle,ON,OFF,1;\n";
 // Execute les tests des parseurs LAN.
 // ----------------------------------------------------------------------------
 function runLanParserTests(): void {
+  // --------------------------------------------------------------------------
+  // Verifie l'enveloppe commune des commandes positives et refusees.
+  // --------------------------------------------------------------------------
+  it("parse le resultat historique d'une commande", () => {
+    expect(parseLanCommandResponse("v=1\nresult=-103\n")).toEqual({
+      protocolVersion: 1,
+      result: -103,
+    });
+  });
+
   // --------------------------------------------------------------------------
   // Vérifie la conversion de la santé et l'ignorance des champs futurs.
   // --------------------------------------------------------------------------

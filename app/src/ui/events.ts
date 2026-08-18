@@ -1,10 +1,11 @@
 // ============================================================================
 // UiEvents - Implementation des evenements applicatifs
 // ----------------------------------------------------------------------------
-// Ce fichier relie les interactions utilisateur aux modules Particle et
+// Ce fichier relie les interactions utilisateur aux transports et a
 // SparkPixels. Il ne construit pas le HTML et ne stocke pas le mot de passe.
 // ============================================================================
 
+import { createLanClient, LanClientError, normalizeLanHost, normalizeLanPort } from "../lan/client";
 import { ParticleCloudError, type ParticleClient } from "../particle/client";
 import {
   clearParticleSession,
@@ -13,7 +14,6 @@ import {
   saveParticleSession,
   type ParticleSessionStorage,
 } from "../particle/session";
-import { parseAuxSwitchList, parseDeviceInfo, parseModeDefinitions } from "../sparkpixels/parsers";
 import {
   buildGetColorCommand,
   buildGetSwitchStateCommand,
@@ -25,11 +25,16 @@ import {
   normalizeHexColor,
   validateSetText,
 } from "../sparkpixels/protocol";
+import { createConfiguredTransport } from "../transport/factory";
+import {
+  SparkPixelsCommandRefusedError,
+  type SparkPixelsTransport,
+  type TransportPreference,
+} from "../transport/types";
 import { saveAppPreferences } from "./preferences";
 import {
   canCallAdvancedFunction,
   canSendSetModeCommand,
-  getSelectedDevice,
   getSelectedModeDefinition,
   isSelectedDeviceOnline,
   resetFirmwareState,
@@ -58,6 +63,9 @@ const REFRESH_DEVICES_ACTION = "refresh-devices";
 
 // Nom de l'action qui lit l'etat firmware du cube.
 const LOAD_FIRMWARE_STATE_ACTION = "load-firmware-state";
+
+// Nom de l'action qui teste uniquement la route de sante LAN.
+const TEST_LAN_ACTION = "test-lan";
 
 // Nom de l'action qui envoie la commande SetMode.
 const SEND_SET_MODE_ACTION = "send-set-mode";
@@ -177,7 +185,11 @@ function attachStateFields(context: UiEventContext): void {
 
   fieldElements.forEach((fieldElement) => {
     fieldElement.addEventListener("input", () => {
-      if (fieldElement.dataset.field === "aux-switch") {
+      if (
+        fieldElement.dataset.field === "aux-switch" ||
+        fieldElement.dataset.field === "lan-host" ||
+        fieldElement.dataset.field === "lan-port"
+      ) {
         return;
       }
 
@@ -250,6 +262,11 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
 
   if (action === LOAD_FIRMWARE_STATE_ACTION) {
     await loadFirmwareState(context);
+    return;
+  }
+
+  if (action === TEST_LAN_ACTION) {
+    await testLanConnection(context);
     return;
   }
 
@@ -350,6 +367,17 @@ function handleFieldChange(
 
   if (fieldName === "device-id") {
     updateSelectedDevice(context, fieldElement.value);
+  } else if (fieldName === "transport-preference") {
+    context.state.transportPreference = fieldElement.value as TransportPreference;
+    context.state.lastTransportUsed = null;
+  } else if (fieldName === "lan-host") {
+    context.state.lanHost = fieldElement.value.trim();
+    context.state.lanTestStatus = null;
+    context.state.lastTransportUsed = null;
+  } else if (fieldName === "lan-port") {
+    context.state.lanPort = Number.parseInt(fieldElement.value, 10);
+    context.state.lanTestStatus = null;
+    context.state.lastTransportUsed = null;
   } else if (fieldName === "mode-name") {
     context.state.selectedModeName = fieldElement.value;
   } else if (fieldName === "brightness") {
@@ -415,84 +443,83 @@ async function loadDevices(context: UiEventContext): Promise<void> {
 // Charge l'etat firmware initial du cube selectionne.
 //
 // Parametres :
-// - context : dependances necessaires aux lectures Particle.
+// - context : dependances necessaires au transport configure.
 //
 // Effet de bord :
 // - lit les variables firmware et met a jour les controles de mode.
 // ----------------------------------------------------------------------------
 async function loadFirmwareState(context: UiEventContext): Promise<void> {
-  if (getSelectedDevice(context.state) === null) {
-    context.state.statusMessage = "Aucun device Particle n'est selectionne.";
+  if (!canCallAdvancedFunction(context.state)) {
+    context.state.statusMessage = "Configure une adresse LAN ou selectionne un Photon online.";
     context.rerender();
     return;
   }
-
-  if (!isSelectedDeviceOnline(context.state)) {
-    context.state.statusMessage = "Le Photon selectionne est offline. Impossible de lire le firmware.";
-    context.rerender();
-    return;
-  }
-
-  const deviceId = requireSelectedDevice(context.state);
 
   await runBusyTask(context, "Lecture du firmware SparkPixelsMega...", async () => {
-    const [
-      modeName,
-      brightness,
-      speedIndex,
-      modeList,
-      modeParamList,
-      auxSwitchList,
-      deviceInfo,
-      wifiRssi,
-      debugMessage,
-    ] = await Promise.all([
-      context.particleClient.getVariable<string>(deviceId, "mode"),
-      context.particleClient.getVariable<number>(deviceId, "brightness"),
-      context.particleClient.getVariable<number>(deviceId, "speed"),
-      context.particleClient.getVariable<string>(deviceId, "modeList"),
-      context.particleClient.getVariable<string>(deviceId, "modeParmList"),
-      context.particleClient.getVariable<string>(deviceId, "auxSwtchList"),
-      context.particleClient.getVariable<string>(deviceId, "deviceInfo"),
-      context.particleClient.getVariable<number>(deviceId, "wifi"),
-      context.particleClient.getVariable<string>(deviceId, "debug"),
-    ]);
-
-    context.state.currentModeName = modeName;
-    context.state.currentBrightnessPercent = convertFirmwareBrightnessToAppPercent(brightness);
-    context.state.currentSpeedIndex = speedIndex;
-    context.state.modes = parseModeDefinitions(modeList, modeParamList);
-    context.state.auxSwitches = parseAuxSwitchList(auxSwitchList);
-    context.state.deviceInfoEntries = parseDeviceInfo(deviceInfo);
-    context.state.wifiRssi = wifiRssi;
-    context.state.debugMessage = debugMessage.length === 0 ? null : debugMessage;
+    const response = await createCurrentTransport(context).readCube();
+    const snapshot = response.value;
+    context.state.lastTransportUsed = response.source;
+    context.state.currentModeName = snapshot.modeName;
+    context.state.currentBrightnessPercent = convertFirmwareBrightnessToAppPercent(
+      snapshot.brightness,
+    );
+    context.state.currentSpeedIndex = snapshot.speedIndex;
+    context.state.modes = snapshot.modes;
+    context.state.auxSwitches = snapshot.auxSwitches;
+    context.state.deviceInfoEntries = snapshot.deviceInfoEntries;
+    context.state.wifiRssi = snapshot.wifiRssi;
+    context.state.debugMessage = snapshot.debugMessage;
+    if (snapshot.colors.length > 0) context.state.colorValues = snapshot.colors;
+    if (snapshot.switches.length > 0) context.state.switchValues = snapshot.switches;
     context.state.selectedModeName =
-      context.state.modes.find((mode) => mode.name === modeName)?.name ??
+      context.state.modes.find((mode) => mode.name === snapshot.modeName)?.name ??
       context.state.selectedModeName ??
       context.state.modes[0]?.name ??
       null;
-    context.state.statusMessage = "Etat du cube charge.";
+    context.state.statusMessage = `Etat du cube charge via ${response.source}.`;
     saveAppPreferences(context.storage, context.state);
   });
 }
 
 // ----------------------------------------------------------------------------
-// Envoie le texte persistant via la fonction Particle `SetText`.
+// Teste uniquement la route de sante de l'adresse LAN saisie.
 //
 // Parametres :
-// - context : dependances necessaires a l'appel Particle.
+// - context : dependances et configuration utilisateur courante.
 //
 // Effet de bord :
-// - appelle Particle Cloud et peut ecrire le texte en EEPROM cote firmware.
+// - lance un GET sans commande et affiche la version du firmware joignable.
+// ----------------------------------------------------------------------------
+async function testLanConnection(context: UiEventContext): Promise<void> {
+  await runBusyTask(context, "Test de la connexion LAN...", async () => {
+    const host = normalizeLanHost(context.state.lanHost);
+    const port = normalizeLanPort(context.state.lanPort);
+    const health = await createLanClient({ host, port }).health();
+    context.state.lanHost = host;
+    context.state.lanPort = port;
+    context.state.lastTransportUsed = "lan";
+    context.state.lanTestStatus = `Photon joignable : firmware ${health.firmwareRevision}, Device OS ${health.deviceOsVersion}.`;
+    context.state.statusMessage = "Connexion LAN validee.";
+    saveAppPreferences(context.storage, context.state);
+  });
+}
+
+// ----------------------------------------------------------------------------
+// Envoie le texte persistant via le transport configure.
+//
+// Parametres :
+// - context : dependances necessaires a l'appel reseau.
+//
+// Effet de bord :
+// - peut ecrire le texte en EEPROM cote firmware.
 // ----------------------------------------------------------------------------
 async function sendSetText(context: UiEventContext): Promise<void> {
   if (!canCallAdvancedFunction(context.state)) {
-    context.state.statusMessage = "Selectionne un Photon online avant d'envoyer SetText.";
+    context.state.statusMessage = "Configure un transport disponible avant d'envoyer SetText.";
     context.rerender();
     return;
   }
 
-  const deviceId = requireSelectedDevice(context.state);
   const text = validateOrShowMessage(context, () => validateSetText(context.state.persistentTextValue));
 
   if (text === null) {
@@ -500,10 +527,15 @@ async function sendSetText(context: UiEventContext): Promise<void> {
   }
 
   await runBusyTask(context, "Envoi du texte persistant...", async () => {
-    const response = await context.particleClient.callFunction(deviceId, "SetText", text);
+    const response = await createCurrentTransport(context).sendText(text);
 
-    context.state.lastResponse = JSON.stringify({ functionName: "SetText", text, response }, null, 2);
-    context.state.statusMessage = "Texte persistant envoye.";
+    context.state.lastTransportUsed = response.source;
+    context.state.lastResponse = JSON.stringify(
+      { functionName: "SetText", text, response: response.value },
+      null,
+      2,
+    );
+    context.state.statusMessage = `Texte persistant envoye via ${response.source}.`;
     saveAppPreferences(context.storage, context.state);
   });
 }
@@ -512,7 +544,7 @@ async function sendSetText(context: UiEventContext): Promise<void> {
 // Applique un fuseau horaire via `SETTIMEZONE`.
 //
 // Parametres :
-// - context : dependances necessaires a l'appel Particle.
+// - context : dependances necessaires a l'appel reseau.
 //
 // Effet de bord :
 // - appelle FnRouter et affiche la reponse Particle.
@@ -533,30 +565,35 @@ async function setTimezone(context: UiEventContext): Promise<void> {
 // Appelle `FnRouter` avec une commande deja construite.
 //
 // Parametres :
-// - context : dependances necessaires a l'appel Particle.
+// - context : dependances necessaires a l'appel reseau.
 // - command : commande FnRouter prete a envoyer.
 //
 // Effet de bord :
-// - appelle la fonction Particle `Function` et affiche sa reponse.
+// - appelle le routeur commun et affiche sa reponse.
 // ----------------------------------------------------------------------------
 async function callFnRouter(context: UiEventContext, command: string): Promise<void> {
   if (!canCallAdvancedFunction(context.state)) {
-    context.state.statusMessage = "Selectionne un Photon online avant d'appeler FnRouter.";
+    context.state.statusMessage = "Configure un transport disponible avant d'appeler FnRouter.";
     context.rerender();
     return;
   }
 
-  const deviceId = requireSelectedDevice(context.state);
-
   await runBusyTask(context, "Appel FnRouter...", async () => {
-    const response = await context.particleClient.callFunction(deviceId, "Function", command);
+    const transport = createCurrentTransport(context);
+    const response = await transport.sendCommand(command);
 
-    context.state.lastResponse = JSON.stringify({ functionName: "Function", command, response }, null, 2);
-    context.state.statusMessage = "Commande FnRouter envoyee.";
+    context.state.lastTransportUsed = response.source;
+    context.state.lastResponse = JSON.stringify(
+      { functionName: "Function", command, response: response.value },
+      null,
+      2,
+    );
+    context.state.statusMessage = `Commande FnRouter envoyee via ${response.source}.`;
 
     if (command.startsWith("SETAUXSWITCH:")) {
-      const auxSwitchList = await context.particleClient.getVariable<string>(deviceId, "auxSwtchList");
-      context.state.auxSwitches = parseAuxSwitchList(auxSwitchList);
+      const auxSwitches = await transport.readAuxSwitches();
+      context.state.lastTransportUsed = auxSwitches.source;
+      context.state.auxSwitches = auxSwitches.value;
     }
 
     saveAppPreferences(context.storage, context.state);
@@ -567,7 +604,7 @@ async function callFnRouter(context: UiEventContext, command: string): Promise<v
 // Lit une couleur courante via `GETCOLOR`.
 //
 // Parametres :
-// - context : dependances necessaires a l'appel Particle.
+// - context : dependances necessaires a l'appel reseau.
 //
 // Effet de bord :
 // - appelle FnRouter et affiche la couleur retournee.
@@ -588,7 +625,7 @@ async function getFirmwareColor(context: UiEventContext): Promise<void> {
 // Lit l'etat d'un switch local courant via `GETSWITCHSTATE`.
 //
 // Parametres :
-// - context : dependances necessaires a l'appel Particle.
+// - context : dependances necessaires a l'appel reseau.
 //
 // Effet de bord :
 // - appelle FnRouter et affiche la reponse Particle.
@@ -606,22 +643,21 @@ async function getFirmwareSwitchState(context: UiEventContext): Promise<void> {
 }
 
 // ----------------------------------------------------------------------------
-// Envoie une commande `SetMode` au device selectionne.
+// Envoie une commande `SetMode` par le transport configure.
 //
 // Parametres :
-// - context : dependances necessaires a l'appel Particle.
+// - context : dependances necessaires a l'appel reseau.
 //
 // Effet de bord :
-// - appelle Particle Cloud et met a jour la derniere reponse affichee.
+// - appelle une seule destination et met a jour la derniere reponse affichee.
 // ----------------------------------------------------------------------------
 async function sendSetMode(context: UiEventContext): Promise<void> {
   if (!canSendSetModeCommand(context.state)) {
-    context.state.statusMessage = "Commande incomplete : selectionne un device online et un mode charge.";
+    context.state.statusMessage = "Commande incomplete : configure un transport et charge un mode.";
     context.rerender();
     return;
   }
 
-  const deviceId = requireSelectedDevice(context.state);
   const selectedMode = getSelectedModeDefinition(context.state);
 
   if (selectedMode === null) {
@@ -639,11 +675,12 @@ async function sendSetMode(context: UiEventContext): Promise<void> {
       switches: context.state.switchValues.slice(0, selectedMode.parameters.switchLabels.length),
       text: selectedMode.parameters.acceptsText ? context.state.textValue : undefined,
     });
-    const response = await context.particleClient.callFunction(deviceId, "SetMode", command);
+    const response = await createCurrentTransport(context).sendMode(command);
 
+    context.state.lastTransportUsed = response.source;
     context.state.currentModeName = context.state.selectedModeName;
-    context.state.lastResponse = JSON.stringify({ command, response }, null, 2);
-    context.state.statusMessage = "Commande SetMode envoyee.";
+    context.state.lastResponse = JSON.stringify({ command, response: response.value }, null, 2);
+    context.state.statusMessage = `Commande SetMode envoyee via ${response.source}.`;
     saveAppPreferences(context.storage, context.state);
   });
 }
@@ -785,11 +822,11 @@ function updateSwitchValue(state: AppState, fieldElement: HTMLInputElement): voi
 // Met a jour un interrupteur auxiliaire global via FnRouter.
 //
 // Parametres :
-// - context : dependances necessaires a l'appel Particle.
+// - context : dependances necessaires a l'appel reseau.
 // - fieldElement : case a cocher modifiee par l'utilisateur.
 //
 // Effet de bord :
-// - appelle Particle Cloud et recharge la liste des interrupteurs globaux.
+// - appelle le transport configure et recharge la liste des interrupteurs.
 // ----------------------------------------------------------------------------
 async function updateAuxSwitch(
   context: UiEventContext,
@@ -835,20 +872,23 @@ function validateOrShowMessage<TValue>(
 }
 
 // ----------------------------------------------------------------------------
-// Exige qu'un device soit selectionne.
+// Construit le transport correspondant a l'etat courant.
 //
 // Parametres :
-// - state : etat applicatif a inspecter.
+// - context : clients et configuration utilisateur courante.
 //
 // Retour :
-// - identifiant du device selectionne.
+// - transport LAN, Particle ou automatique pret a l'emploi.
 // ----------------------------------------------------------------------------
-function requireSelectedDevice(state: AppState): string {
-  if (state.selectedDeviceId === null) {
-    throw new Error("Aucun device Particle n'est selectionne.");
-  }
-
-  return state.selectedDeviceId;
+function createCurrentTransport(context: UiEventContext): SparkPixelsTransport {
+  return createConfiguredTransport({
+    preference: context.state.transportPreference,
+    lanHost: context.state.lanHost,
+    lanPort: context.state.lanPort,
+    particleClient: context.particleClient,
+    particleDeviceId: context.state.selectedDeviceId,
+    particleAvailable: isSelectedDeviceOnline(context.state),
+  });
 }
 
 // ----------------------------------------------------------------------------
@@ -861,6 +901,17 @@ function requireSelectedDevice(state: AppState): string {
 // - message lisible pour l'utilisateur.
 // ----------------------------------------------------------------------------
 function getErrorMessage(error: unknown): string {
+  if (error instanceof SparkPixelsCommandRefusedError) {
+    return `Commande refusee via ${error.source} : ${error.result}.`;
+  }
+
+  if (error instanceof LanClientError) {
+    if (error.category === "timeout") return "Le Photon LAN n'a pas repondu avant le timeout.";
+    if (error.category === "connection") return "Le Photon est inaccessible a l'adresse LAN configuree.";
+    if (error.category === "command-refused") return `Commande LAN refusee : ${error.result}.`;
+    return `Protocole LAN invalide : ${error.message}`;
+  }
+
   if (error instanceof ParticleCloudError) {
     if (error.code === "missing_token") {
       return "Token Particle absent ou invalide.";

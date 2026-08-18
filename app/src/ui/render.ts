@@ -10,6 +10,7 @@ import {
   canSendSetModeCommand,
   getSelectedDevice,
   getSelectedModeDefinition,
+  hasAvailableConfiguredTransport,
   isSelectedDeviceOnline,
   type AppState,
 } from "./state";
@@ -35,7 +36,9 @@ export function renderApp(rootElement: HTMLElement, state: AppState): void {
     <section class="app-shell" aria-label="${escapeHtml(state.applicationName)}">
       ${renderHeader(state)}
       <div class="app-main">
-        ${state.session === null ? renderLoginPanel(state) : renderWorkspace(state)}
+        ${renderTransportPanel(state)}
+        ${state.session === null ? renderLoginPanel(state) : renderDevicePanel(state)}
+        ${renderWorkspace(state)}
       </div>
     </section>
   `;
@@ -98,6 +101,53 @@ function renderLoginPanel(state: AppState): string {
 }
 
 // ----------------------------------------------------------------------------
+// Rend la configuration du transport et du serveur local.
+//
+// Parametres :
+// - state : etat applicatif contenant la preference et l'adresse LAN.
+//
+// Retour :
+// - fragment HTML utilisable avec ou sans session Particle.
+// ----------------------------------------------------------------------------
+function renderTransportPanel(state: AppState): string {
+  const actualTransport = state.lastTransportUsed ?? "Aucun";
+  const lanDisabled = state.lanHost.trim().length === 0 || state.isBusy;
+  return `
+    <section class="panel">
+      <div class="panel-heading">
+        <h2>Transport du cube</h2>
+        <span class="status-pill">Dernier : ${escapeHtml(actualTransport)}</span>
+      </div>
+      <div class="form-grid">
+        <label>
+          Transport
+          <select data-field="transport-preference">
+            <option value="automatic" ${state.transportPreference === "automatic" ? "selected" : ""}>Automatique</option>
+            <option value="lan" ${state.transportPreference === "lan" ? "selected" : ""}>LAN</option>
+            <option value="particle" ${state.transportPreference === "particle" ? "selected" : ""}>Particle</option>
+          </select>
+        </label>
+        <label>
+          Adresse ou nom local du Photon
+          <input data-field="lan-host" inputmode="url" placeholder="photon.local ou 192.168.1.50" value="${escapeHtml(state.lanHost)}" />
+        </label>
+        <label>
+          Port LAN
+          <input data-field="lan-port" max="65535" min="1" type="number" value="${state.lanPort}" />
+        </label>
+        <button class="secondary-action" data-action="test-lan" type="button" ${lanDisabled ? "disabled" : ""}>
+          Tester le LAN
+        </button>
+        <button class="primary-action" data-action="load-firmware-state" type="button" ${state.isBusy || !hasAvailableConfiguredTransport(state) ? "disabled" : ""}>
+          Lire le cube
+        </button>
+      </div>
+      ${state.lanTestStatus === null ? "" : `<p>${escapeHtml(state.lanTestStatus)}</p>`}
+    </section>
+  `;
+}
+
+// ----------------------------------------------------------------------------
 // Rend l'espace principal apres authentification.
 //
 // Parametres :
@@ -108,7 +158,6 @@ function renderLoginPanel(state: AppState): string {
 // ----------------------------------------------------------------------------
 function renderWorkspace(state: AppState): string {
   return `
-    ${renderDevicePanel(state)}
     ${renderFirmwareStatePanel(state)}
     ${renderModePanel(state)}
     ${renderAdvancedPanel(state)}
@@ -175,9 +224,6 @@ function renderDeviceSelect(state: AppState): string {
         ${options}
       </select>
     </label>
-    <button class="primary-action" type="button" data-action="load-firmware-state" ${state.isBusy || !isSelectedDeviceOnline(state) ? "disabled" : ""}>
-      Lire le cube
-    </button>
   `;
 }
 

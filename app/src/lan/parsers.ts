@@ -8,6 +8,7 @@
 import { parseAuxSwitchList, parseModeDefinitions } from "../sparkpixels/parsers";
 import type {
   LanAuxSwitches,
+  LanCommandResponse,
   LanDiagnostics,
   LanHealth,
   LanModes,
@@ -153,6 +154,24 @@ export function parseLanAuxSwitches(text: string): LanAuxSwitches {
     schemaVersion: 1,
     rawSwitches,
     switches: parseAuxSwitchList(rawSwitches),
+  };
+}
+
+// ----------------------------------------------------------------------------
+// Parse l'enveloppe commune retournee par une commande locale.
+//
+// Parametres :
+// - text : corps recu depuis une route POST de commande.
+//
+// Retour :
+// - version et code historique valides.
+// ----------------------------------------------------------------------------
+export function parseLanCommandResponse(text: string): LanCommandResponse {
+  const fields = parseFields(text, "\n");
+  requireVersion(fields, "v");
+  return {
+    protocolVersion: 1,
+    result: requireInteger(fields, "result", INT32_MIN, INT32_MAX),
   };
 }
 
