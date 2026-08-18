@@ -226,3 +226,18 @@ statique. Sur le Photon, `LineSpin,S:0,B:1` a répondu en 166 ms et 100 lectures
 successives ont conservé 34 024 octets libres ainsi qu'un minimum stable à
 31 832 octets. `deviceInfo` est resté inchangé par les lectures LAN et le cube
 a été remis sur `M:Off,B:1,`.
+
+## Phase 4 — État et capacités locales
+
+| Variante | Flash | RAM statique | Binaire | Marge Flash |
+| --- | ---: | ---: | ---: | ---: |
+| Phase 3 active | 116 392 | 15 164 | 116 396 | 14 680 |
+| Phase 4 active | 117 288 | 15 196 | 117 292 | 13 784 |
+| Écart phase 4 | +896 | +32 | +896 | -896 |
+
+Les 32 octets de RAM ajoutés décrivent au plus cinq tranches de réponse ; les
+catalogues eux-mêmes restent dans leurs buffers Particle historiques. Les
+réponses LAN ont été comparées octet pour octet aux listes Particle. Une série
+de 90 lectures `state`, `modes` et `aux-switches` a conservé 33 992 octets
+libres et un minimum stable de 31 896 octets. Le cube a été remis sur
+`M:Off,B:1,`.

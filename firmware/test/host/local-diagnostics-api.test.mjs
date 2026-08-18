@@ -56,7 +56,7 @@ function parseDiagnosticKeys(text) {
 // ----------------------------------------------------------------------------
 test("le producteur commun conserve le format compact version 1", () => {
   const diagnostics = readFirmwareSource("src/diagnostics/runtime_diagnostics.cpp");
-  const formatMatch = diagnostics.match(/"(v=1,y=%ld,[^"]+)"/u);
+  const formatMatch = diagnostics.match(/"(v=%d,y=%ld,[^"]+)"/u);
   assert.ok(formatMatch);
   assert.deepEqual(parseDiagnosticKeys(formatMatch[1]), diagnosticKeys);
   assert.match(diagnostics, /int diagnosticsWriteSnapshot\(/u);

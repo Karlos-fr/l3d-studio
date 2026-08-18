@@ -8,6 +8,23 @@
 #ifdef L3D_UNITY_BUILD
 
 // ----------------------------------------------------------------------------
+// Memorise puis retourne le resultat d'une commande externe.
+//
+// Parametres :
+// - result : code historique ou erreur de validation a conserver.
+//
+// Retour :
+// - valeur result inchangee.
+//
+// Effet de bord :
+// - actualise le dernier resultat expose dans l'etat LAN.
+// ----------------------------------------------------------------------------
+int recordCommandResult(int result) {
+    lastCommandResult = result;
+    return result;
+}
+
+// ----------------------------------------------------------------------------
 // Valide integralement une commande SetMode avant toute modification d'etat.
 //
 // Parametres :

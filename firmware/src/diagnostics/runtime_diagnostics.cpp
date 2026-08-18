@@ -183,7 +183,8 @@ int diagnosticsWriteSnapshot(
     int length = snprintf(
         destination,
         capacity,
-        "v=1,y=%ld,m=%d,u=%lu,r=%d,d=%lu,s=%lu,f=%lu,n=%lu,b=%lu,a=%lu,q=%lu,c=%lu,l=%lu,g=%lu,w=%lu,p=%lu,x=%lu,i=%d,k=%d,o=%d,z=%lu",
+        "v=%d,y=%ld,m=%d,u=%lu,r=%d,d=%lu,s=%lu,f=%lu,n=%lu,b=%lu,a=%lu,q=%lu,c=%lu,l=%lu,g=%lu,w=%lu,p=%lu,x=%lu,i=%d,k=%d,o=%d,z=%lu",
+        DIAGNOSTICS_FORMAT_VERSION,
         static_cast<long>(sequence),
         runtimeDiagnostics.modeId,
         millis() / 1000UL,

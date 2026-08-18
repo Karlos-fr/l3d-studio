@@ -73,6 +73,12 @@
 // Taille maximale contractuelle d'un corps de reponse envoye par segments.
 #define LOCAL_API_RESPONSE_BODY_MAX        1536
 
+// Version independante du schema d'etat et des catalogues LAN.
+#define LOCAL_API_STATE_VERSION            1
+
+// Version independante du format compact des diagnostics runtime.
+#define DIAGNOSTICS_FORMAT_VERSION         1
+
 // Nombre maximal d'octets lus ou ecrits par passage dans le service LAN.
 #define LOCAL_API_BYTES_PER_TICK           256
 

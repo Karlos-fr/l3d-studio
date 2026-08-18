@@ -10,6 +10,20 @@
 #include <stddef.h>
 
 // ----------------------------------------------------------------------------
+// Memorise puis retourne le resultat d'une commande externe.
+//
+// Parametres :
+// - result : code historique ou erreur de validation a conserver.
+//
+// Retour :
+// - valeur result inchangee pour permettre son emploi dans un adaptateur.
+//
+// Effet de bord :
+// - actualise le dernier resultat expose dans l'etat LAN.
+// ----------------------------------------------------------------------------
+int recordCommandResult(int result);
+
+// ----------------------------------------------------------------------------
 // Valide puis applique une commande historique de mode depuis une tranche.
 //
 // Parametres :

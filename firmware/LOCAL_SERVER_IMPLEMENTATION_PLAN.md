@@ -202,23 +202,23 @@ dans l'application. Les valeurs brutes du firmware restent entières.
 
 ### Firmware
 
-- [ ] Ajouter `GET /api/v1/state` avec mode ID, nom courant, luminosité, vitesse, couleurs et switches courants.
-- [ ] Ajouter l'état Wi-Fi, Particle et le dernier code de commande sans recopier de gros buffers.
-- [ ] Ajouter `GET /api/v1/modes` en réutilisant le catalogue dynamique historique.
-- [ ] Ajouter `GET /api/v1/aux-switches` en réutilisant les métadonnées historiques.
-- [ ] Décider et tester une pagination compacte si une réponse dépasse la capacité fixée.
-- [ ] Garantir un instantané cohérent même si un changement de mode est demandé pendant la lecture.
-- [ ] Versionner séparément le schéma d'état et le format des diagnostics.
+- [x] Ajouter `GET /api/v1/state` avec mode ID, nom courant, luminosité, vitesse, couleurs et switches courants.
+- [x] Ajouter l'état Wi-Fi, Particle et le dernier code de commande sans recopier de gros buffers.
+- [x] Ajouter `GET /api/v1/modes` en réutilisant le catalogue dynamique historique.
+- [x] Ajouter `GET /api/v1/aux-switches` en réutilisant les métadonnées historiques.
+- [x] Décider et tester une pagination compacte si une réponse dépasse la capacité fixée.
+- [x] Garantir un instantané cohérent même si un changement de mode est demandé pendant la lecture.
+- [x] Versionner séparément le schéma d'état et le format des diagnostics.
 
 ### Application
 
-- [ ] Définir les types TypeScript des réponses LAN dans un module dédié.
-- [ ] Ajouter des parseurs purs pour santé, diagnostics, état, modes et switches.
-- [ ] Tester les champs inconnus, manquants, invalides et les versions non prises en charge.
+- [x] Définir les types TypeScript des réponses LAN dans un module dédié.
+- [x] Ajouter des parseurs purs pour santé, diagnostics, état, modes et switches.
+- [x] Tester les champs inconnus, manquants, invalides et les versions non prises en charge.
 
 ### Critère de sortie
 
-- [ ] L'application peut reconstruire l'état actuellement obtenu par les variables Particle à partir du LAN.
+- [x] L'application peut reconstruire l'état actuellement obtenu par les variables Particle à partir du LAN.
 
 ## Phase 5 — Commandes locales
 

@@ -194,6 +194,8 @@ bool lastDemo;
 int timeZone;
 int currentModeID;  //This is the ID of the current mode selected - used in the case statement
 int previousModeID;
+// Dernier code retourne par une commande issue d'un transport externe.
+int lastCommandResult = 0;
 int lastBrightness;
 Color lastCol;
 uint32_t lastColors[6];

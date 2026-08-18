@@ -20,7 +20,8 @@
 // - delegue integralement la validation et l'application a setModeFromBuffer().
 // ----------------------------------------------------------------------------
 int SetMode(String command) {
-    return setModeFromBuffer(command.c_str(), command.length());
+    return recordCommandResult(
+        setModeFromBuffer(command.c_str(), command.length()));
 }
 
 // ----------------------------------------------------------------------------
@@ -36,7 +37,8 @@ int SetMode(String command) {
 // - delegue integralement le routage a routeCommandFromBuffer().
 // ----------------------------------------------------------------------------
 int FnRouter(String command) {
-    return routeCommandFromBuffer(command.c_str(), command.length());
+    return recordCommandResult(
+        routeCommandFromBuffer(command.c_str(), command.length()));
 }
 
 // ----------------------------------------------------------------------------
@@ -52,7 +54,8 @@ int FnRouter(String command) {
 // - delegue la lecture et l'ecriture EEPROM a setTextFromBuffer().
 // ----------------------------------------------------------------------------
 int SetText(String command) {
-    return setTextFromBuffer(command.c_str(), command.length());
+    return recordCommandResult(
+        setTextFromBuffer(command.c_str(), command.length()));
 }
 
 #endif

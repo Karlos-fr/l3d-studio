@@ -73,7 +73,7 @@ test("CubePainter conserve les bornes de ses index sans substring C++", () => {
   );
   assert.match(
     painterSource,
-    /return cubePainterFromBuffer\(command\.c_str\(\), command\.length\(\)\);/u,
+    /return recordCommandResult\(\s*cubePainterFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);/u,
   );
 });
 

@@ -216,7 +216,8 @@ int cubePainterFromBuffer(const char* commandText, size_t commandLength) {
 // - delegue les ecritures voxel et EEPROM a cubePainterFromBuffer().
 // ----------------------------------------------------------------------------
 int CubePainter(String command) {
-    return cubePainterFromBuffer(command.c_str(), command.length());
+    return recordCommandResult(
+        cubePainterFromBuffer(command.c_str(), command.length()));
 }
 
 #include "color_all.cpp"

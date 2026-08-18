@@ -18,6 +18,15 @@ const size_t LOCAL_API_ERROR_BODY_CAPACITY = 32;
 // Intervalle entre deux nouvelles tentatives d'ouverture du serveur.
 const uint32_t LOCAL_API_BEGIN_RETRY_MS = 1000UL;
 
+// Nombre maximal de tranches durables composant un corps de reponse.
+const uint8_t LOCAL_API_RESPONSE_PARTS_MAX = 5;
+
+// Separateur entre les noms et parametres historiques des modes.
+static const char LOCAL_API_MODES_PARAMETERS_PREFIX[] = "\nparams=";
+
+// Terminaison commune des reponses segmentees.
+static const char LOCAL_API_BODY_SUFFIX[] = "\n";
+
 // En-tete CORS ajoute lorsque le navigateur demande le reseau prive.
 static const char LOCAL_API_PRIVATE_NETWORK_HEADER[] =
     "Access-Control-Allow-Private-Network: true\r\n";
@@ -35,11 +44,13 @@ struct LocalApiResponse {
     bool timeoutPrepared;
     char header[LOCAL_API_RESPONSE_HEADER_CAPACITY];
     char errorBody[LOCAL_API_ERROR_BODY_CAPACITY];
-    const char* body;
+    const char* bodyParts[LOCAL_API_RESPONSE_PARTS_MAX];
+    uint16_t bodyPartLengths[LOCAL_API_RESPONSE_PARTS_MAX];
     uint16_t headerLength;
     uint16_t headerSent;
-    uint16_t bodyLength;
     uint16_t bodySent;
+    uint8_t bodyPartCount;
+    uint8_t bodyPartIndex;
 };
 
 // Socket d'ecoute durable sur le port local contractuel.
@@ -158,21 +169,22 @@ static void localApiCloseClient(void) {
     localApiClientActive = false;
     localApiResponse.state = LOCAL_API_RESPONSE_IDLE;
     localApiResponse.timeoutPrepared = false;
-    localApiResponse.body = NULL;
     localApiResponse.headerLength = 0;
     localApiResponse.headerSent = 0;
-    localApiResponse.bodyLength = 0;
     localApiResponse.bodySent = 0;
+    localApiResponse.bodyPartCount = 0;
+    localApiResponse.bodyPartIndex = 0;
     localHttpParserReset(&localApiParser);
 }
 
 // ----------------------------------------------------------------------------
-// Prepare une reponse HTTP complete dans les buffers fixes.
+// Prepare une reponse HTTP composee de tranches durables.
 //
 // Parametres :
 // - status : statut HTTP a encoder.
-// - body : corps durable a envoyer, ou NULL pour un corps vide.
-// - bodyLength : nombre exact d'octets du corps.
+// - bodyParts : adresses durables des tranches a envoyer.
+// - bodyPartLengths : longueurs exactes des tranches.
+// - bodyPartCount : nombre de tranches utilisees.
 // - privateNetwork : vrai pour autoriser le preflight reseau prive.
 //
 // Retour :
@@ -181,12 +193,21 @@ static void localApiCloseClient(void) {
 // Effet de bord :
 // - remplace la reponse en cours et commence son envoi segmente.
 // ----------------------------------------------------------------------------
-static bool localApiPrepareResponse(
+static bool localApiPrepareSegmentedResponse(
         int status,
-        const char* body,
-        size_t bodyLength,
+        const char* const* bodyParts,
+        const size_t* bodyPartLengths,
+        uint8_t bodyPartCount,
         bool privateNetwork) {
-    if(bodyLength > LOCAL_API_RESPONSE_BODY_MAX || bodyLength > 65535UL)
+    if(bodyPartCount > LOCAL_API_RESPONSE_PARTS_MAX)
+        return false;
+    size_t bodyLength = 0;
+    for(uint8_t index = 0; index < bodyPartCount; index++) {
+        if(bodyPartLengths[index] > 65535UL - bodyLength)
+            return false;
+        bodyLength += bodyPartLengths[index];
+    }
+    if(bodyLength > LOCAL_API_RESPONSE_BODY_MAX)
         return false;
     const char* privateHeader = privateNetwork
         ? LOCAL_API_PRIVATE_NETWORK_HEADER
@@ -218,12 +239,47 @@ static bool localApiPrepareResponse(
 
     localApiResponse.state = LOCAL_API_RESPONSE_HEADER;
     localApiResponse.timeoutPrepared = false;
-    localApiResponse.body = body;
     localApiResponse.headerLength = static_cast<uint16_t>(headerLength);
     localApiResponse.headerSent = 0;
-    localApiResponse.bodyLength = static_cast<uint16_t>(bodyLength);
     localApiResponse.bodySent = 0;
+    localApiResponse.bodyPartCount = bodyPartCount;
+    localApiResponse.bodyPartIndex = 0;
+    for(uint8_t index = 0; index < bodyPartCount; index++) {
+        localApiResponse.bodyParts[index] = bodyParts[index];
+        localApiResponse.bodyPartLengths[index] =
+            static_cast<uint16_t>(bodyPartLengths[index]);
+    }
     return true;
+}
+
+// ----------------------------------------------------------------------------
+// Prepare une reponse HTTP avec un corps contigu unique.
+//
+// Parametres :
+// - status : statut HTTP a encoder.
+// - body : corps durable a envoyer, ou NULL pour un corps vide.
+// - bodyLength : nombre exact d'octets du corps.
+// - privateNetwork : vrai pour autoriser le preflight reseau prive.
+//
+// Retour :
+// - vrai si le corps et l'en-tete respectent leurs capacites.
+//
+// Effet de bord :
+// - remplace la reponse en cours et commence son envoi segmente.
+// ----------------------------------------------------------------------------
+static bool localApiPrepareResponse(
+        int status,
+        const char* body,
+        size_t bodyLength,
+        bool privateNetwork) {
+    const char* bodyParts[1] = {body};
+    size_t bodyPartLengths[1] = {bodyLength};
+    return localApiPrepareSegmentedResponse(
+        status,
+        bodyParts,
+        bodyPartLengths,
+        1,
+        privateNetwork);
 }
 
 // ----------------------------------------------------------------------------
@@ -327,6 +383,121 @@ static bool localApiRouteDiagnostics(bool resetRequested) {
 }
 
 // ----------------------------------------------------------------------------
+// Prepare un instantane coherent de l'etat courant du cube.
+//
+// Retour :
+// - vrai apres preparation, faux si un changement de mode reste differe.
+//
+// Effet de bord :
+// - remplace le corps de requete par l'etat versionne a envoyer.
+// ----------------------------------------------------------------------------
+static bool localApiRouteState(void) {
+    if(!animationSchedulerMayReadState())
+        return false;
+    int bodyLength = snprintf(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        "v=%d\nm=%d\nname=%s\nb=%d\ns=%d\ncolors=%06lX;%06lX;%06lX;%06lX;%06lX;%06lX\nswitches=%d;%d;%d;%d\ni=%d\nk=%d\nr=%d\n",
+        LOCAL_API_STATE_VERSION,
+        currentModeID,
+        currentModeName,
+        brightness,
+        speedIndex,
+        static_cast<unsigned long>(color1 & 0xFFFFFFUL),
+        static_cast<unsigned long>(color2 & 0xFFFFFFUL),
+        static_cast<unsigned long>(color3 & 0xFFFFFFUL),
+        static_cast<unsigned long>(color4 & 0xFFFFFFUL),
+        static_cast<unsigned long>(color5 & 0xFFFFFFUL),
+        static_cast<unsigned long>(color6 & 0xFFFFFFUL),
+        switch1 ? 1 : 0,
+        switch2 ? 1 : 0,
+        switch3 ? 1 : 0,
+        switch4 ? 1 : 0,
+        WiFi.ready() ? 1 : 0,
+        Particle.connected() ? 1 : 0,
+        lastCommandResult);
+    if(bodyLength < 0 ||
+       static_cast<size_t>(bodyLength) >= sizeof(localApiParser.body) ||
+       !localApiPrepareResponse(
+            200,
+            localApiParser.body,
+            static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Prepare le catalogue des modes depuis ses deux buffers historiques.
+//
+// Effet de bord :
+// - envoie cinq tranches durables sans recopier les deux catalogues.
+// ----------------------------------------------------------------------------
+static void localApiRouteModes(void) {
+    int prefixLength = snprintf(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        "v=%d\nnames=",
+        LOCAL_API_STATE_VERSION);
+    const char* bodyParts[5] = {
+        localApiParser.body,
+        modeNameList,
+        LOCAL_API_MODES_PARAMETERS_PREFIX,
+        modeParamList,
+        LOCAL_API_BODY_SUFFIX
+    };
+    size_t bodyPartLengths[5] = {
+        static_cast<size_t>(prefixLength < 0 ? 0 : prefixLength),
+        strlen(modeNameList),
+        sizeof(LOCAL_API_MODES_PARAMETERS_PREFIX) - 1,
+        strlen(modeParamList),
+        sizeof(LOCAL_API_BODY_SUFFIX) - 1
+    };
+    if(prefixLength < 0 ||
+       static_cast<size_t>(prefixLength) >= sizeof(localApiParser.body) ||
+       !localApiPrepareSegmentedResponse(
+            200,
+            bodyParts,
+            bodyPartLengths,
+            5,
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_TOO_LARGE);
+}
+
+// ----------------------------------------------------------------------------
+// Prepare les switches auxiliaires depuis leur buffer historique.
+//
+// Effet de bord :
+// - envoie trois tranches durables sans recopier la liste publiee.
+// ----------------------------------------------------------------------------
+static void localApiRouteAuxSwitches(void) {
+    int prefixLength = snprintf(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        "v=%d\nswitches=",
+        LOCAL_API_STATE_VERSION);
+    const char* bodyParts[3] = {
+        localApiParser.body,
+        auxSwitchList,
+        LOCAL_API_BODY_SUFFIX
+    };
+    size_t bodyPartLengths[3] = {
+        static_cast<size_t>(prefixLength < 0 ? 0 : prefixLength),
+        strlen(auxSwitchList),
+        sizeof(LOCAL_API_BODY_SUFFIX) - 1
+    };
+    if(prefixLength < 0 ||
+       static_cast<size_t>(prefixLength) >= sizeof(localApiParser.body) ||
+       !localApiPrepareSegmentedResponse(
+            200,
+            bodyParts,
+            bodyPartLengths,
+            3,
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_TOO_LARGE);
+}
+
+// ----------------------------------------------------------------------------
 // Route la requete complete vers les capacites disponibles en phase 3.
 //
 // Retour :
@@ -376,6 +547,30 @@ static bool localApiRouteRequest(void) {
             return true;
         }
         return localApiRouteDiagnostics(true);
+    }
+
+    if(strcmp(localApiParser.path, "/api/v1/state") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_GET) {
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+            return true;
+        }
+        return localApiRouteState();
+    }
+
+    if(strcmp(localApiParser.path, "/api/v1/modes") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_GET)
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+        else
+            localApiRouteModes();
+        return true;
+    }
+
+    if(strcmp(localApiParser.path, "/api/v1/aux-switches") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_GET)
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+        else
+            localApiRouteAuxSwitches();
+        return true;
     }
 
     localApiPrepareError(LOCAL_API_ERROR_NOT_FOUND);
@@ -455,9 +650,24 @@ static void localApiWriteResponse(uint32_t currentMillis) {
             length = localApiResponse.headerLength;
         }
         else {
-            source = localApiResponse.body;
+            while(localApiResponse.bodyPartIndex <
+                      localApiResponse.bodyPartCount &&
+                  localApiResponse.bodySent >=
+                      localApiResponse.bodyPartLengths[
+                          localApiResponse.bodyPartIndex]) {
+                localApiResponse.bodyPartIndex++;
+                localApiResponse.bodySent = 0;
+            }
+            if(localApiResponse.bodyPartIndex >=
+               localApiResponse.bodyPartCount) {
+                localApiCloseClient();
+                return;
+            }
+            source = localApiResponse.bodyParts[
+                localApiResponse.bodyPartIndex];
             sent = &localApiResponse.bodySent;
-            length = localApiResponse.bodyLength;
+            length = localApiResponse.bodyPartLengths[
+                localApiResponse.bodyPartIndex];
         }
 
         if(*sent >= length) {
@@ -465,8 +675,7 @@ static void localApiWriteResponse(uint32_t currentMillis) {
                 localApiResponse.state = LOCAL_API_RESPONSE_BODY;
                 continue;
             }
-            localApiCloseClient();
-            return;
+            continue;
         }
 
         size_t remaining = static_cast<size_t>(length - *sent);

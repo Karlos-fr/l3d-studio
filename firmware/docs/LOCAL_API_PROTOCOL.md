@@ -118,6 +118,7 @@ os=2.3.1
 u=3564
 i=1
 k=1
+r=14
 ```
 
 | Clé | Signification |
@@ -174,6 +175,9 @@ k=1
 `b` est la valeur interne historique de luminosité comprise entre 1 et 255,
 pas le pourcentage reçu dans une commande. Les couleurs sont six valeurs RGB
 hexadécimales sans `#`. Les quatre switches locaux sont `0` ou `1`.
+`r` est le dernier code retourné par une commande externe, qu'elle ait réussi
+ou échoué. Le schéma d'état possède sa propre version et peut donc évoluer
+indépendamment du format des diagnostics.
 
 ### Catalogue des modes
 
@@ -187,7 +191,9 @@ params=<contenu historique de modeParmList>
 
 Les deux listes conservent leurs séparateurs et leur ordre historiques. Leur
 association reste faite par index. La réponse est envoyée par segments depuis
-les buffers existants.
+les buffers existants. Aucune pagination n'est nécessaire : même avec deux
+listes remplies à leur capacité utile de 621 caractères, le corps maximal est
+de 1 261 octets, sous la limite contractuelle de 1 536 octets.
 
 ### Switches auxiliaires
 

@@ -24,6 +24,14 @@ void animationSchedulerBeginCycle(void);
 void animationSchedulerFinishCycle(void);
 
 // ----------------------------------------------------------------------------
+// Indique si l'etat courant ne contient plus de changement de mode differe.
+//
+// Retour :
+// - vrai lorsque le mode et ses reglages forment un instantane coherent.
+// ----------------------------------------------------------------------------
+bool animationSchedulerMayReadState(void);
+
+// ----------------------------------------------------------------------------
 // Enregistre un changement de mode lorsqu'un callback reseau interrompt un rendu.
 //
 // Parametres :

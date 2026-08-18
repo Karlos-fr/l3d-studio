@@ -72,19 +72,19 @@ test("les quatre callbacks Particle sont de simples adaptateurs", () => {
   const painter = readFirmwareSource("src/animations/cube_painter.cpp");
   assert.match(
     cloud,
-    /int SetMode\(String command\) \{\s*return setModeFromBuffer\(command\.c_str\(\), command\.length\(\)\);\s*\}/u,
+    /int SetMode\(String command\) \{\s*return recordCommandResult\(\s*setModeFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
   );
   assert.match(
     cloud,
-    /int FnRouter\(String command\) \{\s*return routeCommandFromBuffer\(command\.c_str\(\), command\.length\(\)\);\s*\}/u,
+    /int FnRouter\(String command\) \{\s*return recordCommandResult\(\s*routeCommandFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
   );
   assert.match(
     cloud,
-    /int SetText\(String command\) \{\s*return setTextFromBuffer\(command\.c_str\(\), command\.length\(\)\);\s*\}/u,
+    /int SetText\(String command\) \{\s*return recordCommandResult\(\s*setTextFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
   );
   assert.match(
     painter,
-    /int CubePainter\(String command\) \{\s*return cubePainterFromBuffer\(command\.c_str\(\), command\.length\(\)\);\s*\}/u,
+    /int CubePainter\(String command\) \{\s*return recordCommandResult\(\s*cubePainterFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
   );
 });
 

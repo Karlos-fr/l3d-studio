@@ -125,3 +125,29 @@ Le détail du format, les commandes de test et les mesures se trouvent dans
 `firmware/docs/DIAGNOSTICS.md`. La génération réutilise le corps de requête et
 n'ajoute aucun buffer statique. Les réponses restent disponibles dans les
 animations longues grâce au service réseau coopératif.
+
+## Évolution de phase 4
+
+Les routes de lecture suivantes sont maintenant actives :
+
+```text
+GET /api/v1/state
+GET /api/v1/modes
+GET /api/v1/aux-switches
+```
+
+`state` expose le mode, la luminosité interne, la vitesse, les six couleurs,
+les quatre switches, les connexions et le dernier résultat de commande. Une
+lecture attend l'application d'un éventuel changement de mode différé afin de
+ne jamais mélanger l'ancien mode et les nouveaux réglages.
+
+Le catalogue complet atteint actuellement 1 208 caractères. Il est envoyé en
+cinq tranches directement depuis `modeNameList` et `modeParamList`. Son maximum
+théorique de 1 261 octets reste sous la limite de 1 536 : aucune pagination ni
+copie temporaire n'est nécessaire. Les switches auxiliaires utilisent le même
+principe avec trois tranches.
+
+La validation du 18 août 2026 a comparé les trois réponses aux variables
+Particle historiques, sans différence. Après 90 lectures, la mémoire libre est
+restée à 33 992 octets et le minimum à 31 896 octets. Le cube a été remis sur
+`M:Off,B:1,`.
