@@ -211,3 +211,18 @@ interrompue et un appel pendant `BuildAWall,S:0,B:1` ont conservé le minimum
 mémoire à 31 928 octets. Particle Cloud est resté accessible et le cube a été
 remis sur `M:Off,B:1,`. Le détail reproductible figure dans
 `firmware/docs/LOCAL_API_SERVER.md`.
+
+## Phase 3 — Santé et diagnostics locaux
+
+| Variante | Flash | RAM statique | Binaire | Marge Flash |
+| --- | ---: | ---: | ---: | ---: |
+| Phase 2 active | 115 992 | 15 164 | 115 996 | 15 080 |
+| Phase 3 active | 116 392 | 15 164 | 116 396 | 14 680 |
+| Écart phase 3 | +400 | 0 | +400 | -400 |
+
+Le générateur compact est maintenant partagé par Particle et le LAN. Le corps
+de requête HTTP sert de scratch de réponse, ce qui évite toute hausse de RAM
+statique. Sur le Photon, `LineSpin,S:0,B:1` a répondu en 166 ms et 100 lectures
+successives ont conservé 34 024 octets libres ainsi qu'un minimum stable à
+31 832 octets. `deviceInfo` est resté inchangé par les lectures LAN et le cube
+a été remis sur `M:Off,B:1,`.

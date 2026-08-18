@@ -1,8 +1,8 @@
 // ============================================================================
 // LocalApiServer - Implementation du premier serveur HTTP local
 // ----------------------------------------------------------------------------
-// Ce module gere un seul TCPClient, ferme chaque transaction et ne fournit
-// encore qu'une sante minimale. Il ne route aucune commande du cube.
+// Ce module gere un seul TCPClient, ferme chaque transaction et expose la
+// sante et les diagnostics. Il ne route encore aucune commande du cube.
 // ============================================================================
 
 #ifdef L3D_UNITY_BUILD
@@ -18,9 +18,6 @@ const size_t LOCAL_API_ERROR_BODY_CAPACITY = 32;
 // Intervalle entre deux nouvelles tentatives d'ouverture du serveur.
 const uint32_t LOCAL_API_BEGIN_RETRY_MS = 1000UL;
 
-// Corps minimal retourne par la route de sante pendant la phase 2.
-static const char LOCAL_API_HEALTH_BODY[] = "v=1\nstatus=ok\n";
-
 // En-tete CORS ajoute lorsque le navigateur demande le reseau prive.
 static const char LOCAL_API_PRIVATE_NETWORK_HEADER[] =
     "Access-Control-Allow-Private-Network: true\r\n";
@@ -35,6 +32,7 @@ enum LocalApiResponseState : uint8_t {
 // Vue durable de la reponse en cours, sans allocation dynamique.
 struct LocalApiResponse {
     LocalApiResponseState state;
+    bool timeoutPrepared;
     char header[LOCAL_API_RESPONSE_HEADER_CAPACITY];
     char errorBody[LOCAL_API_ERROR_BODY_CAPACITY];
     const char* body;
@@ -76,6 +74,9 @@ static uint32_t localApiLastActivityMillis = 0;
 
 // Horodatage fin de l'acceptation utilise pour la latence firmware.
 static uint32_t localApiTransactionStartedMicros = 0;
+
+// Sequence monotone propre aux instantanes produits directement sur le LAN.
+static int32_t localApiDiagnosticsSequence = 0;
 
 // ----------------------------------------------------------------------------
 // Retourne la raison textuelle stable d'un statut HTTP pris en charge.
@@ -156,6 +157,7 @@ static void localApiCloseClient(void) {
         localApiClient.stop();
     localApiClientActive = false;
     localApiResponse.state = LOCAL_API_RESPONSE_IDLE;
+    localApiResponse.timeoutPrepared = false;
     localApiResponse.body = NULL;
     localApiResponse.headerLength = 0;
     localApiResponse.headerSent = 0;
@@ -215,6 +217,7 @@ static bool localApiPrepareResponse(
         return false;
 
     localApiResponse.state = LOCAL_API_RESPONSE_HEADER;
+    localApiResponse.timeoutPrepared = false;
     localApiResponse.body = body;
     localApiResponse.headerLength = static_cast<uint16_t>(headerLength);
     localApiResponse.headerSent = 0;
@@ -238,27 +241,105 @@ static void localApiPrepareError(int errorCode) {
         sizeof(localApiResponse.errorBody),
         "v=1\nerror=%d\n",
         errorCode);
-    if(bodyLength < 0 ||
-       static_cast<size_t>(bodyLength) >= sizeof(localApiResponse.errorBody) ||
-       !localApiPrepareResponse(
+    bool prepared = bodyLength >= 0 &&
+       static_cast<size_t>(bodyLength) < sizeof(localApiResponse.errorBody) &&
+       localApiPrepareResponse(
             localApiStatusFromError(errorCode),
             localApiResponse.errorBody,
             static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
-            localApiParser.privateNetworkRequested))
+            localApiParser.privateNetworkRequested);
+    if(!prepared) {
         localApiCloseClient();
+        return;
+    }
+    localApiResponse.timeoutPrepared = errorCode == LOCAL_API_ERROR_TIMEOUT;
 }
 
 // ----------------------------------------------------------------------------
-// Route la requete complete vers la seule capacite de la phase 2.
+// Incremente et retourne la sequence locale des diagnostics.
+//
+// Retour :
+// - entier positif monotone, rebouclant a un apres la borne signee.
 //
 // Effet de bord :
-// - prepare une sante minimale, un preflight ou une erreur bornee.
+// - modifie la sequence conservee par le serveur LAN.
 // ----------------------------------------------------------------------------
-static void localApiRouteRequest(void) {
+static int32_t localApiNextDiagnosticsSequence(void) {
+    if(localApiDiagnosticsSequence >= 2147483647L)
+        localApiDiagnosticsSequence = 1;
+    else
+        localApiDiagnosticsSequence++;
+    return localApiDiagnosticsSequence;
+}
+
+// ----------------------------------------------------------------------------
+// Prepare la sante locale complete dans le scratch de requete libere.
+//
+// Effet de bord :
+// - remplace le corps recu par la reponse, valable jusqu'a la fermeture.
+// ----------------------------------------------------------------------------
+static void localApiRouteHealth(void) {
+    int bodyLength = snprintf(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        "v=1\nfw=%s\nos=%s\nu=%lu\ni=%d\nk=%d\n",
+        BUILD_REVISION,
+        BUILD_DEVICE_OS_VERSION,
+        millis() / 1000UL,
+        WiFi.ready() ? 1 : 0,
+        Particle.connected() ? 1 : 0);
+    if(bodyLength < 0 ||
+       static_cast<size_t>(bodyLength) >= sizeof(localApiParser.body) ||
+       !localApiPrepareResponse(
+            200,
+            localApiParser.body,
+            static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+}
+
+// ----------------------------------------------------------------------------
+// Prepare un instantane au point de cooperation reseau courant.
+//
+// Parametres :
+// - resetRequested : vrai pour remettre les statistiques a zero avant lecture.
+//
+// Retour :
+// - vrai apres preparation de la reponse.
+//
+// Effet de bord :
+// - reutilise le corps de requete et peut reinitialiser les statistiques.
+// ----------------------------------------------------------------------------
+static bool localApiRouteDiagnostics(bool resetRequested) {
+    int bodyLength = diagnosticsWriteSnapshot(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        resetRequested,
+        localApiNextDiagnosticsSequence());
+    if(bodyLength < 0 ||
+       !localApiPrepareResponse(
+            200,
+            localApiParser.body,
+            static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Route la requete complete vers les capacites disponibles en phase 3.
+//
+// Retour :
+// - vrai si une reponse est preparee, faux si la lecture doit etre differee.
+//
+// Effet de bord :
+// - prepare une sante, un diagnostic, un preflight ou une erreur bornee.
+// ----------------------------------------------------------------------------
+static bool localApiRouteRequest(void) {
     if(localApiParser.method == LOCAL_HTTP_METHOD_OPTIONS) {
         if(!localApiIsKnownPath(localApiParser.path)) {
             localApiPrepareError(LOCAL_API_ERROR_NOT_FOUND);
-            return;
+            return true;
         }
         if(!localApiPrepareResponse(
                 204,
@@ -266,23 +347,39 @@ static void localApiRouteRequest(void) {
                 0,
                 localApiParser.privateNetworkRequested))
             localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
-        return;
+        return true;
     }
 
-    if(strcmp(localApiParser.path, "/api/v1/health") != 0) {
-        localApiPrepareError(LOCAL_API_ERROR_NOT_FOUND);
-        return;
+    if(strcmp(localApiParser.path, "/api/v1/health") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_GET)
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+        else
+            localApiRouteHealth();
+        return true;
     }
-    if(localApiParser.method != LOCAL_HTTP_METHOD_GET) {
-        localApiPrepareError(LOCAL_API_ERROR_METHOD);
-        return;
+
+    if(strcmp(localApiParser.path, "/api/v1/diagnostics") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_GET) {
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+            return true;
+        }
+        return localApiRouteDiagnostics(false);
     }
-    if(!localApiPrepareResponse(
-            200,
-            LOCAL_API_HEALTH_BODY,
-            sizeof(LOCAL_API_HEALTH_BODY) - 1,
-            localApiParser.privateNetworkRequested))
-        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+
+    if(strcmp(localApiParser.path, "/api/v1/diagnostics/reset") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_POST) {
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+            return true;
+        }
+        if(localApiParser.bodyLength != 0) {
+            localApiPrepareError(LOCAL_API_ERROR_BAD_REQUEST);
+            return true;
+        }
+        return localApiRouteDiagnostics(true);
+    }
+
+    localApiPrepareError(LOCAL_API_ERROR_NOT_FOUND);
+    return true;
 }
 
 // ----------------------------------------------------------------------------
@@ -314,7 +411,7 @@ static void localApiAcceptClient(uint32_t currentMillis) {
 // - currentMillis : horodatage du passage courant.
 //
 // Effet de bord :
-// - alimente le parseur puis prepare une reponse des que possible.
+// - alimente le parseur jusqu'a sa fin ou sa premiere erreur.
 // ----------------------------------------------------------------------------
 static void localApiReadRequest(uint32_t currentMillis) {
     size_t processedBytes = 0;
@@ -330,8 +427,8 @@ static void localApiReadRequest(uint32_t currentMillis) {
             &localApiParser,
             static_cast<uint8_t>(value));
         if(result == LOCAL_HTTP_PARSE_READY)
-            localApiRouteRequest();
-        else if(result == LOCAL_HTTP_PARSE_ERROR)
+            break;
+        if(result == LOCAL_HTTP_PARSE_ERROR)
             localApiPrepareError(localApiParser.errorCode);
     }
 }
@@ -392,6 +489,7 @@ void localApiSetup(void) {
     localApiListening = false;
     localApiWiFiWasReady = false;
     localApiLastBeginAttemptMillis = 0;
+    localApiDiagnosticsSequence = 0;
     localHttpParserReset(&localApiParser);
     memset(&localApiResponse, 0, sizeof(localApiResponse));
 }
@@ -432,14 +530,24 @@ void localApiProcess(void) {
     uint32_t idleElapsed = static_cast<uint32_t>(
         currentMillis - localApiLastActivityMillis);
     if(totalElapsed >= LOCAL_API_TOTAL_TIMEOUT_MS) {
-        localApiCloseClient();
-        return;
-    }
-    if(idleElapsed >= LOCAL_API_IDLE_TIMEOUT_MS) {
         if(localApiResponse.state == LOCAL_API_RESPONSE_IDLE) {
             localApiPrepareError(LOCAL_API_ERROR_TIMEOUT);
             if(!localApiClientActive)
                 return;
+            idleElapsed = 0;
+        }
+        else if(!localApiResponse.timeoutPrepared) {
+            localApiCloseClient();
+            return;
+        }
+    }
+    if(idleElapsed >= LOCAL_API_IDLE_TIMEOUT_MS &&
+       localApiParser.state != LOCAL_HTTP_PARSER_READY) {
+        if(localApiResponse.state == LOCAL_API_RESPONSE_IDLE) {
+            localApiPrepareError(LOCAL_API_ERROR_TIMEOUT);
+            if(!localApiClientActive)
+                return;
+            idleElapsed = 0;
         }
         else {
             localApiCloseClient();
@@ -449,6 +557,9 @@ void localApiProcess(void) {
 
     if(localApiResponse.state == LOCAL_API_RESPONSE_IDLE)
         localApiReadRequest(currentMillis);
+    if(localApiResponse.state == LOCAL_API_RESPONSE_IDLE &&
+       localApiParser.state == LOCAL_HTTP_PARSER_READY)
+        localApiRouteRequest();
     if(localApiResponse.state != LOCAL_API_RESPONSE_IDLE)
         localApiWriteResponse(currentMillis);
     else if(!localApiClient.connected() && localApiClient.available() <= 0)

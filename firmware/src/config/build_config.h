@@ -15,6 +15,8 @@
 //Global Defines
 #define BUILD_FILE_NAME         "Spark Pixels Mega"
 #define BUILD_REVISION          "1.4"
+// Version Device OS de la cible de reference exposee par la sante LAN.
+#define BUILD_DEVICE_OS_VERSION "2.3.1"
 #define ON                      1
 #define OFF                     0
 #define BPP                     3       //3 bytes per pixel or 24bit (RGB)

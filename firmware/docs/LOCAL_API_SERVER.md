@@ -109,3 +109,19 @@ validé :
 Le redémarrage consécutif au flash a aussi confirmé que le serveur reprend son
 écoute lorsque le Wi-Fi redevient prêt. Un test matériel provoquant une perte
 Wi-Fi prolongée reste prévu dans la validation d'endurance de la phase 9.
+
+## Évolution de phase 3
+
+Le serveur expose désormais la santé complète, les diagnostics directs et leur
+reset explicite :
+
+```text
+GET  /api/v1/health
+GET  /api/v1/diagnostics
+POST /api/v1/diagnostics/reset
+```
+
+Le détail du format, les commandes de test et les mesures se trouvent dans
+`firmware/docs/DIAGNOSTICS.md`. La génération réutilise le corps de requête et
+n'ajoute aucun buffer statique. Les réponses restent disponibles dans les
+animations longues grâce au service réseau coopératif.

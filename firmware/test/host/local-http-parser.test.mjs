@@ -198,7 +198,7 @@ test("le serveur redemarre avec le Wi-Fi et expose la sante minimale", () => {
   const server = readFirmwareSource("src/network/local_api_server.cpp");
   assert.match(server, /bool wifiReady = WiFi\.ready\(\)/u);
   assert.match(server, /localApiListening = localApiServer\.begin\(\)/u);
-  assert.match(server, /LOCAL_API_HEALTH_BODY\[\] = "v=1\\nstatus=ok\\n"/u);
+  assert.match(server, /"v=1\\nfw=%s\\nos=%s\\nu=%lu\\ni=%d\\nk=%d\\n"/u);
   assert.match(server, /LOCAL_HTTP_METHOD_OPTIONS/u);
   assert.match(server, /Access-Control-Allow-Origin: \*/u);
   assert.match(server, /Access-Control-Allow-Private-Network: true/u);

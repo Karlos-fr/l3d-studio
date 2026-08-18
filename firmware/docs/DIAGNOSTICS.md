@@ -77,6 +77,48 @@ la réponse et `deviceInfo` partagent le buffer historique de 622 octets.
 Après la demande, la réponse compacte est conservée pendant 15 secondes, puis
 `deviceInfo` reprend automatiquement son contenu historique.
 
+## Accès LAN
+
+La phase 3 du serveur local expose directement :
+
+```text
+GET  /api/v1/health
+GET  /api/v1/diagnostics
+POST /api/v1/diagnostics/reset
+```
+
+Vérifier la santé :
+
+```powershell
+curl.exe http://<adresse-ip-du-photon>:8080/api/v1/health
+```
+
+Lire un instantané sans modifier les statistiques :
+
+```powershell
+curl.exe http://<adresse-ip-du-photon>:8080/api/v1/diagnostics
+```
+
+Réinitialiser explicitement les minimums et les statistiques du mode :
+
+```powershell
+curl.exe -X POST -H "Content-Length: 0" `
+  http://<adresse-ip-du-photon>:8080/api/v1/diagnostics/reset
+```
+
+Chaque réponse LAN possède sa propre séquence `y`, monotone depuis le démarrage
+du serveur. La lecture est immédiate et ne consomme aucune Data Operation
+Particle. Le reset n'est exécuté que par la troisième commande.
+
+Le producteur numérique est commun aux deux transports. Particle conserve son
+parcours différé et son stockage temporaire dans `deviceInfo`. Le LAN réutilise
+le buffer du corps HTTP après validation de la requête ; il n'écrase donc jamais
+`deviceInfo` et ne réserve aucun second buffer de 622 octets.
+
+Le serveur est appelé à chaque point de coopération des animations longues.
+Les diagnostics restent ainsi disponibles entre deux images internes même si
+la fonction historique ne revient pas immédiatement dans `loop()`.
+
 ## Format compact version 1
 
 | Clé | Valeur |
@@ -144,6 +186,28 @@ Le firmware instrumenté mesure actuellement 9 144 octets après initialisation.
 Le coût runtime restant doit encore être isolé entre l'activation persistante
 de `FEATURE_RESET_INFO`, le handler `out_of_memory` et les autres effets du
 démarrage. Le seuil reste donc volontairement non validé.
+
+### Mesure du serveur local — phase 3
+
+La compilation Photon Device OS 2.3.1 du 17 août 2026 utilise 116 392 octets de
+Flash, 15 164 octets de RAM statique et laisse 14 680 octets de marge Flash.
+La RAM statique est identique à la phase 2 grâce à la réutilisation du corps de
+requête HTTP ; le coût de la phase 3 est donc uniquement de 400 octets de Flash.
+
+Sur le Photon réel :
+
+- les instantanés Particle et LAN ont exposé le même mode et les mêmes clés ;
+- un appel LAN n'a pas modifié le diagnostic conservé dans `deviceInfo` ;
+- deux lectures ordinaires n'ont pas réinitialisé les minimums ;
+- `/diagnostics/reset` a produit `c=0` et des minimums recalés sur la mémoire
+  libre courante ;
+- `LineSpin,S:0,B:1` a répondu en 166 ms ;
+- 100 lectures LAN successives ont réussi, avec 34 024 octets libres et un
+  minimum stable à 31 832 octets ;
+- le cube a été remis sur `M:Off,B:1,`, luminosité interne 2/255.
+
+Le test continu d'au moins une heure reste volontairement regroupé avec les
+tests d'endurance de la phase 9.
 
 ## Cause de reset
 

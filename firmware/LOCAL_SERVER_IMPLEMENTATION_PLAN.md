@@ -177,26 +177,26 @@ dans l'application. Les valeurs brutes du firmware restent entières.
 
 ### Firmware
 
-- [ ] Ajouter `GET /api/v1/health` avec version firmware, version API, uptime et état Wi-Fi.
-- [ ] Extraire la production des diagnostics compacts vers une fonction écrivant dans un buffer fourni et borné.
-- [ ] Conserver exactement le parcours Particle `GETDIAG`, séquence et `deviceInfo`.
-- [ ] Ajouter `GET /api/v1/diagnostics` avec génération directe entre deux frames.
-- [ ] Ajouter `POST /api/v1/diagnostics/reset` avec remise à zéro puis réponse actualisée.
-- [ ] Inclure un numéro d'échantillon local monotone dans chaque réponse.
-- [ ] Mesurer et exposer le délai de service de la requête sans utiliser de flottants.
-- [ ] Vérifier qu'aucune réponse LAN n'écrase prématurément le contenu historique de `deviceInfo`.
+- [x] Ajouter `GET /api/v1/health` avec version firmware, version API, uptime et état Wi-Fi.
+- [x] Extraire la production des diagnostics compacts vers une fonction écrivant dans un buffer fourni et borné.
+- [x] Conserver exactement le parcours Particle `GETDIAG`, séquence et `deviceInfo`.
+- [x] Ajouter `GET /api/v1/diagnostics` avec génération directe entre deux frames.
+- [x] Ajouter `POST /api/v1/diagnostics/reset` avec remise à zéro puis réponse actualisée.
+- [x] Inclure un numéro d'échantillon local monotone dans chaque réponse.
+- [x] Mesurer et exposer le délai de service de la requête sans utiliser de flottants.
+- [x] Vérifier qu'aucune réponse LAN n'écrase prématurément le contenu historique de `deviceInfo`.
 
 ### Tests
 
-- [ ] Tester chaque clé du format compact et les valeurs aux bornes entières.
-- [ ] Comparer un échantillon LAN avec un échantillon Particle pris dans le même mode.
-- [ ] Vérifier que seul l'endpoint de reset efface les minimums.
-- [ ] Vérifier les diagnostics pendant les animations courtes et longues.
-- [ ] Répéter les lectures pendant au moins une heure et surveiller le minimum mémoire.
+- [x] Tester chaque clé du format compact et les valeurs aux bornes entières.
+- [x] Comparer un échantillon LAN avec un échantillon Particle pris dans le même mode.
+- [x] Vérifier que seul l'endpoint de reset efface les minimums.
+- [x] Vérifier les diagnostics pendant les animations courtes et longues.
+- [ ] Répéter les lectures pendant au moins une heure et surveiller le minimum mémoire — reporté à la phase 9.
 
 ### Critère de sortie
 
-- [ ] Un diagnostic LAN ne consomme aucune Data Operation Particle et reste cohérent avec `GETDIAG`.
+- [x] Un diagnostic LAN ne consomme aucune Data Operation Particle et reste cohérent avec `GETDIAG`.
 
 ## Phase 4 — Lecture de l'état et des capacités
 

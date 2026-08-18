@@ -1,7 +1,15 @@
+// ============================================================================
+// RuntimeDiagnostics - Implementation des diagnostics runtime bornes
+// ----------------------------------------------------------------------------
+// Ce module collecte des entiers statiques et produit un instantane dans un
+// buffer fourni. Il ne publie rien et n'alloue aucune memoire dynamique.
+// ============================================================================
+
 #ifdef L3D_UNITY_BUILD
 
 #if L3D_DIAGNOSTICS_ENABLED
 
+// Etat entier durable de l'instrumentation runtime.
 struct RuntimeDiagnosticsState {
     uint32_t startupFreeMemory;
     uint32_t minimumFreeMemory;
@@ -19,22 +27,54 @@ struct RuntimeDiagnosticsState {
     int16_t resetReason;
 };
 
+// Mesures runtime partagees par les transports Particle et LAN.
 static RuntimeDiagnosticsState runtimeDiagnostics = {};
+
+// Taille de la derniere allocation refusee, modifiable par le handler systeme.
 static volatile int diagnosticsOutOfMemoryBytes = -1;
+
+// Nombre d'evenements memoire recus depuis le demarrage.
 static volatile uint32_t diagnosticsOutOfMemoryCount = 0;
+
+// Demande Particle en attente de traitement entre deux frames.
 static volatile bool diagnosticsRefreshRequested = false;
+
+// Indique si la prochaine demande Particle doit remettre les statistiques a zero.
 static volatile bool diagnosticsResetRequested = false;
-static volatile int diagnosticsRequestSequence = 0;
-static int diagnosticsResponseSequence = 0;
+
+// Sequence attribuee aux demandes Particle recues.
+static volatile int32_t diagnosticsRequestSequence = 0;
+
+// Date jusqu'a laquelle deviceInfo contient un diagnostic Particle.
 static uint32_t diagnosticsTextValidUntil = 0;
 
+// ----------------------------------------------------------------------------
+// Integre une mesure libre dans les minimums global et du mode.
+//
+// Parametres :
+// - freeMemory : nombre d'octets libres nouvellement observe.
+//
+// Effet de bord :
+// - peut abaisser les deux minimums conserves.
+// ----------------------------------------------------------------------------
 static void diagnosticsObserveMemory(uint32_t freeMemory) {
-    if(runtimeDiagnostics.minimumFreeMemory == 0 || freeMemory < runtimeDiagnostics.minimumFreeMemory)
+    if(runtimeDiagnostics.minimumFreeMemory == 0 ||
+       freeMemory < runtimeDiagnostics.minimumFreeMemory)
         runtimeDiagnostics.minimumFreeMemory = freeMemory;
-    if(runtimeDiagnostics.modeMinimumFreeMemory == 0 || freeMemory < runtimeDiagnostics.modeMinimumFreeMemory)
+    if(runtimeDiagnostics.modeMinimumFreeMemory == 0 ||
+       freeMemory < runtimeDiagnostics.modeMinimumFreeMemory)
         runtimeDiagnostics.modeMinimumFreeMemory = freeMemory;
 }
 
+// ----------------------------------------------------------------------------
+// Reinitialise les compteurs propres au mode fourni.
+//
+// Parametres :
+// - modeId : ID historique du mode qui devient la reference.
+//
+// Effet de bord :
+// - efface les statistiques de frame et mesure la memoire libre courante.
+// ----------------------------------------------------------------------------
 static void diagnosticsResetModeStats(int modeId) {
     runtimeDiagnostics.modeId = modeId;
     runtimeDiagnostics.frameMemoryBefore = 0;
@@ -47,12 +87,92 @@ static void diagnosticsResetModeStats(int modeId) {
     diagnosticsObserveMemory(runtimeDiagnostics.modeMinimumFreeMemory);
 }
 
+// ----------------------------------------------------------------------------
+// Reinitialise les minimums globaux et les statistiques du mode courant.
+//
+// Effet de bord :
+// - remplace les minimums historiques par la memoire libre courante.
+// ----------------------------------------------------------------------------
+static void diagnosticsResetStatistics(void) {
+    uint32_t freeMemory = System.freeMemory();
+    runtimeDiagnostics.minimumFreeMemory = freeMemory;
+    diagnosticsResetModeStats(currentModeID);
+}
+
+// ----------------------------------------------------------------------------
+// Memorise un refus d'allocation sans effectuer de traitement complexe.
+//
+// Parametres :
+// - event : evenement systeme recu, sans lecture necessaire.
+// - param : taille de l'allocation refusee.
+//
+// Effet de bord :
+// - actualise deux compteurs volatils uniquement.
+// ----------------------------------------------------------------------------
 static void outOfMemoryHandler(system_event_t event, int param) {
+    (void)event;
     diagnosticsOutOfMemoryBytes = param;
     diagnosticsOutOfMemoryCount++;
 }
 
-static void diagnosticsRefreshText(void) {
+// ----------------------------------------------------------------------------
+// Initialise la cause de reset et le handler memoire avant le reste du setup.
+//
+// Effet de bord :
+// - active FEATURE_RESET_INFO et enregistre un handler systeme minimal.
+// ----------------------------------------------------------------------------
+void diagnosticsSetupEarly(void) {
+    runtimeDiagnostics.modeId = -1;
+    runtimeDiagnostics.resetReason = -1;
+    diagnosticsOutOfMemoryBytes = -1;
+    diagnosticsOutOfMemoryCount = 0;
+
+    System.enableFeature(FEATURE_RESET_INFO);
+    runtimeDiagnostics.resetReason = static_cast<int16_t>(System.resetReason());
+    runtimeDiagnostics.resetReasonData = System.resetReasonData();
+    System.on(out_of_memory, outOfMemoryHandler);
+}
+
+// ----------------------------------------------------------------------------
+// Capture la memoire disponible une fois l'initialisation terminee.
+//
+// Parametres :
+// - modeId : ID historique du premier mode actif.
+//
+// Effet de bord :
+// - initialise les minimums globaux et les compteurs du mode.
+// ----------------------------------------------------------------------------
+void diagnosticsSetupComplete(int modeId) {
+    runtimeDiagnostics.startupFreeMemory = System.freeMemory();
+    runtimeDiagnostics.minimumFreeMemory = runtimeDiagnostics.startupFreeMemory;
+    diagnosticsResetModeStats(modeId);
+}
+
+// ----------------------------------------------------------------------------
+// Produit un instantane compact dans le buffer fourni par le transport.
+//
+// Parametres :
+// - destination : buffer recevant une chaine terminee par un caractere nul.
+// - capacity : capacite totale du buffer, terminaison comprise.
+// - resetRequested : vrai pour reinitialiser les statistiques avant la mesure.
+// - sequence : numero associe a cet instantane.
+//
+// Retour :
+// - longueur utile produite ou moins un si le buffer est invalide ou trop petit.
+//
+// Effet de bord :
+// - observe la memoire libre et peut reinitialiser les statistiques demandees.
+// ----------------------------------------------------------------------------
+int diagnosticsWriteSnapshot(
+        char* destination,
+        size_t capacity,
+        bool resetRequested,
+        int32_t sequence) {
+    if(destination == NULL || capacity == 0)
+        return -1;
+    if(resetRequested)
+        diagnosticsResetStatistics();
+
     uint32_t freeMemory = System.freeMemory();
     diagnosticsObserveMemory(freeMemory);
 
@@ -60,9 +180,11 @@ static void diagnosticsRefreshText(void) {
     if(runtimeDiagnostics.averageFrameMicros > 0)
         fpsTimesTen = 10000000UL / runtimeDiagnostics.averageFrameMicros;
 
-    snprintf(diagnosticsText, DIAGNOSTICS_TEXT_LENGTH,
-        "v=1,y=%d,m=%d,u=%lu,r=%d,d=%lu,s=%lu,f=%lu,n=%lu,b=%lu,a=%lu,q=%lu,c=%lu,l=%lu,g=%lu,w=%lu,p=%lu,x=%lu,i=%d,k=%d,o=%d,z=%lu",
-        diagnosticsResponseSequence,
+    int length = snprintf(
+        destination,
+        capacity,
+        "v=1,y=%ld,m=%d,u=%lu,r=%d,d=%lu,s=%lu,f=%lu,n=%lu,b=%lu,a=%lu,q=%lu,c=%lu,l=%lu,g=%lu,w=%lu,p=%lu,x=%lu,i=%d,k=%d,o=%d,z=%lu",
+        static_cast<long>(sequence),
         runtimeDiagnostics.modeId,
         millis() / 1000UL,
         runtimeDiagnostics.resetReason,
@@ -83,45 +205,46 @@ static void diagnosticsRefreshText(void) {
         Particle.connected() ? 1 : 0,
         diagnosticsOutOfMemoryBytes,
         diagnosticsOutOfMemoryCount);
+    if(length < 0 || static_cast<size_t>(length) >= capacity) {
+        destination[0] = '\0';
+        return -1;
+    }
+    return length;
 }
 
-void diagnosticsSetupEarly(void) {
-    runtimeDiagnostics.modeId = -1;
-    runtimeDiagnostics.resetReason = -1;
-    diagnosticsOutOfMemoryBytes = -1;
-    diagnosticsOutOfMemoryCount = 0;
-
-    System.enableFeature(FEATURE_RESET_INFO);
-    runtimeDiagnostics.resetReason = (int16_t)System.resetReason();
-    runtimeDiagnostics.resetReasonData = System.resetReasonData();
-    System.on(out_of_memory, outOfMemoryHandler);
-}
-
-void diagnosticsSetupComplete(int modeId) {
-    runtimeDiagnostics.startupFreeMemory = System.freeMemory();
-    runtimeDiagnostics.minimumFreeMemory = runtimeDiagnostics.startupFreeMemory;
-    diagnosticsResetModeStats(modeId);
-}
-
+// ----------------------------------------------------------------------------
+// Traite la demande Particle differee entre deux frames.
+//
+// Effet de bord :
+// - ecrit temporairement le diagnostic dans deviceInfo pendant quinze secondes.
+// ----------------------------------------------------------------------------
 void diagnosticsProcessRequests(void) {
     if(!diagnosticsRefreshRequested)
         return;
 
     bool resetRequested = diagnosticsResetRequested;
+    int32_t sequence = diagnosticsRequestSequence;
     diagnosticsRefreshRequested = false;
     diagnosticsResetRequested = false;
 
-    if(resetRequested) {
-        uint32_t freeMemory = System.freeMemory();
-        runtimeDiagnostics.minimumFreeMemory = freeMemory;
-        diagnosticsResetModeStats(currentModeID);
-    }
-
-    diagnosticsResponseSequence = diagnosticsRequestSequence;
-    diagnosticsRefreshText();
+    if(diagnosticsWriteSnapshot(
+            diagnosticsText,
+            DIAGNOSTICS_TEXT_LENGTH,
+            resetRequested,
+            sequence) < 0)
+        diagnosticsText[0] = '\0';
     diagnosticsTextValidUntil = millis() + 15000UL;
 }
 
+// ----------------------------------------------------------------------------
+// Capture le debut d'une frame et detecte un changement de mode implicite.
+//
+// Parametres :
+// - modeId : ID historique de la frame qui commence.
+//
+// Effet de bord :
+// - actualise la memoire avant frame et son horodatage.
+// ----------------------------------------------------------------------------
 void diagnosticsBeginFrame(int modeId) {
     if(runtimeDiagnostics.modeId != modeId) {
         runtimeDiagnostics.modeChangeCount++;
@@ -133,6 +256,12 @@ void diagnosticsBeginFrame(int modeId) {
     runtimeDiagnostics.frameStartedMicros = micros();
 }
 
+// ----------------------------------------------------------------------------
+// Termine la mesure de frame et actualise moyenne, pire duree et memoire.
+//
+// Effet de bord :
+// - incremente le compteur de frames et tous les agregats correspondants.
+// ----------------------------------------------------------------------------
 void diagnosticsEndFrame(void) {
     uint32_t frameMicros = micros() - runtimeDiagnostics.frameStartedMicros;
     runtimeDiagnostics.frameMemoryAfter = System.freeMemory();
@@ -146,29 +275,49 @@ void diagnosticsEndFrame(void) {
     }
     else if(frameMicros >= runtimeDiagnostics.averageFrameMicros) {
         runtimeDiagnostics.averageFrameMicros +=
-            (frameMicros - runtimeDiagnostics.averageFrameMicros) / runtimeDiagnostics.frameCount;
+            (frameMicros - runtimeDiagnostics.averageFrameMicros) /
+            runtimeDiagnostics.frameCount;
     }
     else {
         runtimeDiagnostics.averageFrameMicros -=
-            (runtimeDiagnostics.averageFrameMicros - frameMicros) / runtimeDiagnostics.frameCount;
+            (runtimeDiagnostics.averageFrameMicros - frameMicros) /
+            runtimeDiagnostics.frameCount;
     }
 
     if(frameMicros > runtimeDiagnostics.worstFrameMicros)
         runtimeDiagnostics.worstFrameMicros = frameMicros;
 }
 
+// ----------------------------------------------------------------------------
+// Signale un changement de mode applique hors de la detection de frame.
+//
+// Parametres :
+// - modeId : ID historique du nouveau mode.
+//
+// Effet de bord :
+// - incremente le compteur global et remet les statistiques du mode a zero.
+// ----------------------------------------------------------------------------
 void diagnosticsModeChanged(int modeId) {
     runtimeDiagnostics.modeChangeCount++;
     diagnosticsResetModeStats(modeId);
 }
 
+// ----------------------------------------------------------------------------
+// Indique si les metadonnees historiques peuvent remplacer le diagnostic.
+//
+// Parametres :
+// - currentMillis : horodatage courant compatible avec le debordement millis.
+//
+// Retour :
+// - vrai hors de la fenetre Particle de quinze secondes.
+// ----------------------------------------------------------------------------
 bool diagnosticsMayRefreshDeviceInfo(uint32_t currentMillis) {
     return diagnosticsTextValidUntil == 0 ||
-        (int32_t)(currentMillis - diagnosticsTextValidUntil) >= 0;
+        static_cast<int32_t>(currentMillis - diagnosticsTextValidUntil) >= 0;
 }
 
 // ----------------------------------------------------------------------------
-// Programme la production differee des diagnostics compacts.
+// Programme la production differee des diagnostics compacts pour Particle.
 //
 // Parametres :
 // - resetRequested : vrai pour remettre les minimums a zero avant la mesure.
@@ -181,7 +330,7 @@ bool diagnosticsMayRefreshDeviceInfo(uint32_t currentMillis) {
 // ----------------------------------------------------------------------------
 int GetDiagnostics(bool resetRequested) {
     diagnosticsResetRequested = resetRequested;
-    if(diagnosticsRequestSequence >= 2147483647)
+    if(diagnosticsRequestSequence >= 2147483647L)
         diagnosticsRequestSequence = 1;
     else
         diagnosticsRequestSequence++;
