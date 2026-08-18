@@ -7,8 +7,12 @@
 
 import { createLanClient, LanClientError, normalizeLanHost, normalizeLanPort } from "../lan/client";
 import type { DiagnosticsMonitor } from "../diagnostics/monitor";
-import { appendDiagnosticsSample } from "../diagnostics/history";
+import {
+  appendDiagnosticsSample,
+  clearDiagnosticsHistory,
+} from "../diagnostics/history";
 import { resetDiagnosticsSample } from "../diagnostics/reader";
+import type { DiagnosticsChartWindow } from "../diagnostics/types";
 import { ParticleCloudError, type ParticleClient } from "../particle/client";
 import {
   clearParticleSession,
@@ -42,6 +46,7 @@ import {
   type AppState,
 } from "./state";
 import { createTransportForState } from "./transport";
+import { updateDiagnosticsView } from "./diagnostics_render";
 
 export interface UiEventContext {
   rootElement: HTMLElement;
@@ -75,6 +80,9 @@ const REFRESH_DIAGNOSTICS_ACTION = "refresh-diagnostics";
 
 // Nom de l'action explicite qui remet les minimums a zero.
 const RESET_DIAGNOSTICS_ACTION = "reset-diagnostics";
+
+// Nom de l'action qui efface seulement l'historique utilise par les graphiques.
+const CLEAR_DIAGNOSTICS_HISTORY_ACTION = "clear-diagnostics-history";
 
 // Nom de l'action qui envoie la commande SetMode.
 const SEND_SET_MODE_ACTION = "send-set-mode";
@@ -110,6 +118,7 @@ export function attachAppEvents(context: UiEventContext): void {
   attachLoginForm(context);
   attachActionButtons(context);
   attachStateFields(context);
+  attachDiagnosticsChartEvents(context.rootElement);
 }
 
 // ----------------------------------------------------------------------------
@@ -199,7 +208,8 @@ function attachStateFields(context: UiEventContext): void {
         fieldElement.dataset.field === "lan-host" ||
         fieldElement.dataset.field === "lan-port" ||
         fieldElement.dataset.field === "diagnostics-enabled" ||
-        fieldElement.dataset.field === "diagnostics-interval"
+        fieldElement.dataset.field === "diagnostics-interval" ||
+        fieldElement.dataset.field === "diagnostics-window"
       ) {
         return;
       }
@@ -211,6 +221,64 @@ function attachStateFields(context: UiEventContext): void {
       handleFieldChange(context, fieldElement);
     });
   });
+}
+
+// ----------------------------------------------------------------------------
+// Branche par delegation les survols et focus des points des graphiques.
+//
+// Parametres :
+// - rootElement : racine contenant le panneau Diagnostics eventuel.
+//
+// Effet de bord :
+// - actualise la sortie textuelle partagee sans reconstruire les graphiques.
+// ----------------------------------------------------------------------------
+function attachDiagnosticsChartEvents(rootElement: HTMLElement): void {
+  const panelElement = rootElement.querySelector<HTMLElement>("[data-diagnostics-panel]");
+  if (panelElement === null) return;
+  panelElement.addEventListener("pointerover", showDiagnosticsChartTooltip);
+  panelElement.addEventListener("focusin", showDiagnosticsChartTooltip);
+  panelElement.addEventListener("pointerout", clearDiagnosticsChartTooltip);
+  panelElement.addEventListener("focusout", clearDiagnosticsChartTooltip);
+}
+
+// ----------------------------------------------------------------------------
+// Affiche les valeurs du point survole ou selectionne au clavier.
+//
+// Parametres :
+// - event : evenement dont la cible peut porter `data-chart-point`.
+//
+// Effet de bord :
+// - remplace le texte de la sortie partagee du panneau courant.
+// ----------------------------------------------------------------------------
+function showDiagnosticsChartTooltip(event: Event): void {
+  const targetElement = event.target instanceof Element
+    ? event.target.closest<SVGElement>("[data-chart-point]")
+    : null;
+  const panelElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  const outputElement = panelElement?.querySelector<HTMLElement>("[data-chart-tooltip]") ?? null;
+  if (targetElement === null || outputElement === null) return;
+  outputElement.textContent = targetElement.dataset.tooltip ?? "Valeur indisponible.";
+}
+
+// ----------------------------------------------------------------------------
+// Retablit l'aide lorsque le pointeur ou le focus quitte un point.
+//
+// Parametres :
+// - event : evenement emis par la delegation du panneau.
+//
+// Effet de bord :
+// - remet le texte d'aide si aucun autre point ne recoit immediatement le focus.
+// ----------------------------------------------------------------------------
+function clearDiagnosticsChartTooltip(event: Event): void {
+  const targetElement = event.target instanceof Element
+    ? event.target.closest<SVGElement>("[data-chart-point]")
+    : null;
+  if (targetElement === null) return;
+  const panelElement = event.currentTarget instanceof HTMLElement ? event.currentTarget : null;
+  const outputElement = panelElement?.querySelector<HTMLElement>("[data-chart-tooltip]") ?? null;
+  if (outputElement !== null) {
+    outputElement.textContent = "Survole ou selectionne un point pour afficher ses valeurs.";
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -291,6 +359,12 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
     confirm("Remettre a zero les minimums et statistiques de diagnostics ?")
   ) {
     await resetDiagnostics(context);
+    return;
+  }
+
+  if (action === CLEAR_DIAGNOSTICS_HISTORY_ACTION) {
+    clearDiagnosticsHistory(context.state.diagnostics);
+    updateDiagnosticsView(context.rootElement, context.state);
     return;
   }
 
@@ -419,6 +493,9 @@ function handleFieldChange(
     if (context.state.diagnostics.enabled) {
       context.diagnosticsMonitor.start(context.state.diagnostics.intervalSeconds);
     }
+  } else if (fieldName === "diagnostics-window") {
+    context.state.diagnostics.chartWindow = fieldElement.value as DiagnosticsChartWindow;
+    updateDiagnosticsView(context.rootElement, context.state);
   } else if (fieldName === "mode-name") {
     context.state.selectedModeName = fieldElement.value;
   } else if (fieldName === "brightness") {
@@ -449,7 +526,11 @@ function handleFieldChange(
   // Les champs texte doivent conserver leur nœud DOM pendant la saisie. Un
   // rendu complet à chaque caractère remplacerait l'input et ferait perdre le
   // focus ainsi que la position du curseur.
-  if (fieldName === "text" || fieldName === "persistent-text") {
+  if (
+    fieldName === "text" ||
+    fieldName === "persistent-text" ||
+    fieldName === "diagnostics-window"
+  ) {
     return;
   }
 
@@ -562,12 +643,10 @@ async function testLanConnection(context: UiEventContext): Promise<void> {
 // ----------------------------------------------------------------------------
 async function refreshDiagnostics(context: UiEventContext): Promise<void> {
   context.state.statusMessage = "Lecture immediate des diagnostics...";
-  context.rerender();
   const refreshed = await context.diagnosticsMonitor.refresh();
   context.state.statusMessage = refreshed
     ? "Diagnostics actualises."
     : "Lecture ignoree ou echouee ; le dernier echantillon valide est conserve.";
-  context.rerender();
 }
 
 // ----------------------------------------------------------------------------

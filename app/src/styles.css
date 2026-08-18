@@ -24,6 +24,21 @@
   /* Couleur de bordure discrete pour separer les zones. */
   --color-border: #303741;
 
+  /* Premiere couleur stable des courbes de diagnostics. */
+  --color-chart-1: #2dd4bf;
+
+  /* Deuxieme couleur stable des courbes de diagnostics. */
+  --color-chart-2: #60a5fa;
+
+  /* Troisieme couleur stable des courbes de diagnostics. */
+  --color-chart-3: #c084fc;
+
+  /* Quatrieme couleur stable des courbes de diagnostics. */
+  --color-chart-4: #fb923c;
+
+  /* Cinquieme couleur stable des courbes de diagnostics. */
+  --color-chart-5: #facc15;
+
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -262,6 +277,146 @@ legend {
   color: #f87171;
 }
 
+/* Groupe les actions Diagnostics sans imposer une largeur fixe. */
+.diagnostics-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Separe les graphiques tout en conservant un flux vertical responsive. */
+.diagnostics-charts {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+
+/* Encadre chaque graphique avec son titre, sa legende et son resume. */
+.diagnostics-chart {
+  min-width: 0;
+}
+
+.diagnostics-chart h3 {
+  margin: 0 0 0.375rem;
+  font-size: 0.95rem;
+}
+
+/* Adapte le SVG a son conteneur sans provoquer de nouvelle collecte reseau. */
+.diagnostics-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: var(--color-text);
+}
+
+/* Legende compacte commune aux series du graphique. */
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin: 0 0 0.25rem;
+  padding: 0;
+  color: var(--color-muted);
+  font-size: 0.75rem;
+  list-style: none;
+}
+
+.chart-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.chart-legend-swatch {
+  width: 1rem;
+  height: 3px;
+  background: var(--chart-series-color);
+}
+
+/* Cadre neutre de la zone quantitative du graphique. */
+.chart-frame {
+  fill: #101215;
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+/* Grille legere qui aide la lecture sans concurrencer les series. */
+.chart-grid {
+  stroke: var(--color-border);
+  stroke-width: 1;
+}
+
+.chart-axis-label,
+.chart-axis-title {
+  fill: var(--color-muted);
+  font-size: 12px;
+}
+
+/* Courbe sans remplissage dont la couleur vient de sa serie stable. */
+.chart-line {
+  fill: none;
+  stroke: var(--chart-series-color);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+/* Marque les modes, interruptions, redemarrages et OOM sur la chronologie. */
+.chart-event-marker {
+  stroke: var(--color-muted);
+  stroke-dasharray: 4 4;
+  stroke-width: 1;
+}
+
+/* Cible transparente assez large pour le pointeur et visible au focus clavier. */
+.chart-hit {
+  fill: transparent;
+  stroke: transparent;
+  stroke-width: 2;
+}
+
+.chart-hit:hover,
+.chart-hit:focus-visible {
+  fill: var(--color-surface);
+  stroke: var(--color-accent);
+  outline: none;
+}
+
+/* Affectations partagees par les lignes et leurs echantillons de legende. */
+.chart-series-1 {
+  --chart-series-color: var(--color-chart-1);
+}
+
+.chart-series-2 {
+  --chart-series-color: var(--color-chart-2);
+}
+
+.chart-series-3 {
+  --chart-series-color: var(--color-chart-3);
+}
+
+.chart-series-4 {
+  --chart-series-color: var(--color-chart-4);
+}
+
+.chart-series-5 {
+  --chart-series-color: var(--color-chart-5);
+}
+
+/* Sortie partagee qui rend le survol egalement lisible hors du SVG. */
+.diagnostics-chart-tooltip {
+  min-height: 1.5rem;
+  margin-top: 0.75rem;
+  color: var(--color-text);
+  font-size: 0.875rem;
+}
+
+.diagnostics-chart-summary,
+.diagnostics-chart-empty {
+  margin-top: 0.375rem !important;
+  font-size: 0.75rem;
+}
+
 .primary-action:disabled,
 .secondary-action:disabled {
   cursor: wait;
@@ -295,5 +450,16 @@ select:focus-visible {
   .control-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: end;
+  }
+}
+
+@media (max-width: 520px) {
+  .diagnostics-actions,
+  .diagnostics-actions button {
+    width: 100%;
+  }
+
+  .diagnostics-chart-summary {
+    font-size: 0.8rem;
   }
 }

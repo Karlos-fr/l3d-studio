@@ -7,6 +7,7 @@
 
 import type { ParticleDeviceSummary, ParticleStoredSession } from "../particle/types";
 import type { DiagnosticsMonitorState } from "../diagnostics/types";
+import { createDiagnosticsHistory } from "../diagnostics/history";
 import type {
   SparkPixelsAuxSwitch,
   SparkPixelsDeviceInfoEntry,
@@ -110,7 +111,8 @@ export function createInitialState(
       enabled: false,
       intervalSeconds: INITIAL_DIAGNOSTICS_INTERVAL_SECONDS,
       latestSample: null,
-      history: [],
+      history: createDiagnosticsHistory(),
+      chartWindow: "recent",
       lastError: null,
       consecutiveErrors: 0,
       estimatedParticleDataOperations: 0,
@@ -263,7 +265,10 @@ export function resetFirmwareState(state: AppState): void {
   state.lastTransportUsed = null;
   state.diagnostics.enabled = false;
   state.diagnostics.latestSample = null;
-  state.diagnostics.history = [];
+  state.diagnostics.history = createDiagnosticsHistory(
+    state.diagnostics.history.capacity,
+  );
+  state.diagnostics.chartWindow = "recent";
   state.diagnostics.lastError = null;
   state.diagnostics.consecutiveErrors = 0;
   state.diagnostics.estimatedParticleDataOperations = 0;

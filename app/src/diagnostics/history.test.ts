@@ -6,7 +6,13 @@
 // ============================================================================
 
 import { describe, expect, it } from "vitest";
-import { appendDiagnosticsSample, DIAGNOSTICS_HISTORY_CAPACITY } from "./history";
+import {
+  appendDiagnosticsSample,
+  clearDiagnosticsHistory,
+  createDiagnosticsHistory,
+  diagnosticsHistoryValues,
+  DIAGNOSTICS_HISTORY_CAPACITY,
+} from "./history";
 import type { DiagnosticsMonitorState, DiagnosticsSample } from "./types";
 
 // ----------------------------------------------------------------------------
@@ -22,8 +28,9 @@ function runDiagnosticsHistoryTests(): void {
       appendDiagnosticsSample(state, createSample(index, 32_000, 0));
     }
 
-    expect(state.history).toHaveLength(DIAGNOSTICS_HISTORY_CAPACITY);
-    expect(state.history[0]?.capturedAtMilliseconds).toBe(1);
+    const history = diagnosticsHistoryValues(state);
+    expect(history).toHaveLength(DIAGNOSTICS_HISTORY_CAPACITY);
+    expect(history[0]?.sample.capturedAtMilliseconds).toBe(1);
   });
 
   // --------------------------------------------------------------------------
@@ -36,6 +43,39 @@ function runDiagnosticsHistoryTests(): void {
     expect(state.warningMessage).toContain("minimum");
     appendDiagnosticsSample(state, createSample(3, 31_000, 1));
     expect(state.warningMessage).toContain("insuffisante");
+  });
+
+  // --------------------------------------------------------------------------
+  // Verifie les ruptures apres echec et redemarrage ainsi que les marqueurs.
+  // --------------------------------------------------------------------------
+  it("annote interruptions, redemarrages, modes et OOM", () => {
+    const state = createMonitorState();
+    appendDiagnosticsSample(state, createSample(1_000, 32_000, 0));
+    state.consecutiveErrors = 1;
+    const interrupted = createSample(2_000, 32_000, 0);
+    interrupted.diagnostics.modeId = 2;
+    interrupted.diagnostics.modeChangeCount = 2;
+    appendDiagnosticsSample(state, interrupted);
+    const restarted = createSample(3_000, 32_000, 1);
+    restarted.diagnostics.uptimeSeconds = 0;
+    appendDiagnosticsSample(state, restarted);
+
+    const history = diagnosticsHistoryValues(state);
+    expect(history[1]).toMatchObject({ breakReason: "interruption", modeChanged: true });
+    expect(history[2]).toMatchObject({ breakReason: "restart", outOfMemoryOccurred: true });
+  });
+
+  // --------------------------------------------------------------------------
+  // Verifie que l'action graphique conserve le dernier KPI instantane.
+  // --------------------------------------------------------------------------
+  it("efface seulement l'historique graphique", () => {
+    const state = createMonitorState();
+    appendDiagnosticsSample(state, createSample(1, 32_000, 0));
+
+    clearDiagnosticsHistory(state);
+
+    expect(state.history.length).toBe(0);
+    expect(state.latestSample?.capturedAtMilliseconds).toBe(1);
   });
 }
 
@@ -50,7 +90,8 @@ function createMonitorState(): DiagnosticsMonitorState {
     enabled: false,
     intervalSeconds: 10,
     latestSample: null,
-    history: [],
+    history: createDiagnosticsHistory(),
+    chartWindow: "recent",
     lastError: null,
     consecutiveErrors: 0,
     estimatedParticleDataOperations: 0,

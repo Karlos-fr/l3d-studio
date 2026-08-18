@@ -314,38 +314,40 @@ dans l'application. Les valeurs brutes du firmware restent entières.
 
 ### Modèle de données
 
-- [ ] Définir un type d'échantillon horodaté commun aux transports LAN et Particle.
-- [ ] Conserver les valeurs firmware brutes et calculer séparément les unités affichées.
-- [ ] Utiliser un buffer circulaire avec une capacité fixe configurable.
-- [ ] Insérer une rupture de courbe après une interruption ou un redémarrage détecté.
-- [ ] Réinitialiser l'historique sur changement de cube ou sur action utilisateur explicite.
+- [x] Définir un type d'échantillon horodaté commun aux transports LAN et Particle.
+- [x] Conserver les valeurs firmware brutes et calculer séparément les unités affichées.
+- [x] Utiliser un buffer circulaire avec une capacité fixe configurable.
+- [x] Insérer une rupture de courbe après une interruption ou un redémarrage détecté.
+- [x] Réinitialiser l'historique sur changement de cube ou sur action utilisateur explicite.
 
 ### Rendu SVG
 
-- [ ] Créer un module de graphique SVG sans dépendance et sans logique réseau.
-- [ ] Ajouter une courbe `Mémoire` pour libre courante, minimum global et minimum du mode.
-- [ ] Ajouter une courbe `Temps de frame` pour dernière, moyenne et pire durée.
-- [ ] Ajouter une courbe `FPS` avec une échelle indépendante.
-- [ ] Marquer les changements de mode, resets et événements OOM sur la chronologie.
-- [ ] Ajouter axes, unités, légende, heure locale et indication des données manquantes.
-- [ ] Adapter la largeur au conteneur sans relancer les appels réseau.
-- [ ] Fournir une alternative textuelle résumant minimum, maximum et dernière valeur.
-- [ ] Limiter le nombre de points SVG rendus afin de conserver une interface fluide.
+- [x] Créer un module de graphique SVG sans dépendance et sans logique réseau.
+- [x] Ajouter une courbe `Mémoire` pour libre courante, minimum global et minimum du mode.
+- [x] Ajouter une courbe `Temps de frame` pour dernière, moyenne et pire durée.
+- [x] Ajouter une courbe `FPS` avec une échelle indépendante.
+- [x] Marquer les changements de mode, resets et événements OOM sur la chronologie.
+- [x] Ajouter axes, unités, légende, heure locale et indication des données manquantes.
+- [x] Adapter la largeur au conteneur sans relancer les appels réseau.
+- [x] Fournir une alternative textuelle résumant minimum, maximum et dernière valeur.
+- [x] Limiter le nombre de points SVG rendus afin de conserver une interface fluide.
 
 ### Interaction
 
-- [ ] Permettre de sélectionner une fenêtre temporelle courte ou complète.
-- [ ] Ajouter un bouton pour effacer uniquement l'historique graphique.
-- [ ] Afficher la valeur et l'heure d'un point au survol ou au focus clavier.
-- [ ] Ne pas rerendre les champs de formulaire sans rapport lors de l'ajout d'un échantillon.
+- [x] Permettre de sélectionner une fenêtre temporelle courte ou complète.
+- [x] Ajouter un bouton pour effacer uniquement l'historique graphique.
+- [x] Afficher la valeur et l'heure d'un point au survol ou au focus clavier.
+- [x] Ne pas rerendre les champs de formulaire sans rapport lors de l'ajout d'un échantillon.
 
 ### Tests
 
-- [ ] Tester les échelles avec valeurs constantes, extrêmes et manquantes.
-- [ ] Tester le passage de `micros()` à millisecondes et de FPS dixièmes à FPS.
-- [ ] Tester le buffer circulaire et les ruptures de séries.
-- [ ] Tester le rendu d'un historique vide, d'un point unique et de la capacité maximale.
-- [ ] Vérifier le rendu sur écran étroit et large.
+- [x] Tester les échelles avec valeurs constantes, extrêmes et manquantes.
+- [x] Tester le passage de `micros()` à millisecondes et de FPS dixièmes à FPS.
+- [x] Tester le buffer circulaire et les ruptures de séries.
+- [x] Tester le rendu d'un historique vide, d'un point unique et de la capacité maximale.
+- [ ] Vérifier visuellement le rendu sur écran étroit et large ; les repères
+  SVG 320 px et 720 px sont testés, mais aucun navigateur n'était disponible
+  dans la session pour la validation visuelle finale.
 
 ### Critère de sortie
 
