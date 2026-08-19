@@ -62,6 +62,7 @@ function runLanClientTests(): void {
       createTextResponse("v=1\nresult=2\n"),
       createTextResponse("v=1\nresult=3\n"),
       createTextResponse("v=1\nresult=4\n"),
+      createTextResponse("v=1\nresult=0\n"),
     ];
     const client = createLanClient({
       host: "photon.local",
@@ -78,6 +79,9 @@ function runLanClientTests(): void {
     await client.mode("M:Off,B:1,");
     await client.text("Bonjour");
     await client.cubePainter("I0,#000000,");
+    const streamFrame = new Uint8Array(512);
+    streamFrame[7] = 0xe0;
+    await client.streamFrame(streamFrame);
 
     expect(calls.map((call) => call.url)).toEqual([
       "http://photon.local:8080/api/v1/health",
@@ -90,10 +94,30 @@ function runLanClientTests(): void {
       "http://photon.local:8080/api/v1/mode",
       "http://photon.local:8080/api/v1/text",
       "http://photon.local:8080/api/v1/cube-painter",
+      "http://photon.local:8080/api/v1/stream/frame",
     ]);
     expect(calls[2]?.init?.method).toBe("POST");
     expect(calls[7]?.init?.body).toBe("M:Off,B:1,");
     expect(calls[7]?.init?.method).toBe("POST");
+    expect(calls[10]?.init?.headers).toEqual({ "Content-Type": "application/octet-stream" });
+    expect(new Uint8Array(calls[10]?.init?.body as ArrayBuffer)[7]).toBe(0xe0);
+  });
+
+  // --------------------------------------------------------------------------
+  // Verifie que le refus hors du mode Stream conserve le code de transport.
+  // --------------------------------------------------------------------------
+  it("classe une frame recue hors du mode Stream", async () => {
+    const client = createLanClient({
+      host: "192.0.2.25",
+      fetchFn: createMockFetch([], [createTextResponse("v=1\nerror=-208\n", 409)]),
+    });
+
+    await expect(client.streamFrame(new Uint8Array(512))).rejects.toMatchObject({
+      category: "command-refused",
+      status: 409,
+      result: -208,
+      requestDispatched: true,
+    });
   });
 
   // --------------------------------------------------------------------------

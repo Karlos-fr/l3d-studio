@@ -154,6 +154,7 @@ void setRandomMode(void) {
 		   (selectedModeID == POLICELIGHTS)     	||
 		   (selectedModeID == SHUFFLE) 	     	||
 		   (selectedModeID == TEXT)              ||
+           (selectedModeID == STREAM)            ||
            (selectedModeID == LISTENER));
 	
 	//sprintf(debug, "currentModeID: %d", currentModeID);
@@ -162,7 +163,7 @@ void setRandomMode(void) {
 }
 
 // ----------------------------------------------------------------------------
-// Repart du premier index et mélange les 67 entrées actives du registre.
+// Repart du premier index et melange les 68 entrees actives du registre.
 //
 // Effet de bord :
 // - remet l'index global à zéro et consomme un tirage par entrée.
@@ -215,6 +216,9 @@ void runMode() {
             break;
 		case GYROPHARE_FR:
 			runGyrophareFr();
+			break;
+		case STREAM:
+			streamTick();
 			break;
      	case CHASER:
 		    colorChaser(color1);

@@ -182,6 +182,23 @@ static bool localHttpIsTextContentType(const char* text, size_t length) {
 }
 
 // ----------------------------------------------------------------------------
+// Valide le media type binaire strict des frames de streaming.
+//
+// Parametres :
+// - text : debut de la valeur Content-Type depouillee.
+// - length : nombre exact de caracteres.
+//
+// Retour :
+// - vrai uniquement pour application/octet-stream sans parametre.
+// ----------------------------------------------------------------------------
+static bool localHttpIsBinaryContentType(const char* text, size_t length) {
+    return localHttpTextEqualsIgnoreCase(
+        text,
+        length,
+        "application/octet-stream");
+}
+
+// ----------------------------------------------------------------------------
 // Decode et valide la premiere ligne HTTP.
 //
 // Parametres :
@@ -279,6 +296,7 @@ static int localHttpParseHeader(LocalHttpRequestParser* parser) {
             return LOCAL_API_ERROR_BAD_REQUEST;
         parser->contentTypePresent = true;
         parser->contentTypeText = localHttpIsTextContentType(value, valueLength);
+        parser->contentTypeBinary = localHttpIsBinaryContentType(value, valueLength);
     }
     else if(localHttpTextEqualsIgnoreCase(
             parser->line,
@@ -313,7 +331,8 @@ static LocalHttpParseResult localHttpFinishHeaders(
         if(!parser->contentLengthPresent)
             return localHttpParserFail(parser, LOCAL_API_ERROR_BAD_REQUEST);
         if(parser->bodyLength > 0 &&
-           (!parser->contentTypePresent || !parser->contentTypeText))
+           (!parser->contentTypePresent ||
+            (!parser->contentTypeText && !parser->contentTypeBinary)))
             return localHttpParserFail(parser, LOCAL_API_ERROR_MEDIA_TYPE);
     }
     else if(parser->contentLengthPresent && parser->bodyLength > 0) {

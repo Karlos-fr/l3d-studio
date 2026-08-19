@@ -583,7 +583,7 @@ int setNewMode(int newModeIndex) {
     if((currentModeID == CUBE_PAINTER || currentModeID == LISTENER) && modeStruct[newModeIndex].modeId == IFTTTWEATHER) 
         return getModeIndexFromID(currentModeID);
     
-    if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY) 
+    if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY && currentModeID != STREAM)
         previousModeID = currentModeID;
 
     int oldModeID = currentModeID;
@@ -593,7 +593,7 @@ int setNewMode(int newModeIndex) {
 		diagnosticsModeChanged(currentModeID);
 			
     // Persiste uniquement les modes utilisateur durables.
-    if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY) 
+    if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY && currentModeID != STREAM)
         EEPROM.write(LASTMODE_START_ADDR, currentModeID);
     
     boundedTextCopy(currentModeName, sizeof(currentModeName), modeStruct[newModeIndex].modeName);

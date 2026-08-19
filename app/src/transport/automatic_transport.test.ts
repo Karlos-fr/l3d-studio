@@ -142,6 +142,7 @@ function createLanClientDouble(): LanClient {
     mode: vi.fn(),
     text: vi.fn(),
     cubePainter: vi.fn(),
+    streamFrame: vi.fn(),
   };
 }
 

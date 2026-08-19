@@ -15,6 +15,19 @@ import type {
 } from "../sparkpixels/types";
 import type { AppPreferences } from "./preferences";
 import type { TransportKind, TransportPreference } from "../transport/types";
+import type { StreamingFps } from "../streaming/engine";
+
+// Etat visible de la session de streaming web.
+export interface StreamingUiState {
+  active: boolean;
+  targetFps: StreamingFps;
+  movementStepsPerSecond: number;
+  brightnessPercent: number;
+  sentFrames: number;
+  droppedFrames: number;
+  measuredFps: number;
+  statusMessage: string;
+}
 
 export interface AppState {
   applicationName: string;
@@ -25,6 +38,7 @@ export interface AppState {
   lastTransportUsed: TransportKind | null;
   lanTestStatus: string | null;
   diagnostics: DiagnosticsMonitorState;
+  streaming: StreamingUiState;
   session: ParticleStoredSession | null;
   devices: ParticleDeviceSummary[];
   selectedDeviceId: string | null;
@@ -117,6 +131,16 @@ export function createInitialState(
       consecutiveErrors: 0,
       estimatedParticleDataOperations: 0,
       warningMessage: null,
+    },
+    streaming: {
+      active: false,
+      targetFps: 10,
+      movementStepsPerSecond: 10,
+      brightnessPercent: 1,
+      sentFrames: 0,
+      droppedFrames: 0,
+      measuredFps: 0,
+      statusMessage: "Streaming arrêté.",
     },
     session,
     devices: [],

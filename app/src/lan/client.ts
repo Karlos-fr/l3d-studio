@@ -169,7 +169,95 @@ export function createLanClient(config: LanClientConfig): LanClient {
     // Transmet une commande CubePainter.
     cubePainter: (command: string) =>
       postCommand(fetchFn, baseUrl, "/cube-painter", command, timeoutMilliseconds),
+    // Transmet une frame RGB332 binaire complete.
+    streamFrame: (frame: Uint8Array, signal?: AbortSignal) =>
+      postStreamFrame(fetchFn, baseUrl, frame, timeoutMilliseconds, signal),
   };
+}
+
+// ----------------------------------------------------------------------------
+// Envoie une frame binaire et conserve les erreurs de protocole du firmware.
+//
+// Parametres :
+// - fetchFn : implementation fetch utilisee.
+// - baseUrl : racine locale versionnee.
+// - frame : corps RGB332 de 512 octets.
+// - timeoutMilliseconds : duree maximale de l'appel.
+// - signal : annulation optionnelle demandee par le moteur de streaming.
+//
+// Retour :
+// - enveloppe commune du firmware apres application complete.
+// ----------------------------------------------------------------------------
+async function postStreamFrame(
+  fetchFn: typeof fetch,
+  baseUrl: string,
+  frame: Uint8Array,
+  timeoutMilliseconds: number,
+  signal?: AbortSignal,
+): Promise<LanCommandResponse> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMilliseconds);
+  const abortFromCaller = (): void => controller.abort();
+  signal?.addEventListener("abort", abortFromCaller, { once: true });
+
+  try {
+    const frameBuffer = frame.slice().buffer as ArrayBuffer;
+    const response = await fetchFn(`${baseUrl}/stream/frame`, {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+      body: frameBuffer,
+      signal: controller.signal,
+    });
+    const responseText = await response.text();
+    if (!response.ok) {
+      const errorCode = readLanTransportError(responseText);
+      throw new LanClientError(
+        errorCode === null ? `Erreur LAN HTTP ${response.status}.` : `Frame LAN refusee (${errorCode}).`,
+        errorCode === null ? "protocol" : "command-refused",
+        response.status,
+        errorCode,
+        true,
+      );
+    }
+    let parsedValue: LanCommandResponse;
+    try {
+      parsedValue = parseLanCommandResponse(responseText);
+    } catch (error) {
+      throw new LanClientError(
+        error instanceof Error ? error.message : "Reponse LAN invalide.",
+        "protocol",
+        response.status,
+        null,
+        true,
+      );
+    }
+    return parsedValue;
+  } catch (error) {
+    if (error instanceof LanClientError) throw error;
+    if (controller.signal.aborted) {
+      throw new LanClientError("Envoi de frame annule ou expire.", "timeout", null, null, true);
+    }
+    throw new LanClientError("Photon inaccessible pendant le streaming.", "connection", null, null, true);
+  } finally {
+    clearTimeout(timeoutId);
+    signal?.removeEventListener("abort", abortFromCaller);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Extrait le code compact d'une erreur de transport LAN.
+//
+// Parametres :
+// - responseText : corps texte retourne par le serveur.
+//
+// Retour :
+// - code entier de la ligne error ou null pour un corps different.
+// ----------------------------------------------------------------------------
+function readLanTransportError(responseText: string): number | null {
+  const match = /(?:^|\n)error=(-?\d+)(?:\n|$)/u.exec(responseText);
+  if (match?.[1] === undefined) return null;
+  const value = Number.parseInt(match[1], 10);
+  return Number.isSafeInteger(value) ? value : null;
 }
 
 // ----------------------------------------------------------------------------

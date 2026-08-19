@@ -105,4 +105,6 @@ export interface LanClient {
   text(text: string): Promise<LanCommandResponse>;
   // Applique une commande CubePainter.
   cubePainter(command: string): Promise<LanCommandResponse>;
+  // Envoie une frame RGB332 sans nouvelle tentative automatique.
+  streamFrame(frame: Uint8Array, signal?: AbortSignal): Promise<LanCommandResponse>;
 }

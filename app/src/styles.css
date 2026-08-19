@@ -463,3 +463,69 @@ select:focus-visible {
     font-size: 0.8rem;
   }
 }
+.streaming-controls {
+  align-items: end;
+}
+
+.streaming-controls input[type="range"] {
+  width: 100%;
+}
+
+.streaming-slider-value {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--muted-text, #9fb3c8);
+  font-size: 0.82rem;
+}
+
+.streaming-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 1rem 0;
+  color: var(--muted-text, #9fb3c8);
+}
+
+.streaming-preview-tabs {
+  display: inline-flex;
+  gap: 0.25rem;
+  margin-bottom: 0.55rem;
+  padding: 0.2rem;
+  border-radius: 0.55rem;
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.streaming-preview-tab {
+  padding: 0.4rem 0.75rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--muted-text, #9fb3c8);
+  cursor: pointer;
+}
+
+.streaming-preview-tab.is-active {
+  background: rgba(59, 130, 246, 0.24);
+  color: #e2e8f0;
+}
+
+.streaming-preview {
+  display: block;
+  width: 100%;
+  height: 260px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 0.6rem;
+  background: #08111f;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.streaming-preview.is-rotating {
+  cursor: grabbing;
+}
+
+.streaming-preview.is-layers-view {
+  cursor: default;
+  touch-action: auto;
+}

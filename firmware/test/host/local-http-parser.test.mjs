@@ -108,7 +108,7 @@ function parseRequestModel(chunks) {
     return { state: "error", code: -200 };
   }
   if (match[1] === "POST" && contentLength > 0 &&
-      !/^text\/plain(?:\s*;\s*charset=utf-8)?$/iu.test(headers.get("content-type") ?? "")) {
+      !/^(?:text\/plain(?:\s*;\s*charset=utf-8)?|application\/octet-stream)$/iu.test(headers.get("content-type") ?? "")) {
     return { state: "error", code: -203 };
   }
   if (body.length < contentLength) return { state: "progress" };

@@ -113,7 +113,7 @@ test("Les imports CubeTube utilisent quatre nouveaux IDs stables", () => {
   assert.match(identifiers, /#define TRANQUILITY\s+74\b/u);
 
   const names = extractActiveModeNames();
-  assert.equal(names.length, 67);
+  assert.equal(names.length, 68);
   for (const modeName of importedModeNames) {
     assert.ok(names.includes(modeName), `${modeName} doit être publié`);
   }

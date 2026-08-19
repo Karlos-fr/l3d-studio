@@ -50,6 +50,7 @@ struct LocalHttpRequestParser {
     bool contentLengthPresent;
     bool contentTypePresent;
     bool contentTypeText;
+    bool contentTypeBinary;
     bool privateNetworkRequested;
     bool waitingForLineFeed;
 };

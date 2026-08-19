@@ -77,6 +77,7 @@
 #define FFT_JOY_LEGACY               73 //credit: CubeTube Library
 #define TRANQUILITY                  74 //credit: CubeTube Library
 #define GYROPHARE_FR                 75 //credit: L3D Studio
+#define STREAM                       76 //credit: L3D Studio
 
 /* ======================= ADD NEW AUX SWITCH ID HERE. ======================= */
 // AUX SWITCH ID Defines

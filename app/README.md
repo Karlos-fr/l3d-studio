@@ -118,11 +118,44 @@ de cinq minutes ou l’historique complet et peuvent être effacés sans supprim
 le dernier KPI instantané. Le format des mesures est documenté dans
 [../firmware/docs/DIAGNOSTICS.md](../firmware/docs/DIAGNOSTICS.md).
 
+## Streaming web
+
+La section **Streaming web** calcule une sphere voxelisee mobile dans le navigateur et
+envoie des frames RGB332 de 512 octets au serveur LAN configuré. Elle propose
+une cadence entière de 10 à 30 FPS par pas de 1, affiche les frames envoyées et abandonnées, et projette les
+512 voxels dans un Canvas leger. Deux onglets proposent la projection 3D,
+rotative par glisser-deposer a la souris, et l'ancienne vue des huit couches z,
+sans bibliotheque 3D externe.
+
+La sphere conserve un volume fixe de 33 voxels et se translate d'une position
+entiere a la suivante : elle ne se deforme pas entre deux centres. Sa direction
+varie aleatoirement aux rebonds, tandis qu'un motif multicolore tourne sur son
+volume et change progressivement de teinte. La vitesse
+de translation et la luminosite physique sont configurables avant le demarrage ;
+les valeurs initiales sont 10 deplacements par seconde et 1 %. Les sliders de
+cadence, de vitesse et de luminosite restent actifs pendant la lecture : la
+cadence et la vitesse changent localement sans reinitialiser la sphere, et la
+luminosite est envoyee apres la frame LAN en cours.
+Tous les sliders conservent leur noeud DOM pendant le glisser ; leur valeur est
+actualisee en direct et le rendu complet intervient seulement au relachement.
+
+Le bouton bascule **Démarrer / Arrêter** active ou interrompt le mode firmware
+`Stream`, avec une luminosité initiale de 1 %. Un seul appel HTTP peut être actif ;
+une frame devenue ancienne est abandonnée au lieu d'être mise en file. **Arrêter** annule immédiatement la
+cadence et demande le retour a `Off`. Le firmware possede aussi un timeout de
+trois secondes si la page ou le reseau disparait.
+
+Cette fonction exige l'adresse LAN du Photon et une application servie
+localement en HTTP, car le Photon ne propose pas HTTPS. Le format et les mesures
+sont documentes dans
+[../firmware/docs/WEB_STREAMING.md](../firmware/docs/WEB_STREAMING.md).
+
 ## Architecture du code
 
 ```text
 app/src/
   diagnostics/  collecte, historique circulaire et graphiques SVG
+  streaming/    framebuffer, primitives, animation pilote et cadence RGB332
   lan/          client HTTP, parseurs et types du serveur local
   particle/     client Cloud, session et types Particle
   sparkpixels/  protocole et métadonnées historiques

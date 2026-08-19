@@ -398,6 +398,7 @@ Timer demoTimer(2*60*1000, advanceDemo);
 #include "diagnostics/runtime_diagnostics.h"
 #include "network/local_http_parser.h"
 #include "network/local_api_server.h"
+#include "network/stream_frames.h"
 
 // ----------------------------------------------------------------------------
 // Initialise les endpoints Particle, le hardware et l'etat persistant.
@@ -591,6 +592,8 @@ void loop() {
 #include "animations/classic_color_effects.cpp"
 
 #include "rendering/primitives.cpp"
+
+#include "network/stream_frames.cpp"
 
 #include "network/udp_listener.cpp"
 

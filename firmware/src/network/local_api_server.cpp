@@ -112,6 +112,7 @@ static const char* localApiStatusText(int status) {
         case 408: return "Request Timeout";
         case 413: return "Content Too Large";
         case 415: return "Unsupported Media Type";
+        case 409: return "Conflict";
         case 422: return "Unprocessable Content";
         case 503: return "Service Unavailable";
         default: return "Internal Server Error";
@@ -136,6 +137,7 @@ static int localApiStatusFromError(int errorCode) {
         case LOCAL_API_ERROR_NOT_FOUND: return 404;
         case LOCAL_API_ERROR_TIMEOUT: return 408;
         case LOCAL_API_ERROR_BUSY: return 503;
+        case LOCAL_API_ERROR_STATE: return 409;
         default: return 500;
     }
 }
@@ -159,7 +161,8 @@ static bool localApiIsKnownPath(const char* path) {
         strcmp(path, "/api/v1/command") == 0 ||
         strcmp(path, "/api/v1/mode") == 0 ||
         strcmp(path, "/api/v1/text") == 0 ||
-        strcmp(path, "/api/v1/cube-painter") == 0;
+        strcmp(path, "/api/v1/cube-painter") == 0 ||
+        strcmp(path, "/api/v1/stream/frame") == 0;
 }
 
 // ----------------------------------------------------------------------------
@@ -516,6 +519,10 @@ static void localApiRouteAuxSwitches(void) {
 // ----------------------------------------------------------------------------
 static bool localApiRouteCommand(
         int (*handler)(const char*, size_t)) {
+    if(localApiParser.bodyLength > 0 && !localApiParser.contentTypeText) {
+        localApiPrepareError(LOCAL_API_ERROR_MEDIA_TYPE);
+        return true;
+    }
     if(localApiCommandActive) {
         localApiPrepareError(LOCAL_API_ERROR_BUSY);
         return true;
@@ -538,6 +545,52 @@ static bool localApiRouteCommand(
        static_cast<size_t>(bodyLength) >= sizeof(localApiParser.body) ||
        !localApiPrepareResponse(
             commandResult < 0 ? 422 : 200,
+            localApiParser.body,
+            static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Decode une frame binaire complete depuis le buffer HTTP deja alloue.
+//
+// Retour :
+// - vrai apres preparation de la reponse commune.
+//
+// Effet de bord :
+// - applique la frame uniquement si son contrat et le mode Stream sont valides.
+// ----------------------------------------------------------------------------
+static bool localApiRouteStreamFrame(void) {
+    if(!localApiParser.contentTypeBinary) {
+        localApiPrepareError(LOCAL_API_ERROR_MEDIA_TYPE);
+        return true;
+    }
+    if(localApiParser.bodyLength != STREAM_FRAME_BYTES) {
+        localApiPrepareError(LOCAL_API_ERROR_BAD_REQUEST);
+        return true;
+    }
+
+    // L'affichage appelle animationProcessServices(), donc revient dans ce
+    // serveur. Le verrou interdit de retraiter recursivement la meme requete.
+    localApiCommandActive = true;
+    const int streamResult = streamApplyFrame(
+        reinterpret_cast<const uint8_t*>(localApiParser.body),
+        localApiParser.bodyLength);
+    localApiCommandActive = false;
+    if(streamResult < 0) {
+        localApiPrepareError(streamResult);
+        return true;
+    }
+
+    const int bodyLength = snprintf(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        "v=1\nresult=0\n");
+    if(bodyLength < 0 ||
+       static_cast<size_t>(bodyLength) >= sizeof(localApiParser.body) ||
+       !localApiPrepareResponse(
+            200,
             localApiParser.body,
             static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
             localApiParser.privateNetworkRequested))
@@ -582,6 +635,12 @@ static bool localApiRouteRequest(void) {
                 0,
                 localApiParser.privateNetworkRequested))
             localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+        return true;
+    }
+
+    if(localApiParser.contentTypeBinary &&
+       strcmp(localApiParser.path, "/api/v1/stream/frame") != 0) {
+        localApiPrepareError(LOCAL_API_ERROR_MEDIA_TYPE);
         return true;
     }
 
@@ -635,6 +694,14 @@ static bool localApiRouteRequest(void) {
         else
             localApiRouteAuxSwitches();
         return true;
+    }
+
+    if(strcmp(localApiParser.path, "/api/v1/stream/frame") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_POST) {
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+            return true;
+        }
+        return localApiRouteStreamFrame();
     }
 
     if(localApiIsCommandPath(localApiParser.path)) {

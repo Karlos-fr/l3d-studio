@@ -16,13 +16,14 @@ L’installation et l’utilisation de l’IHM sont décrites dans
 - IDs, noms de modes et commandes Spark Pixels historiques conservés ;
 - Particle Cloud toujours disponible ;
 - API HTTP locale v1 active par défaut sur le port `8080` ;
+- streaming web RGB332 sur `/api/v1/stream/frame` via le mode `Stream` 76 ;
 - aucune allocation dynamique dans le code applicatif actif ;
 - animations servies par un ordonnanceur coopératif qui maintient Particle et
   le serveur LAN pendant les attentes historiques.
 
-La dernière mesure du serveur complet indique 117 608 octets de Flash, 15 196
-octets de RAM statique et 13 464 octets de marge Flash. Le détail et les
-comparaisons se trouvent dans [docs/BASELINE.md](docs/BASELINE.md).
+La compilation avec streaming indique 118 248 octets de Flash, 15 204 octets
+de RAM statique et 12 824 octets de marge Flash. Le detail de cette evolution
+se trouve dans [docs/WEB_STREAMING.md](docs/WEB_STREAMING.md).
 
 ## Compilation et tests
 
@@ -82,6 +83,7 @@ POST /command
 POST /mode
 POST /text
 POST /cube-painter
+POST /stream/frame
 ```
 
 Le serveur accepte un seul client à la fois, utilise uniquement des buffers
@@ -167,6 +169,8 @@ préserver la compatibilité avec la compilation Particle de cette génération.
 - [docs/COMMAND_TRANSPORT.md](docs/COMMAND_TRANSPORT.md) : séparation entre
   commandes métier, Particle et HTTP ;
 - [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md) : instrumentation LAN et Particle.
+- [docs/WEB_STREAMING.md](docs/WEB_STREAMING.md) : format RGB332, baseline et
+  architecture du mode Stream.
 
 ### Animations et rendu
 

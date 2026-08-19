@@ -37,6 +37,8 @@ void animationLifecycleStart(int modeId) {
 // - ferme TCP ou UDP puis invalide immediatement la zone mutualisee.
 // ----------------------------------------------------------------------------
 void animationExit(int modeId) {
+    if(modeId == STREAM)
+        streamExit();
     if(modeId == CHEERLIGHTS) {
         client.stop();
         connected = FALSE;
@@ -63,6 +65,10 @@ void animationExit(int modeId) {
 // ----------------------------------------------------------------------------
 void animationEnter(int modeId) {
     activeAnimationModeId = modeId;
+    if(modeId == STREAM) {
+        streamEnter();
+        return;
+    }
     resetVariables(modeId);
 }
 

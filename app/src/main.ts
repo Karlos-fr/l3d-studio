@@ -11,15 +11,26 @@ import { createDiagnosticsMonitor } from "./diagnostics/monitor";
 import { readDiagnosticsSample } from "./diagnostics/reader";
 import type { DiagnosticsSample } from "./diagnostics/types";
 import { createParticleClient } from "./particle/client";
+import { createLanClient, LanClientError, normalizeLanHost, normalizeLanPort } from "./lan/client";
 import { loadParticleSession } from "./particle/session";
 import { attachAppEvents, hydrateAuthenticatedSession } from "./ui/events";
 import { loadAppPreferences } from "./ui/preferences";
 import { renderApp } from "./ui/render";
 import { updateDiagnosticsView } from "./ui/diagnostics_render";
 import { createInitialState } from "./ui/state";
+import { MovingSphereAnimation } from "./streaming/animations/moving_sphere";
+import { createStreamingEngine, type StreamingFps } from "./streaming/engine";
+import type { LanClient } from "./lan/types";
+import { updateStreamingView } from "./ui/streaming_render";
 
 // Identifiant du conteneur DOM racine fourni par index.html.
 const APP_ROOT_ID = "app";
+
+// Identifiant firmware stable du mode Stream.
+const STREAM_MODE_ID = 76;
+
+// Attente apres le dernier mouvement du slider avant la commande Photon.
+const STREAMING_BRIGHTNESS_DEBOUNCE_MS = 150;
 
 // ----------------------------------------------------------------------------
 // Initialise L3D Studio dans le conteneur DOM principal.
@@ -46,6 +57,170 @@ function bootstrapApplication(): void {
     token: session?.accessToken,
   });
   const state = createInitialState(session, preferences);
+
+  // Client LAN propre a la session de streaming courante.
+  let streamingLanClient: LanClient | null = null;
+
+  // Derniere luminosite a appliquer apres la frame HTTP actuellement en cours.
+  let pendingStreamingBrightness: number | null = null;
+
+  // Temporisation qui regroupe les nombreux evenements produits par le slider.
+  let streamingBrightnessTimer: number | null = null;
+
+  const movingSphereAnimation = new MovingSphereAnimation();
+  const streamingEngine = createStreamingEngine({
+    animation: movingSphereAnimation,
+    sendFrame: async (frame, signal) => {
+      if (streamingLanClient === null) {
+        throw new Error("Aucune destination LAN n'est configurée pour le streaming.");
+      }
+      await streamingLanClient.streamFrame(frame, signal);
+      if (pendingStreamingBrightness !== null) {
+        const brightnessPercent = pendingStreamingBrightness;
+        pendingStreamingBrightness = null;
+        try {
+          await streamingLanClient.mode(`B:${brightnessPercent},`);
+        } catch {
+          // Une prochaine manipulation du slider pourra retenter sans couper
+          // le streaming ni transformer cette commande annexe en erreur fatale.
+        }
+      }
+    },
+    onFrame: (framebuffer) => updateStreamingView(mountedRootElement, state, framebuffer),
+    onStats: (stats) => {
+      Object.assign(state.streaming, stats);
+      updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
+    },
+    onError: handleStreamingError,
+  });
+
+  // ----------------------------------------------------------------------------
+  // Convertit un echec de streaming en instruction directement exploitable.
+  //
+  // Parametres :
+  // - error : erreur reseau ou de protocole recue par le moteur.
+  //
+  // Effet de bord :
+  // - arrete la session et actualise uniquement son panneau.
+  // ----------------------------------------------------------------------------
+  function handleStreamingError(error: unknown): void {
+    state.streaming.active = false;
+    state.streaming.statusMessage = error instanceof LanClientError
+      ? "Streaming interrompu : vérifie l'adresse LAN, le port 8080 et le firmware du Photon."
+      : error instanceof Error
+        ? `Streaming interrompu : ${error.message}`
+        : "Streaming interrompu par une erreur inconnue.";
+    state.statusMessage = state.streaming.statusMessage;
+    updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
+  }
+
+  // ----------------------------------------------------------------------------
+  // Applique les reglages modifiables pendant une session active.
+  //
+  // Effet de bord :
+  // - modifie immediatement la vitesse locale ;
+  // - remplace la luminosite en attente, envoyee apres la prochaine frame.
+  // ----------------------------------------------------------------------------
+  function updateStreamingSettings(): void {
+    movingSphereAnimation.setStepsPerSecond(state.streaming.movementStepsPerSecond);
+    if (state.streaming.active && streamingLanClient !== null) {
+      if (streamingBrightnessTimer !== null) {
+        window.clearTimeout(streamingBrightnessTimer);
+      }
+      streamingBrightnessTimer = window.setTimeout(() => {
+        streamingBrightnessTimer = null;
+        if (state.streaming.active && streamingLanClient !== null) {
+          pendingStreamingBrightness = state.streaming.brightnessPercent;
+        }
+      }, STREAMING_BRIGHTNESS_DEBOUNCE_MS);
+    }
+    updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
+  }
+
+  // ----------------------------------------------------------------------------
+  // Applique une nouvelle cadence sans interrompre la session courante.
+  //
+  // Effet de bord :
+  // - modifie l'intervalle du moteur actif sans reinitialiser la sphere.
+  // ----------------------------------------------------------------------------
+  function updateStreamingCadence(): void {
+    if (state.streaming.active) {
+      streamingEngine.setTargetFps(state.streaming.targetFps);
+      return;
+    }
+    updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
+  }
+
+  // ----------------------------------------------------------------------------
+  // Selectionne le mode Stream puis lance la cadence du navigateur.
+  //
+  // Parametres :
+  // - targetFps : cadence bornee choisie dans l'interface.
+  //
+  // Effet de bord :
+  // - appelle le Photon sur le LAN et demarre le moteur apres confirmation.
+  // ----------------------------------------------------------------------------
+  async function startStreaming(targetFps: StreamingFps): Promise<void> {
+    try {
+      state.isBusy = true;
+      const host = normalizeLanHost(state.lanHost);
+      const port = normalizeLanPort(state.lanPort);
+      streamingLanClient = createLanClient({ host, port });
+      state.streaming.statusMessage = "Activation du mode Stream...";
+      rerender();
+      movingSphereAnimation.setStepsPerSecond(state.streaming.movementStepsPerSecond);
+      pendingStreamingBrightness = null;
+      if (streamingBrightnessTimer !== null) {
+        window.clearTimeout(streamingBrightnessTimer);
+        streamingBrightnessTimer = null;
+      }
+      await streamingLanClient.mode(
+        `M:Stream,S:0,B:${state.streaming.brightnessPercent},`,
+      );
+      const streamState = await streamingLanClient.state();
+      if (streamState.modeId !== STREAM_MODE_ID) {
+        throw new Error("Le Photon n'a pas confirmé l'activation du mode Stream.");
+      }
+      state.lastTransportUsed = "lan";
+      state.currentModeName = "Stream";
+      state.streaming.statusMessage = "Sphère mobile en cours.";
+      state.isBusy = false;
+      streamingEngine.start(targetFps);
+      rerender();
+    } catch (error) {
+      state.isBusy = false;
+      streamingLanClient = null;
+      handleStreamingError(error);
+      rerender();
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Arrete les frames et demande au cube de revenir au mode Off.
+  //
+  // Parametres :
+  // - returnToOff : demande Off sauf lorsqu'une animation native va suivre.
+  //
+  // Effet de bord :
+  // - annule requestAnimationFrame et le POST actif avant toute commande finale.
+  // ----------------------------------------------------------------------------
+  function stopStreaming(returnToOff = true): void {
+    const wasActive = state.streaming.active;
+    streamingEngine.stop();
+    state.streaming.statusMessage = "Streaming arrêté.";
+    if (returnToOff && wasActive && streamingLanClient !== null) {
+      void streamingLanClient.mode("M:Off,S:0,B:1,").catch(() => {
+        // Le timeout firmware ramene egalement le cube a Off si cette commande echoue.
+      });
+    }
+    streamingLanClient = null;
+    pendingStreamingBrightness = null;
+    if (streamingBrightnessTimer !== null) {
+      window.clearTimeout(streamingBrightnessTimer);
+      streamingBrightnessTimer = null;
+    }
+    updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
+  }
 
   // ----------------------------------------------------------------------------
   // Integre un nouvel echantillon puis actualise uniquement le panneau concerne.
@@ -124,7 +299,12 @@ function bootstrapApplication(): void {
       diagnosticsMonitor,
       storage: window.localStorage,
       rerender,
+      startStreaming,
+      updateStreamingCadence,
+      updateStreamingSettings,
+      stopStreaming,
     });
+    updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
   }
 
   // ----------------------------------------------------------------------------
@@ -167,6 +347,10 @@ function bootstrapApplication(): void {
     diagnosticsMonitor,
     storage: window.localStorage,
     rerender,
+    startStreaming,
+    updateStreamingCadence,
+    updateStreamingSettings,
+    stopStreaming,
   });
 }
 

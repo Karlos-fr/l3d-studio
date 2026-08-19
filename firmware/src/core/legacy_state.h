@@ -53,6 +53,7 @@ static const modeParams modeStruct[] =
 //		{  LIFE,                        "GameOfLife",           0,          0,      FALSE   },  //credit: Ben? grajohnt? modded by socaljj
 		{  GOLDRAIN,                    "GoldRain",             0,          1,      FALSE   },  //credit: Werner Moecke (based on Alex Hornstein's "Purple Rain")
 		{  GYROPHARE_FR,                "GyrophareFR",          0,          3,      FALSE   },  //credit: L3D Studio
+		{  STREAM,                      "Stream",               0,          0,      FALSE   },  //credit: L3D Studio
 //		{  HYPER,                       "HyperBall",            0,          0,      FALSE   },  //credit: fool, mod by socaljj
         {  IFTTTWEATHER,                "IFTTT",                0,          0,      FALSE   },  //credit: Kevin Carlborg, Werner Moecke (code improvements)
 //        {  LIGHTNING,                   "Lightning",            0,          0,      FALSE   },  //credit: Bill Marrs
@@ -166,14 +167,14 @@ bool isFirstLap;
 bool shuffleMode;
 volatile bool stopDemo;		//Set to TRUE when the Interrupt Timer demoTimer gets triggered
 
-// Le registre actif publie 62 modes historiques et cinq évolutions explicites.
-static_assert(sizeof modeStruct / sizeof modeStruct[0] == 67,
-    "Le registre actif doit contenir exactement 67 modes");
+// Le registre actif publie 62 modes historiques et six evolutions explicites.
+static_assert(sizeof modeStruct / sizeof modeStruct[0] == 68,
+    "Le registre actif doit contenir exactement 68 modes");
 
-// Position du prochain mode dans l'ordre mélangé, comprise entre zéro et 67.
+// Position du prochain mode dans l'ordre melange, comprise entre zero et 67.
 uint8_t shuffleIdx;
 
-// Index compacts des 67 entrées actives du registre de modes.
+// Index compacts des 68 entrees actives du registre de modes.
 uint8_t modeShuffleOrder[sizeof modeStruct / sizeof modeStruct[0]];
 
 static_assert(sizeof modeShuffleOrder < 256,

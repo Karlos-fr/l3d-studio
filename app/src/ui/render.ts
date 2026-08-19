@@ -162,6 +162,7 @@ function renderWorkspace(state: AppState): string {
   return `
     ${renderFirmwareStatePanel(state)}
     ${renderModePanel(state)}
+    ${renderStreamingPanel(state)}
     ${renderAdvancedPanel(state)}
     ${renderDiagnosticsPanel(state)}
     ${renderDeviceInfoPanel(state)}
@@ -227,6 +228,64 @@ function renderDeviceSelect(state: AppState): string {
         ${options}
       </select>
     </label>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend le controle dedie au streaming d'animations calculees dans le navigateur.
+//
+// Parametres :
+// - state : etat de cadence et compteurs de la session courante.
+//
+// Retour :
+// - panneau HTML autonome reutilisant l'adresse LAN generale.
+// ----------------------------------------------------------------------------
+function renderStreamingPanel(state: AppState): string {
+  const lanConfigured = state.lanHost.trim().length > 0 && Number.isInteger(state.lanPort);
+  return `
+    <section class="panel streaming-panel" data-streaming-panel>
+      <div class="panel-heading">
+        <h2>Streaming web</h2>
+        <span class="status-pill" data-streaming-status>${escapeHtml(state.streaming.statusMessage)}</span>
+      </div>
+      <p>
+        L'animation est calculée par cette page puis envoyée directement au Photon sur le LAN.
+        Garde l'application locale ouverte pendant la lecture.
+      </p>
+      <div class="form-grid streaming-controls">
+        <label>
+          Cadence cible
+          <input data-field="streaming-fps" type="range" min="10" max="30" step="1" value="${state.streaming.targetFps}">
+          <span class="streaming-slider-value" data-range-output data-range-suffix=" FPS" data-streaming-fps-value>${state.streaming.targetFps} FPS</span>
+        </label>
+        <label>
+          Vitesse
+          <input data-field="streaming-speed" type="range" min="1" max="30" step="1" value="${state.streaming.movementStepsPerSecond}">
+          <span class="streaming-slider-value" data-range-output data-range-suffix=" déplacements/s" data-streaming-speed-value>${state.streaming.movementStepsPerSecond} déplacements/s</span>
+        </label>
+        <label>
+          Luminosité
+          <input data-field="streaming-brightness" type="range" min="1" max="100" step="1" value="${state.streaming.brightnessPercent}">
+          <span class="streaming-slider-value" data-range-output data-range-suffix=" %" data-streaming-brightness-value>${state.streaming.brightnessPercent} %</span>
+        </label>
+        <button class="${state.streaming.active ? "secondary-action" : "primary-action"}" data-action="${state.streaming.active ? "stop-streaming" : "start-streaming"}" data-streaming-toggle type="button" ${state.isBusy || (!state.streaming.active && !lanConfigured) ? "disabled" : ""}>
+          ${state.streaming.active ? "Arrêter" : "Démarrer"}
+        </button>
+      </div>
+      <div class="streaming-stats" aria-live="polite">
+        <span>Cible : ${state.streaming.targetFps} FPS</span>
+        <span>Mesurée : <strong data-streaming-measured>${state.streaming.measuredFps.toFixed(1)}</strong> FPS</span>
+        <span>Envoyées : <strong data-streaming-sent>${state.streaming.sentFrames}</strong></span>
+        <span title="Frames calculées mais non envoyées car un POST était déjà actif">Ignorées : <strong data-streaming-dropped>${state.streaming.droppedFrames}</strong></span>
+      </div>
+      <p class="field-help">Une frame ignorée n'a pas été perdue sur le réseau : elle n'est volontairement pas envoyée si la précédente est encore en cours.</p>
+      <div class="streaming-preview-tabs" role="tablist" aria-label="Représentation du cube">
+        <button class="streaming-preview-tab is-active" data-streaming-preview-mode="3d" type="button" role="tab" aria-selected="true">Vue 3D</button>
+        <button class="streaming-preview-tab" data-streaming-preview-mode="layers" type="button" role="tab" aria-selected="false" tabindex="-1">Couches z</button>
+      </div>
+      <canvas class="streaming-preview" data-streaming-preview role="tabpanel" aria-label="Aperçu 3D rotatif du cube"></canvas>
+      <p class="field-help">Destination : ${escapeHtml(state.lanHost || "adresse LAN non configurée")}:${state.lanPort}</p>
+    </section>
   `;
 }
 
@@ -325,12 +384,12 @@ function renderModeControls(state: AppState): string {
       <label>
         Luminosite
         <input data-field="brightness" max="100" min="0" type="range" value="${state.currentBrightnessPercent}" />
-        <span>${state.currentBrightnessPercent}%</span>
+        <span data-range-output data-range-suffix="%">${state.currentBrightnessPercent}%</span>
       </label>
       <label>
         Vitesse
         <input data-field="speed" max="8" min="0" type="range" value="${state.currentSpeedIndex}" />
-        <span>${state.currentSpeedIndex}</span>
+        <span data-range-output>${state.currentSpeedIndex}</span>
       </label>
       <button class="primary-action" type="button" data-action="send-set-mode" ${canSendSetModeCommand(state) ? "" : "disabled"}>
         Envoyer

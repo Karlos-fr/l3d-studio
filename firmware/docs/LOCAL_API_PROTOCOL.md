@@ -10,7 +10,7 @@ Il sert de référence aux tests du firmware et de L3D Studio.
 - Transport : TCP local, sous-ensemble HTTP/1.0 et HTTP/1.1.
 - Port par défaut : `8080`.
 - Préfixe des routes : `/api/v1`.
-- Type des corps : `text/plain; charset=utf-8`.
+- Type des corps : `text/plain; charset=utf-8`, sauf la frame RGB332 binaire.
 - Connexion : une requête, une réponse, puis fermeture.
 - Sécurité : aucune authentification ni aucun chiffrement dans cette version.
 
@@ -55,7 +55,7 @@ Règles de validation :
 - un `POST` exige un `Content-Length` décimal, même lorsque sa valeur est zéro ;
 - un `GET` ou `OPTIONS` ne doit pas contenir de corps ;
 - un corps non vide exige `Content-Type: text/plain`, avec `charset=utf-8`
-  facultatif ;
+  facultatif, ou `application/octet-stream` pour la seule route de frame ;
 - les chemins sont comparés exactement et ne sont pas décodés comme des URL ;
 - tout dépassement est refusé avant copie dans le buffer correspondant ;
 - une commande n'est exécutée qu'après réception et validation du corps entier ;
@@ -239,10 +239,35 @@ result=-103
 Le client ne doit pas renvoyer automatiquement un `POST` après un timeout : la
 commande a pu être appliquée avant la perte de la réponse.
 
+### Frame de streaming web
+
+`POST /api/v1/stream/frame`
+
+Cette route exige simultanement :
+
+- le mode courant `Stream`, ID 76 ;
+- `Content-Type: application/octet-stream` sans parametre ;
+- `Content-Length: 512` ;
+- exactement un octet RGB332 par voxel, range selon `z`, puis `y`, puis `x`.
+
+Le corps est valide integralement avant toute modification des LEDs. Il est
+decode directement depuis le buffer HTTP existant vers le mapping logique du
+cube. Une frame acceptee produit un seul `showPixels()` et retourne :
+
+```text
+v=1
+result=0
+```
+
+Une longueur differente jusqu'a la capacite HTTP retourne `400`. Un corps qui
+depasse la capacite HTTP retourne `413`. Le type incorrect retourne `415` et
+une frame recue hors du mode Stream retourne `409` avec le code `-208`.
+
 ## Statuts et erreurs du transport
 
 | Statut | Code | Situation |
 | --- | ---: | --- |
+| `409 Conflict` | `-208` | Frame valide recue hors du mode `Stream` |
 | `400 Bad Request` | `-200` | Syntaxe HTTP, longueur ou en-tête invalide |
 | `404 Not Found` | `-204` | Route inconnue |
 | `405 Method Not Allowed` | `-202` | Méthode connue mais interdite pour la route |
@@ -277,13 +302,15 @@ les codes historiques de commandes commençant actuellement à `-100`.
 - une route avec query string, une méthode `PUT` ou un corps chunked est refusé ;
 - une déconnexion au milieu d'une commande ne doit produire aucun effet ;
 - deux clients concurrents ne doivent jamais partager leurs buffers ou corps.
+- une frame vide, tronquee, de 511 ou 513 octets ne doit modifier aucun voxel ;
+- une frame valide doit suivre l'ordre `z`, `y`, `x` et produire un seul rendu.
 
 ## Évolutions explicitement reportées
 
 - authentification, appairage et signature des requêtes ;
 - HTTPS et gestion de certificats ;
 - découverte mDNS ou UDP ;
-- WebSocket, streaming temps réel et Server-Sent Events ;
+- WebSocket et Server-Sent Events ;
 - accès depuis Internet ;
 - désactivation de Particle Cloud ;
 - modification ou suppression des métadonnées historiques.

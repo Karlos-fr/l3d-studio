@@ -48,6 +48,7 @@ import {
 import { createTransportForState } from "./transport";
 import { updateDiagnosticsView } from "./diagnostics_render";
 import { syncLanTestButton } from "./lan_controls";
+import { normalizeStreamingFps, type StreamingFps } from "../streaming/engine";
 
 export interface UiEventContext {
   rootElement: HTMLElement;
@@ -56,6 +57,10 @@ export interface UiEventContext {
   diagnosticsMonitor: DiagnosticsMonitor;
   storage: ParticleSessionStorage;
   rerender: () => void;
+  startStreaming: (targetFps: StreamingFps) => Promise<void>;
+  updateStreamingCadence: () => void;
+  updateStreamingSettings: () => void;
+  stopStreaming: (returnToOff?: boolean) => void;
 }
 
 // Selecteur du formulaire de connexion Particle.
@@ -102,6 +107,12 @@ const GET_SWITCH_STATE_ACTION = "get-switch-state";
 
 // Nom de l'action qui demande le redemarrage du Photon via FnRouter.
 const REBOOT_DEVICE_ACTION = "reboot-device";
+
+// Nom de l'action qui demarre l'animation web pilote.
+const START_STREAMING_ACTION = "start-streaming";
+
+// Nom de l'action qui arrete immediatement l'envoi des frames.
+const STOP_STREAMING_ACTION = "stop-streaming";
 
 // Selecteur des champs de formulaire controles par l'etat applicatif.
 const STATE_FIELD_SELECTOR = "[data-field]";
@@ -213,13 +224,34 @@ function attachStateFields(context: UiEventContext): void {
         return;
       }
 
-      handleFieldChange(context, fieldElement);
+      // Un range doit conserver le meme noeud pendant toute la capture du
+      // pointeur. Sa valeur reste vivante, mais le rendu complet attend change.
+      if (fieldElement instanceof HTMLInputElement && fieldElement.type === "range") {
+        handleFieldChange(context, fieldElement, false);
+        updateRangeOutput(fieldElement);
+        return;
+      }
+
+      handleFieldChange(context, fieldElement, true);
     });
 
     fieldElement.addEventListener("change", () => {
-      handleFieldChange(context, fieldElement);
+      handleFieldChange(context, fieldElement, true);
     });
   });
+}
+
+// ----------------------------------------------------------------------------
+// Actualise la valeur textuelle associee a un slider sans remplacer son DOM.
+//
+// Parametres :
+// - fieldElement : range dont le parent contient une sortie annotee.
+// ----------------------------------------------------------------------------
+function updateRangeOutput(fieldElement: HTMLInputElement): void {
+  const outputElement = fieldElement.parentElement?.querySelector<HTMLElement>("[data-range-output]");
+  if (outputElement === null || outputElement === undefined) return;
+  const suffix = outputElement.dataset.rangeSuffix ?? "";
+  outputElement.textContent = `${fieldElement.value}${suffix}`;
 }
 
 // ----------------------------------------------------------------------------
@@ -348,6 +380,16 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
     return;
   }
 
+  if (action === START_STREAMING_ACTION) {
+    await context.startStreaming(context.state.streaming.targetFps);
+    return;
+  }
+
+  if (action === STOP_STREAMING_ACTION) {
+    context.stopStreaming();
+    return;
+  }
+
   if (action === REFRESH_DIAGNOSTICS_ACTION) {
     await refreshDiagnostics(context);
     return;
@@ -368,6 +410,7 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
   }
 
   if (action === SEND_SET_MODE_ACTION) {
+    if (context.state.streaming.active) context.stopStreaming(false);
     await sendSetMode(context);
     return;
   }
@@ -407,6 +450,7 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
 // - supprime la session locale et remet l'application en etat initial.
 // ----------------------------------------------------------------------------
 function handleLogout(context: UiEventContext): void {
+  context.stopStreaming();
   stopDiagnosticsMonitoring(context);
   clearParticleSession(context.storage);
   context.particleClient.setToken(null);
@@ -432,6 +476,7 @@ function handleLogout(context: UiEventContext): void {
 // - efface le token local et force un nouveau login utilisateur.
 // ----------------------------------------------------------------------------
 function handleExpiredSession(context: UiEventContext): void {
+  context.stopStreaming();
   stopDiagnosticsMonitoring(context);
   clearParticleSession(context.storage);
   context.particleClient.setToken(null);
@@ -461,22 +506,26 @@ function handleExpiredSession(context: UiEventContext): void {
 function handleFieldChange(
   context: UiEventContext,
   fieldElement: HTMLInputElement | HTMLSelectElement,
+  commitChange: boolean,
 ): void {
   const fieldName = fieldElement.dataset.field ?? "";
 
   if (fieldName === "device-id") {
     updateSelectedDevice(context, fieldElement.value);
   } else if (fieldName === "transport-preference") {
+    context.stopStreaming();
     stopDiagnosticsMonitoring(context);
     context.state.transportPreference = fieldElement.value as TransportPreference;
     context.state.lastTransportUsed = null;
   } else if (fieldName === "lan-host") {
+    context.stopStreaming();
     stopDiagnosticsMonitoring(context);
     context.state.lanHost = fieldElement.value.trim();
     context.state.lanTestStatus = null;
     context.state.lastTransportUsed = null;
     syncLanTestButton(context.rootElement, context.state);
   } else if (fieldName === "lan-port") {
+    context.stopStreaming();
     stopDiagnosticsMonitoring(context);
     context.state.lanPort = Number.parseInt(fieldElement.value, 10);
     context.state.lanTestStatus = null;
@@ -497,6 +546,24 @@ function handleFieldChange(
   } else if (fieldName === "diagnostics-window") {
     context.state.diagnostics.chartWindow = fieldElement.value as DiagnosticsChartWindow;
     updateDiagnosticsView(context.rootElement, context.state);
+  } else if (fieldName === "streaming-fps") {
+    const requestedFps = Number.parseInt(fieldElement.value, 10);
+    if (Number.isFinite(requestedFps)) {
+      context.state.streaming.targetFps = normalizeStreamingFps(requestedFps);
+      context.updateStreamingCadence();
+    }
+  } else if (fieldName === "streaming-speed") {
+    const requestedSpeed = Number.parseInt(fieldElement.value, 10);
+    if (Number.isFinite(requestedSpeed)) {
+      context.state.streaming.movementStepsPerSecond = Math.max(1, Math.min(30, requestedSpeed));
+      context.updateStreamingSettings();
+    }
+  } else if (fieldName === "streaming-brightness") {
+    const requestedBrightness = Number.parseInt(fieldElement.value, 10);
+    if (Number.isFinite(requestedBrightness)) {
+      context.state.streaming.brightnessPercent = Math.max(1, Math.min(100, requestedBrightness));
+      context.updateStreamingSettings();
+    }
   } else if (fieldName === "mode-name") {
     context.state.selectedModeName = fieldElement.value;
   } else if (fieldName === "brightness") {
@@ -521,6 +588,8 @@ function handleFieldChange(
   } else if (fieldName === "switch-query-index") {
     context.state.switchQueryIndex = Number.parseInt(fieldElement.value, 10);
   }
+
+  if (!commitChange) return;
 
   saveAppPreferences(context.storage, context.state);
 
@@ -953,6 +1022,7 @@ function handleSessionError(context: UiEventContext, error: unknown): void {
 // - modifie le device selectionne, persiste la session et vide l'etat firmware.
 // ----------------------------------------------------------------------------
 function updateSelectedDevice(context: UiEventContext, deviceId: string): void {
+  context.stopStreaming();
   stopDiagnosticsMonitoring(context);
   context.state.selectedDeviceId = deviceId;
   resetFirmwareState(context.state);

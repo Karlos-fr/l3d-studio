@@ -97,6 +97,14 @@
 #define LOCAL_API_ERROR_TIMEOUT            -205
 #define LOCAL_API_ERROR_BUSY               -206
 #define LOCAL_API_ERROR_INTERNAL           -207
+// Code retourne lorsqu'une frame est recue hors du mode Stream.
+#define LOCAL_API_ERROR_STATE              -208
+
+// Nombre exact de voxels encodes dans une frame RGB332.
+#define STREAM_FRAME_BYTES                 512
+
+// Duree sans frame avant le retour automatique au mode Off.
+#define STREAM_FRAME_TIMEOUT_MS            3000UL
 
 // Taille maximale de la reponse compacte des diagnostics.
 #define DIAGNOSTICS_TEXT_LENGTH 256
