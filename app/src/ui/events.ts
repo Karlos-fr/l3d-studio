@@ -47,6 +47,7 @@ import {
 } from "./state";
 import { createTransportForState } from "./transport";
 import { updateDiagnosticsView } from "./diagnostics_render";
+import { syncLanTestButton } from "./lan_controls";
 
 export interface UiEventContext {
   rootElement: HTMLElement;
@@ -205,8 +206,6 @@ function attachStateFields(context: UiEventContext): void {
     fieldElement.addEventListener("input", () => {
       if (
         fieldElement.dataset.field === "aux-switch" ||
-        fieldElement.dataset.field === "lan-host" ||
-        fieldElement.dataset.field === "lan-port" ||
         fieldElement.dataset.field === "diagnostics-enabled" ||
         fieldElement.dataset.field === "diagnostics-interval" ||
         fieldElement.dataset.field === "diagnostics-window"
@@ -476,11 +475,13 @@ function handleFieldChange(
     context.state.lanHost = fieldElement.value.trim();
     context.state.lanTestStatus = null;
     context.state.lastTransportUsed = null;
+    syncLanTestButton(context.rootElement, context.state);
   } else if (fieldName === "lan-port") {
     stopDiagnosticsMonitoring(context);
     context.state.lanPort = Number.parseInt(fieldElement.value, 10);
     context.state.lanTestStatus = null;
     context.state.lastTransportUsed = null;
+    syncLanTestButton(context.rootElement, context.state);
   } else if (fieldName === "diagnostics-enabled" && fieldElement instanceof HTMLInputElement) {
     context.state.diagnostics.enabled = fieldElement.checked;
     if (fieldElement.checked) {
@@ -529,7 +530,9 @@ function handleFieldChange(
   if (
     fieldName === "text" ||
     fieldName === "persistent-text" ||
-    fieldName === "diagnostics-window"
+    fieldName === "diagnostics-window" ||
+    fieldName === "lan-host" ||
+    fieldName === "lan-port"
   ) {
     return;
   }

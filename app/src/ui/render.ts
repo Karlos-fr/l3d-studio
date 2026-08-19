@@ -15,6 +15,7 @@ import {
   type AppState,
 } from "./state";
 import { renderDiagnosticsPanel } from "./diagnostics_render";
+import { isLanTestConfigurationValid } from "./lan_controls";
 
 // Libelle affiche quand aucune valeur Particle n'est encore disponible.
 const EMPTY_VALUE_LABEL = "Non lu";
@@ -112,7 +113,7 @@ function renderLoginPanel(state: AppState): string {
 // ----------------------------------------------------------------------------
 function renderTransportPanel(state: AppState): string {
   const actualTransport = state.lastTransportUsed ?? "Aucun";
-  const lanDisabled = state.lanHost.trim().length === 0 || state.isBusy;
+  const lanDisabled = !isLanTestConfigurationValid(state) || state.isBusy;
   return `
     <section class="panel">
       <div class="panel-heading">
