@@ -120,8 +120,14 @@ le dernier KPI instantané. Le format des mesures est documenté dans
 
 ## Streaming web
 
-La section **Streaming web** calcule une sphere voxelisee mobile dans le navigateur et
-envoie des frames RGB332 de 512 octets au serveur LAN configuré. Elle propose
+La section **Streaming web** calcule des animations dans le navigateur et envoie
+des frames RGB332 de 512 octets au serveur LAN configuré. Un registre léger
+isole chaque animation du moteur et permet de changer de choix sans couper le
+flux. La sphère reste l'animation par défaut. Le lecteur de sprites 8x8 fournit
+aussi les cinq séquences **Repos**, **Mange**, **Décollage**, **Vol** et
+**Atterrissage** du pack CC0
+[Lil' Birb](https://casual-garage-coder.itch.io/lil-birb), projetées sur la face
+avant du cube. L'interface propose
 une cadence entière de 10 à 30 FPS par pas de 1, affiche les frames envoyées et abandonnées, et projette les
 512 voxels dans un Canvas leger. Deux onglets proposent la projection 3D,
 rotative par glisser-deposer a la souris, et l'ancienne vue des huit couches z,

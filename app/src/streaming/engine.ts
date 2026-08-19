@@ -56,6 +56,7 @@ export interface StreamingEngineOptions {
 // API publique minimale du moteur de streaming.
 export interface StreamingEngine {
   start(targetFps: StreamingFps): void;
+  setAnimation(animation: StreamingAnimation): void;
   setTargetFps(targetFps: StreamingFps): void;
   stop(): void;
   getFramebuffer(): StreamingFramebuffer;
@@ -73,12 +74,14 @@ export interface StreamingEngine {
 // ----------------------------------------------------------------------------
 export function createStreamingEngine(options: StreamingEngineOptions): StreamingEngine {
   const framebuffer = new StreamingFramebuffer();
+  let animation = options.animation;
   const requestFrame = options.requestFrame ?? requestAnimationFrame;
   const cancelFrame = options.cancelFrame ?? cancelAnimationFrame;
   let animationFrameHandle: number | null = null;
   let abortController: AbortController | null = null;
   let inFlight = false;
   let startedAt = 0;
+  let animationStartedAt = 0;
   let lastComputedAt = Number.NEGATIVE_INFINITY;
   let stats: StreamingStats = {
     active: false,
@@ -118,8 +121,9 @@ export function createStreamingEngine(options: StreamingEngineOptions): Streamin
       return;
     }
     if (startedAt === 0) startedAt = timestamp;
+    if (animationStartedAt === 0) animationStartedAt = timestamp;
     lastComputedAt = timestamp;
-    options.animation.frame(framebuffer, (timestamp - startedAt) / 1000);
+    animation.frame(framebuffer, (timestamp - animationStartedAt) / 1000);
     options.onFrame(framebuffer);
 
     if (inFlight) {
@@ -169,8 +173,9 @@ export function createStreamingEngine(options: StreamingEngineOptions): Streamin
       measuredFps: 0,
     };
     startedAt = 0;
+    animationStartedAt = 0;
     lastComputedAt = Number.NEGATIVE_INFINITY;
-    options.animation.init(framebuffer);
+    animation.init(framebuffer);
     options.onFrame(framebuffer);
     publishStats();
     scheduleNextFrame();
@@ -191,6 +196,23 @@ export function createStreamingEngine(options: StreamingEngineOptions): Streamin
   }
 
   // --------------------------------------------------------------------------
+  // Remplace l'animation sans arreter le flux ni remettre les compteurs a zero.
+  //
+  // Parametres :
+  // - nextAnimation : nouvelle instance creee par le registre.
+  //
+  // Effet de bord :
+  // - initialise son framebuffer et redemarre seulement son horloge locale.
+  // --------------------------------------------------------------------------
+  function setAnimation(nextAnimation: StreamingAnimation): void {
+    animation = nextAnimation;
+    animation.init(framebuffer);
+    animationStartedAt = stats.active ? performance.now() : 0;
+    lastComputedAt = Number.NEGATIVE_INFINITY;
+    options.onFrame(framebuffer);
+  }
+
+  // --------------------------------------------------------------------------
   // Arrete la cadence et annule le POST encore actif.
   // --------------------------------------------------------------------------
   function stop(): void {
@@ -206,6 +228,7 @@ export function createStreamingEngine(options: StreamingEngineOptions): Streamin
 
   return {
     start,
+    setAnimation,
     setTargetFps,
     stop,
     getFramebuffer: () => framebuffer,

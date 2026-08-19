@@ -70,7 +70,7 @@ export function updateStreamingView(
   setText(
     panelElement,
     "[data-streaming-speed-value]",
-    `${state.streaming.movementStepsPerSecond} déplacements/s`,
+    `${state.streaming.movementStepsPerSecond} /s`,
   );
   setText(
     panelElement,

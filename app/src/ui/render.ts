@@ -16,6 +16,7 @@ import {
 } from "./state";
 import { renderDiagnosticsPanel } from "./diagnostics_render";
 import { isLanTestConfigurationValid } from "./lan_controls";
+import { listStreamingAnimations } from "../streaming/registry";
 
 // Libelle affiche quand aucune valeur Particle n'est encore disponible.
 const EMPTY_VALUE_LABEL = "Non lu";
@@ -242,6 +243,14 @@ function renderDeviceSelect(state: AppState): string {
 // ----------------------------------------------------------------------------
 function renderStreamingPanel(state: AppState): string {
   const lanConfigured = state.lanHost.trim().length > 0 && Number.isInteger(state.lanPort);
+  let animationOptions = "";
+  for (const animation of listStreamingAnimations()) {
+    animationOptions += renderStreamingAnimationOption(
+      animation.id,
+      animation.label,
+      state.streaming.selectedAnimationId,
+    );
+  }
   return `
     <section class="panel streaming-panel" data-streaming-panel>
       <div class="panel-heading">
@@ -254,6 +263,12 @@ function renderStreamingPanel(state: AppState): string {
       </p>
       <div class="form-grid streaming-controls">
         <label>
+          Animation
+          <select data-field="streaming-animation">
+            ${animationOptions}
+          </select>
+        </label>
+        <label>
           Cadence cible
           <input data-field="streaming-fps" type="range" min="10" max="30" step="1" value="${state.streaming.targetFps}">
           <span class="streaming-slider-value" data-range-output data-range-suffix=" FPS" data-streaming-fps-value>${state.streaming.targetFps} FPS</span>
@@ -261,7 +276,7 @@ function renderStreamingPanel(state: AppState): string {
         <label>
           Vitesse
           <input data-field="streaming-speed" type="range" min="1" max="30" step="1" value="${state.streaming.movementStepsPerSecond}">
-          <span class="streaming-slider-value" data-range-output data-range-suffix=" déplacements/s" data-streaming-speed-value>${state.streaming.movementStepsPerSecond} déplacements/s</span>
+          <span class="streaming-slider-value" data-range-output data-range-suffix=" /s" data-streaming-speed-value>${state.streaming.movementStepsPerSecond} /s</span>
         </label>
         <label>
           Luminosité
@@ -286,6 +301,29 @@ function renderStreamingPanel(state: AppState): string {
       <canvas class="streaming-preview" data-streaming-preview role="tabpanel" aria-label="Aperçu 3D rotatif du cube"></canvas>
       <p class="field-help">Destination : ${escapeHtml(state.lanHost || "adresse LAN non configurée")}:${state.lanPort}</p>
     </section>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend une option du registre en echappant ses donnees visibles.
+//
+// Parametres :
+// - animationId : valeur stable envoyee par le selecteur.
+// - label : libelle destine a l'utilisateur.
+// - selectedAnimationId : identifiant actuellement selectionne.
+//
+// Retour :
+// - option HTML prete a etre inseree dans le panneau de streaming.
+// ----------------------------------------------------------------------------
+function renderStreamingAnimationOption(
+  animationId: string,
+  label: string,
+  selectedAnimationId: string,
+): string {
+  return `
+    <option value="${escapeHtml(animationId)}" ${animationId === selectedAnimationId ? "selected" : ""}>
+      ${escapeHtml(label)}
+    </option>
   `;
 }
 

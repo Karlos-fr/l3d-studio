@@ -70,6 +70,16 @@ export class MovingSphereAnimation implements StreamingAnimation {
   }
 
   // --------------------------------------------------------------------------
+  // Adapte le reglage generique du lecteur a la vitesse de translation.
+  //
+  // Parametres :
+  // - stepsPerSecond : nombre de translations entieres demandees par seconde.
+  // --------------------------------------------------------------------------
+  setSpeed(stepsPerSecond: number): void {
+    this.setStepsPerSecond(stepsPerSecond);
+  }
+
+  // --------------------------------------------------------------------------
   // Initialise une nouvelle trajectoire et efface le framebuffer.
   //
   // Parametres :

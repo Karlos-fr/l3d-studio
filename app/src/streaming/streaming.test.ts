@@ -114,4 +114,24 @@ describe("backpressure du moteur", () => {
     expect(engine.getStats().active).toBe(true);
     expect(animation.init).toHaveBeenCalledTimes(1);
   });
+
+  it("remplace une animation active sans remettre les compteurs a zero", () => {
+    const firstAnimation = { init: vi.fn(), frame: vi.fn() };
+    const secondAnimation = { init: vi.fn(), frame: vi.fn() };
+    const engine = createStreamingEngine({
+      animation: firstAnimation,
+      sendFrame: vi.fn(async () => undefined),
+      onFrame: vi.fn(),
+      onStats: vi.fn(),
+      onError: vi.fn(),
+      requestFrame: vi.fn(() => 1),
+      cancelFrame: vi.fn(),
+    });
+    engine.start(10);
+    engine.setAnimation(secondAnimation);
+    expect(firstAnimation.init).toHaveBeenCalledTimes(1);
+    expect(secondAnimation.init).toHaveBeenCalledTimes(1);
+    expect(engine.getStats().active).toBe(true);
+    expect(engine.getStats().sentFrames).toBe(0);
+  });
 });

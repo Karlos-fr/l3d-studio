@@ -18,8 +18,9 @@ import { loadAppPreferences } from "./ui/preferences";
 import { renderApp } from "./ui/render";
 import { updateDiagnosticsView } from "./ui/diagnostics_render";
 import { createInitialState } from "./ui/state";
-import { MovingSphereAnimation } from "./streaming/animations/moving_sphere";
 import { createStreamingEngine, type StreamingFps } from "./streaming/engine";
+import { createStreamingAnimation, getStreamingAnimationLabel } from "./streaming/registry";
+import type { StreamingAnimation } from "./streaming/animation";
 import type { LanClient } from "./lan/types";
 import { updateStreamingView } from "./ui/streaming_render";
 
@@ -67,9 +68,12 @@ function bootstrapApplication(): void {
   // Temporisation qui regroupe les nombreux evenements produits par le slider.
   let streamingBrightnessTimer: number | null = null;
 
-  const movingSphereAnimation = new MovingSphereAnimation();
+  // Animation creee depuis le registre et remplacable sans recreer le moteur.
+  let activeStreamingAnimation: StreamingAnimation = createStreamingAnimation(
+    state.streaming.selectedAnimationId,
+  );
   const streamingEngine = createStreamingEngine({
-    animation: movingSphereAnimation,
+    animation: activeStreamingAnimation,
     sendFrame: async (frame, signal) => {
       if (streamingLanClient === null) {
         throw new Error("Aucune destination LAN n'est configurée pour le streaming.");
@@ -122,7 +126,7 @@ function bootstrapApplication(): void {
   // - remplace la luminosite en attente, envoyee apres la prochaine frame.
   // ----------------------------------------------------------------------------
   function updateStreamingSettings(): void {
-    movingSphereAnimation.setStepsPerSecond(state.streaming.movementStepsPerSecond);
+    activeStreamingAnimation.setSpeed?.(state.streaming.movementStepsPerSecond);
     if (state.streaming.active && streamingLanClient !== null) {
       if (streamingBrightnessTimer !== null) {
         window.clearTimeout(streamingBrightnessTimer);
@@ -134,6 +138,26 @@ function bootstrapApplication(): void {
         }
       }, STREAMING_BRIGHTNESS_DEBOUNCE_MS);
     }
+    updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
+  }
+
+  // ----------------------------------------------------------------------------
+  // Selectionne une animation du registre sans interrompre une session active.
+  //
+  // Parametres :
+  // - animationId : identifiant stable choisi dans l'interface.
+  //
+  // Effet de bord :
+  // - remplace l'animation et remet uniquement sa timeline a zero.
+  // ----------------------------------------------------------------------------
+  function selectStreamingAnimation(animationId: string): void {
+    state.streaming.selectedAnimationId = animationId;
+    activeStreamingAnimation = createStreamingAnimation(animationId);
+    activeStreamingAnimation.setSpeed?.(state.streaming.movementStepsPerSecond);
+    streamingEngine.setAnimation(activeStreamingAnimation);
+    state.streaming.statusMessage = state.streaming.active
+      ? `${getStreamingAnimationLabel(animationId)} en cours.`
+      : `${getStreamingAnimationLabel(animationId)} sélectionné.`;
     updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
   }
 
@@ -168,7 +192,7 @@ function bootstrapApplication(): void {
       streamingLanClient = createLanClient({ host, port });
       state.streaming.statusMessage = "Activation du mode Stream...";
       rerender();
-      movingSphereAnimation.setStepsPerSecond(state.streaming.movementStepsPerSecond);
+      activeStreamingAnimation.setSpeed?.(state.streaming.movementStepsPerSecond);
       pendingStreamingBrightness = null;
       if (streamingBrightnessTimer !== null) {
         window.clearTimeout(streamingBrightnessTimer);
@@ -183,7 +207,7 @@ function bootstrapApplication(): void {
       }
       state.lastTransportUsed = "lan";
       state.currentModeName = "Stream";
-      state.streaming.statusMessage = "Sphère mobile en cours.";
+      state.streaming.statusMessage = `${getStreamingAnimationLabel(state.streaming.selectedAnimationId)} en cours.`;
       state.isBusy = false;
       streamingEngine.start(targetFps);
       rerender();
@@ -300,6 +324,7 @@ function bootstrapApplication(): void {
       storage: window.localStorage,
       rerender,
       startStreaming,
+      selectStreamingAnimation,
       updateStreamingCadence,
       updateStreamingSettings,
       stopStreaming,
@@ -348,6 +373,7 @@ function bootstrapApplication(): void {
     storage: window.localStorage,
     rerender,
     startStreaming,
+    selectStreamingAnimation,
     updateStreamingCadence,
     updateStreamingSettings,
     stopStreaming,

@@ -13,4 +13,6 @@ export interface StreamingAnimation {
   init(framebuffer: StreamingFramebuffer): void;
   // Calcule une frame pour le temps ecoule exprime en secondes.
   frame(framebuffer: StreamingFramebuffer, elapsedSeconds: number): void;
+  // Applique une vitesse propre a l'animation lorsque celle-ci la prend en charge.
+  setSpeed?(stepsPerSecond: number): void;
 }

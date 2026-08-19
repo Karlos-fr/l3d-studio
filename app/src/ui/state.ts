@@ -16,10 +16,12 @@ import type {
 import type { AppPreferences } from "./preferences";
 import type { TransportKind, TransportPreference } from "../transport/types";
 import type { StreamingFps } from "../streaming/engine";
+import { DEFAULT_STREAMING_ANIMATION_ID } from "../streaming/registry";
 
 // Etat visible de la session de streaming web.
 export interface StreamingUiState {
   active: boolean;
+  selectedAnimationId: string;
   targetFps: StreamingFps;
   movementStepsPerSecond: number;
   brightnessPercent: number;
@@ -134,6 +136,7 @@ export function createInitialState(
     },
     streaming: {
       active: false,
+      selectedAnimationId: DEFAULT_STREAMING_ANIMATION_ID,
       targetFps: 10,
       movementStepsPerSecond: 10,
       brightnessPercent: 1,

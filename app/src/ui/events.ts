@@ -58,6 +58,7 @@ export interface UiEventContext {
   storage: ParticleSessionStorage;
   rerender: () => void;
   startStreaming: (targetFps: StreamingFps) => Promise<void>;
+  selectStreamingAnimation: (animationId: string) => void;
   updateStreamingCadence: () => void;
   updateStreamingSettings: () => void;
   stopStreaming: (returnToOff?: boolean) => void;
@@ -552,6 +553,8 @@ function handleFieldChange(
       context.state.streaming.targetFps = normalizeStreamingFps(requestedFps);
       context.updateStreamingCadence();
     }
+  } else if (fieldName === "streaming-animation") {
+    context.selectStreamingAnimation(fieldElement.value);
   } else if (fieldName === "streaming-speed") {
     const requestedSpeed = Number.parseInt(fieldElement.value, 10);
     if (Number.isFinite(requestedSpeed)) {
