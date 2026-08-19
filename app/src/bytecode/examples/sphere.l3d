@@ -1,0 +1,20 @@
+# Sphere - Sphere pleine rebondissante dont la couleur evolue.
+SET_U8 R0, 2
+SET_U8 R1, 2
+SET_U8 R2, 2
+SET_I8 R3, 1
+SET_I8 R4, 1
+SET_I8 R5, 1
+SET_U8 R6, 0
+
+loop:
+CLEAR
+COLOR_WHEEL R6
+SPHERE R0, R1, R2, 1
+BOUNCE R0, R3, 1, 6
+BOUNCE R1, R4, 1, 6
+BOUNCE R2, R5, 1, 6
+ADD_I8 R6, 3
+SHOW
+WAIT 50
+JUMP loop

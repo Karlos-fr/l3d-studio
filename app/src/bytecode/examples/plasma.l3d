@@ -1,0 +1,38 @@
+# Plasma - Champ trigonometrique calcule voxel par voxel sans float source.
+SET_U8 R3, 8
+SET_U8 R4, 0
+SET_U8 R0, 0
+
+loop_x:
+SET_U8 R1, 0
+
+loop_y:
+SET_U8 R2, 0
+
+loop_z:
+COPY R5, R0
+ADD_REG R5, R4
+SIN8 R5, R5
+COPY R6, R1
+ADD_REG R6, R4
+SIN8 R6, R6
+COPY R7, R2
+ADD_REG R7, R4
+SIN8 R7, R7
+COPY R8, R5
+ADD_REG R8, R6
+ADD_REG R8, R7
+COLOR_WHEEL R8
+VOXEL R0, R1, R2
+ADD_I8 R2, 1
+JLT R2, R3, loop_z
+YIELD
+ADD_I8 R1, 1
+JLT R1, R3, loop_y
+ADD_I8 R0, 1
+JLT R0, R3, loop_x
+SHOW
+WAIT 50
+ADD_I8 R4, 3
+SET_U8 R0, 0
+JUMP loop_x

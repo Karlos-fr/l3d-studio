@@ -1,0 +1,18 @@
+# Rain - Pluie procedurale fondee sur le moteur borne de particules.
+PARTICLE_CONFIG 16, -1, 250, 24
+SET_U8 R1, 7
+SET_I8 R3, 0
+SET_I8 R4, -8
+SET_I8 R5, 0
+
+loop:
+CLEAR
+RAND_U8 R0, 0, 7
+RAND_U8 R2, 0, 7
+RAND_U8 R6, 128, 220
+COLOR_WHEEL R6
+PARTICLE_EMIT R0, R1, R2, R3, R4, R5
+PARTICLE_STEP
+SHOW
+WAIT 50
+JUMP loop

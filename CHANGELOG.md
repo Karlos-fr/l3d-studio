@@ -6,6 +6,20 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Bytecode procédural L3D — phases 0 à 2
+
+- Validation d'un emplacement EEPROM transactionnel de 197 octets, avec deux
+  banques et un payload maximal de 185 octets sans réutiliser CubePainter.
+- Définition du conteneur version 1, du CRC, des 16 registres, des capacités,
+  des opcodes procéduraux, des quotas coopératifs et des erreurs `-300` à
+  `-315`.
+- Ajout d'un assembleur `.l3d` en deux passes, d'un validateur, d'un
+  désassembleur et d'une VM TypeScript de référence indépendante du DOM.
+- Ajout des programmes procéduraux Rain, sphère, Fireworks et Plasma ; leurs
+  payloads assemblés occupent respectivement 43, 49, 45 et 75 octets.
+- Ajout de tests déterministes couvrant les opcodes, branchements, limites,
+  conteneurs corrompus, quotas, rendu et exécution du corpus.
+
 ### Serveur LAN v1 et diagnostics
 
 - Ajout d'un serveur HTTP local optionnel sur le port 8080, sans allocation
