@@ -278,21 +278,10 @@ function bootstrapApplication(): void {
     updateDiagnosticsView(mountedRootElement, state);
   }
 
-  // ----------------------------------------------------------------------------
-  // Indique si la page courante est masquee par le navigateur.
-  //
-  // Retour :
-  // - vrai lorsque la collecte doit rester suspendue.
-  // ----------------------------------------------------------------------------
-  function isDiagnosticsPageHidden(): boolean {
-    return document.hidden;
-  }
-
   const diagnosticsMonitor = createDiagnosticsMonitor({
     readSample: readCurrentDiagnosticsSample,
     onSample: handleDiagnosticsSample,
     onError: handleDiagnosticsError,
-    isPageHidden: isDiagnosticsPageHidden,
   });
 
   // ----------------------------------------------------------------------------
@@ -333,16 +322,6 @@ function bootstrapApplication(): void {
   }
 
   // ----------------------------------------------------------------------------
-  // Transmet les changements de visibilite au moniteur periodique.
-  //
-  // Effet de bord :
-  // - suspend ou reprogramme le prochain echantillon sans lancer de rafale.
-  // ----------------------------------------------------------------------------
-  function handleVisibilityChange(): void {
-    diagnosticsMonitor.pageVisibilityChanged();
-  }
-
-  // ----------------------------------------------------------------------------
   // Recalcule les SVG lorsque la largeur disponible change reellement.
   //
   // Parametres :
@@ -357,8 +336,6 @@ function bootstrapApplication(): void {
     previousDiagnosticsWidth = currentWidth;
     updateDiagnosticsView(mountedRootElement, state);
   }
-
-  document.addEventListener("visibilitychange", handleVisibilityChange);
 
   // Observateur unique de la racine conserve pendant toute la vie de l'app.
   const diagnosticsResizeObserver = new ResizeObserver(handleDiagnosticsResize);

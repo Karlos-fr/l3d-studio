@@ -37,7 +37,6 @@ function runDiagnosticsMonitorTests(): void {
       readSample,
       onSample: vi.fn(),
       onError: vi.fn(),
-      isPageHidden: () => false,
     });
 
     monitor.start(5);
@@ -51,27 +50,23 @@ function runDiagnosticsMonitorTests(): void {
   });
 
   // --------------------------------------------------------------------------
-  // Verifie la suspension masquee et la reprise sans lecture immediate.
+  // Verifie que la collecte continue sans dependance a la visibilite de la page.
   // --------------------------------------------------------------------------
-  it("suspend un onglet masque et reprend sans rafale", async () => {
-    let hidden = true;
+  it("continue la surveillance lorsque la page passe en arriere-plan", async () => {
     const readSample = vi.fn(async () => SAMPLE);
     const monitor = createDiagnosticsMonitor({
       readSample,
       onSample: vi.fn(),
       onError: vi.fn(),
-      isPageHidden: () => hidden,
     });
 
     monitor.start(5);
-    await vi.advanceTimersByTimeAsync(20_000);
-    expect(readSample).not.toHaveBeenCalled();
-    hidden = false;
-    monitor.pageVisibilityChanged();
     await vi.advanceTimersByTimeAsync(4_999);
     expect(readSample).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(readSample).toHaveBeenCalledOnce();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(readSample).toHaveBeenCalledTimes(2);
   });
 
   // --------------------------------------------------------------------------
@@ -84,7 +79,6 @@ function runDiagnosticsMonitorTests(): void {
       readSample,
       onSample: vi.fn(),
       onError,
-      isPageHidden: () => false,
     });
 
     monitor.start(5);
@@ -105,7 +99,6 @@ function runDiagnosticsMonitorTests(): void {
       readSample,
       onSample: vi.fn(),
       onError: vi.fn(),
-      isPageHidden: () => false,
     });
 
     monitor.start(5);

@@ -118,6 +118,11 @@ de cinq minutes ou l’historique complet et peuvent être effacés sans supprim
 le dernier KPI instantané. Le format des mesures est documenté dans
 [../firmware/docs/DIAGNOSTICS.md](../firmware/docs/DIAGNOSTICS.md).
 
+La surveillance continue lorsque l'onglet passe en arrière-plan, sans lancer
+de lectures simultanées ni rattraper les intervalles manqués. Le navigateur peut
+toutefois ralentir les timers d'un onglet masqué ; la cadence exacte n'est donc
+garantie que lorsque la page reste active.
+
 ## Streaming web
 
 La section **Streaming web** calcule des animations dans le navigateur et envoie
