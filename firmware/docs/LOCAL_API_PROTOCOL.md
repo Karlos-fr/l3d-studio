@@ -2,8 +2,8 @@
 
 ## Statut du document
 
-Ce document fige le contrat de la première API LAN avant son implémentation.
-Il sert de référence aux tests du firmware et de L3D Studio.
+Ce document décrit le contrat implémenté de la première API LAN. Il sert de
+référence aux tests du firmware, à L3D Studio et aux appels manuels.
 
 - Version de l'API : `1`.
 - Cible : Particle Photon, Device OS 2.3.1.
@@ -40,6 +40,46 @@ est produite par segments sans réserver un buffer de 1 536 octets.
 Les longueurs historiques relevées pendant la phase 0 sont de 613 octets pour
 `modeList`, 577 pour `modeParmList` et 82 pour `auxSwtchList`. La limite de
 réponse permet donc d'exposer les deux listes de modes dans une transaction.
+
+## Exemples `curl`
+
+Les exemples PowerShell utilisent `curl.exe` pour éviter l'alias historique de
+`Invoke-WebRequest`. Remplacer l'adresse une seule fois :
+
+```powershell
+$api = "http://192.168.1.25:8080/api/v1"
+
+curl.exe "$api/health"
+curl.exe "$api/diagnostics"
+curl.exe "$api/state"
+curl.exe "$api/modes"
+curl.exe "$api/aux-switches"
+curl.exe -X POST -H "Content-Length: 0" "$api/diagnostics/reset"
+curl.exe -H "Content-Type: text/plain" --data-binary "GETSWITCHSTATE:1" "$api/command"
+curl.exe -H "Content-Type: text/plain" --data-binary "M:ColorAll,S:4,B:1,C1:0000FF," "$api/mode"
+curl.exe -H "Content-Type: text/plain" --data-binary "Bonjour" "$api/text"
+curl.exe -H "Content-Type: text/plain" --data-binary "I511,#FF0000," "$api/cube-painter"
+```
+
+Équivalent dans un terminal POSIX :
+
+```bash
+api="http://192.168.1.25:8080/api/v1"
+curl "$api/health"
+curl "$api/diagnostics"
+curl -X POST -H 'Content-Length: 0' "$api/diagnostics/reset"
+curl -H 'Content-Type: text/plain' --data-binary 'M:ColorAll,S:4,B:1,C1:0000FF,' "$api/mode"
+```
+
+`--data-binary` conserve exactement le corps historique. Une commande visuelle
+de validation doit rester à `B:1`. Ne pas relancer automatiquement un `POST`
+après un timeout : la commande peut avoir été exécutée avant la perte de sa
+réponse. La route de streaming reçoit un fichier de 512 octets RGB332 :
+
+```powershell
+curl.exe -H "Content-Type: application/octet-stream" `
+  --data-binary "@frame.rgb332" "$api/stream/frame"
+```
 
 ## Traitement d'une requête
 
@@ -118,7 +158,6 @@ os=2.3.1
 u=3564
 i=1
 k=1
-r=14
 ```
 
 | Clé | Signification |
@@ -170,6 +209,7 @@ colors=0000FF;FF0000;00FF00;0000FF;FFFF00;00FFFF
 switches=0;0;0;0
 i=1
 k=1
+r=14
 ```
 
 `b` est la valeur interne historique de luminosité comprise entre 1 et 255,
@@ -314,3 +354,61 @@ les codes historiques de commandes commençant actuellement à `-100`.
 - accès depuis Internet ;
 - désactivation de Particle Cloud ;
 - modification ou suppression des métadonnées historiques.
+
+## Contraintes des navigateurs
+
+Le serveur répond en HTTP sur une adresse privée. L'application et le Photon
+doivent appartenir au même réseau, sans isolation des clients Wi-Fi. Un pare-feu
+local, un réseau invité ou une règle de point d'accès peut bloquer le port 8080.
+Le nom `photon.local` dépend de mDNS et n'est pas garanti ; utiliser l'IPv4 du
+Photon lorsqu'il ne se résout pas.
+
+Une application publiée en HTTPS peut être empêchée d'appeler une ressource
+HTTP locale à cause du contenu mixte. Les navigateurs peuvent aussi demander
+une autorisation d'accès au réseau local ou exécuter un preflight Private
+Network Access. Les réponses CORS et `Access-Control-Allow-Private-Network`
+du firmware permettent le dialogue, mais ne contournent ni le contenu mixte,
+ni un refus utilisateur, ni la politique du navigateur. Le parcours de
+référence consiste donc à servir L3D Studio localement en HTTP avec
+`npm run dev`, puis à utiliser l'adresse affichée par Vite.
+
+Les timers d'un onglet masqué peuvent être ralentis ou suspendus. La
+surveillance des diagnostics continue en mode best effort, sans chevauchement
+et sans rattrapage, mais sa cadence exacte n'est garantie qu'au premier plan.
+
+Références : [MDN — Mixed content](https://developer.mozilla.org/docs/Web/Security/Mixed_content),
+[Chrome — Local Network Access](https://developer.chrome.com/blog/local-network-access/)
+et [MDN — timers inactifs](https://developer.mozilla.org/docs/Web/API/Window/setTimeout#timeouts_in_inactive_tabs).
+
+## Sécurité volontairement absente
+
+La version 1 ne possède ni authentification, ni appairage, ni autorisation par
+commande, ni TLS. Toute machine pouvant joindre le port 8080 peut lire l'état,
+changer de mode, modifier le texte, écrire via CubePainter, remettre les
+diagnostics à zéro et envoyer des frames. Le joker CORS `*` est cohérent avec
+ce choix temporaire ; il ne constitue pas une protection.
+
+Le Photon doit rester sur un LAN de confiance. Ne pas ouvrir ni rediriger le
+port 8080 sur Internet et ne pas placer le cube sur un réseau public. Particle
+Cloud conserve son authentification et reste le transport à employer hors du
+réseau local. L'authentification LAN est explicitement reportée à une version
+ultérieure.
+
+## Rollback fonctionnel
+
+Définir `L3D_LOCAL_API_ENABLED` à `0` dans
+`firmware/src/config/build_config.h`, puis recompiler et flasher :
+
+```cpp
+#define L3D_LOCAL_API_ENABLED 0
+```
+
+```powershell
+powershell -ExecutionPolicy Bypass -File firmware/tools/compile.ps1
+particle flash <nom-ou-id-du-photon> firmware/build/l3d-studio-photon-2.3.1.bin
+```
+
+Ce rollback retire le serveur, ses routes LAN et ses buffers à la compilation.
+Il ne restaure pas un ancien firmware et ne modifie ni les IDs, ni l'EEPROM.
+Particle Cloud, les animations natives et les commandes historiques restent
+disponibles. Remettre la valeur à `1` et recompiler pour réactiver l'API.

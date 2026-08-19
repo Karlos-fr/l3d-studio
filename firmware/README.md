@@ -21,8 +21,9 @@ L’installation et l’utilisation de l’IHM sont décrites dans
 - animations servies par un ordonnanceur coopératif qui maintient Particle et
   le serveur LAN pendant les attentes historiques.
 
-La compilation avec streaming indique 118 248 octets de Flash, 15 204 octets
-de RAM statique et 12 824 octets de marge Flash. Le detail de cette evolution
+La compilation finale disponible avec streaming indique 118 296 octets de
+Flash, 15 204 octets de RAM statique, un binaire de 118 300 octets et 12 776
+octets de marge Flash. Le détail de cette évolution
 se trouve dans [docs/WEB_STREAMING.md](docs/WEB_STREAMING.md).
 
 ## Compilation et tests
@@ -93,7 +94,10 @@ privé requis par certains navigateurs.
 
 Cette première version ne possède ni authentification ni TLS. Elle doit rester
 sur un réseau local de confiance et ne doit jamais être exposée par une
-redirection de port Internet.
+redirection de port Internet. Toute machine capable de joindre le port 8080
+peut appeler les routes de lecture et de commande. Le détail des risques et des
+contraintes des navigateurs figure dans
+[docs/LOCAL_API_PROTOCOL.md](docs/LOCAL_API_PROTOCOL.md#sécurité-volontairement-absente).
 
 Vérifier rapidement la santé du serveur :
 
@@ -106,9 +110,13 @@ dans [docs/LOCAL_API_PROTOCOL.md](docs/LOCAL_API_PROTOCOL.md). L’architecture,
 les mesures et les commandes de validation se trouvent dans
 [docs/LOCAL_API_SERVER.md](docs/LOCAL_API_SERVER.md).
 
-Le serveur peut être retiré du binaire en définissant
-`L3D_LOCAL_API_ENABLED=0` dans `src/config/build_config.h`. Particle Cloud reste
-alors disponible.
+Le rollback fonctionnel consiste à définir `L3D_LOCAL_API_ENABLED=0` dans
+`src/config/build_config.h`, puis à recompiler et flasher normalement. Le
+serveur, ses routes et ses buffers sont alors retirés du binaire ; Particle
+Cloud, les animations natives, les IDs et l'EEPROM restent inchangés. Ce n'est
+pas un retour à une ancienne version du firmware. La procédure complète est
+décrite dans
+[docs/LOCAL_API_PROTOCOL.md](docs/LOCAL_API_PROTOCOL.md#rollback-fonctionnel).
 
 ## Diagnostics
 

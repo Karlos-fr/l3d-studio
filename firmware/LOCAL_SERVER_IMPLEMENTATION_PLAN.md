@@ -290,7 +290,7 @@ dans l'application. Les valeurs brutes du firmware restent entières.
 
 - [x] Utiliser un `setTimeout` récursif afin d'interdire les appels superposés.
 - [x] Annuler le timer au changement de transport, d'adresse, de device ou à la déconnexion.
-- [x] Suspendre les appels lorsque l'onglet est masqué et reprendre sans rafale.
+- [x] Continuer les appels en arrière-plan en mode best effort, sans chevauchement ni rafale.
 - [x] Ajouter un timeout borné et un ralentissement progressif après plusieurs échecs.
 - [x] Pour Particle, appeler `GETDIAG`, puis relire `deviceInfo` jusqu'à la séquence attendue.
 - [x] Pour le LAN, lire directement `/api/v1/diagnostics` sans séquence Particle.
@@ -384,15 +384,15 @@ dans l'application. Les valeurs brutes du firmware restent entières.
 
 ## Phase 10 — Documentation et livraison
 
-- [ ] Documenter l'API LAN, ses formats, limites, erreurs et exemples `curl`.
-- [ ] Documenter la configuration de l'adresse locale dans L3D Studio.
-- [ ] Documenter les différences entre diagnostics LAN et Particle.
-- [ ] Documenter les KPI et l'interprétation de chaque courbe.
-- [ ] Documenter les contraintes des navigateurs pour l'accès au réseau local.
-- [ ] Documenter l'absence volontaire de sécurité dans cette première version.
-- [ ] Documenter la désactivation par `L3D_LOCAL_API_ENABLED=0` comme rollback fonctionnel.
-- [ ] Mettre à jour `README.md`, `firmware/docs/DIAGNOSTICS.md` et `CHANGELOG.md`.
-- [ ] Archiver les mesures finales dans `firmware/docs/BASELINE.md`.
+- [x] Documenter l'API LAN, ses formats, limites, erreurs et exemples `curl`.
+- [x] Documenter la configuration de l'adresse locale dans L3D Studio.
+- [x] Documenter les différences entre diagnostics LAN et Particle.
+- [x] Documenter les KPI et l'interprétation de chaque courbe.
+- [x] Documenter les contraintes des navigateurs pour l'accès au réseau local.
+- [x] Documenter l'absence volontaire de sécurité dans cette première version.
+- [x] Documenter la désactivation par `L3D_LOCAL_API_ENABLED=0` comme rollback fonctionnel.
+- [x] Mettre à jour les README, `firmware/docs/DIAGNOSTICS.md` et `CHANGELOG.md`.
+- [x] Archiver les mesures finales dans `firmware/docs/BASELINE.md`.
 - [ ] Produire un binaire de test identifié sans secret ni configuration personnelle.
 
 ### Critère de sortie

@@ -47,14 +47,36 @@ Le navigateur communique directement avec le serveur HTTP du Photon. Indiquer
 uniquement son nom local ou son IPv4, par exemple `photon.local` ou
 `192.168.1.25`, puis conserver le port `8080` et utiliser **Tester le LAN**.
 
+Configuration recommandée :
+
+1. relever l'IPv4 du Photon dans l'interface du routeur ou avec Particle ;
+2. lancer L3D Studio localement avec `npm run dev` ;
+3. ouvrir l'adresse HTTP affichée par Vite, généralement
+   `http://127.0.0.1:5173/l3d-studio/` ;
+4. saisir uniquement `192.168.1.25` dans **Adresse LAN**, sans `http://`, port,
+   chemin ni barre finale ;
+5. conserver **Port LAN** à `8080` ;
+6. cliquer sur **Tester le LAN** et attendre la confirmation de `/health` ;
+7. choisir **LAN** pour l'imposer ou **Automatique** pour conserver Particle en
+   secours.
+
+L'adresse, le port et le transport sont enregistrés dans le stockage local du
+navigateur. Ils ne sont pas ajoutés au dépôt. Si `photon.local` ne fonctionne
+pas, utiliser directement l'IPv4 et, idéalement, lui réserver un bail DHCP dans
+le routeur afin qu'elle reste stable.
+
 Le poste et le Photon doivent être sur le même réseau. Le serveur firmware ne
-possède actuellement ni authentification ni chiffrement : il doit rester sur un
-LAN de confiance.
+possède actuellement ni authentification ni chiffrement. Toute machine du LAN
+pouvant joindre le port 8080 peut commander le cube. Il doit rester sur un
+réseau de confiance et le port ne doit jamais être redirigé vers Internet.
 
 Selon la politique du navigateur, une page publiée en HTTPS peut être empêchée
-d’appeler directement le serveur HTTP privé du Photon. Pour tester ou utiliser
-le transport LAN sans ce blocage de contenu mixte, lancer l’application
-localement avec `npm run dev`.
+d’appeler directement le serveur HTTP privé du Photon. Le navigateur peut aussi
+demander une autorisation d'accès au réseau local. CORS ne contourne ni ce
+blocage de contenu mixte, ni un refus utilisateur. Pour le parcours le plus
+prévisible, lancer l’application localement en HTTP avec `npm run dev`. Les
+réseaux invités, pare-feu et options d'isolation Wi-Fi peuvent bloquer le port
+8080.
 
 Le protocole appelé par l’IHM est documenté dans
 [../firmware/docs/LOCAL_API_PROTOCOL.md](../firmware/docs/LOCAL_API_PROTOCOL.md).
@@ -101,8 +123,8 @@ La syntaxe historique des commandes Spark Pixels est décrite dans
 
 Le panneau **Diagnostics** peut effectuer une lecture immédiate ou activer une
 surveillance toutes les 5, 10, 30 ou 60 secondes. La surveillance est
-désactivée par défaut, suspendue lorsque l’onglet est masqué et ralentie après
-plusieurs erreurs.
+désactivée par défaut, continue en arrière-plan en mode best effort et ralentit
+progressivement après plusieurs erreurs.
 
 En LAN, une lecture appelle directement `/api/v1/diagnostics` et ne consomme
 aucune Data Operation Particle. En transport Particle, l’application appelle
@@ -118,10 +140,10 @@ de cinq minutes ou l’historique complet et peuvent être effacés sans supprim
 le dernier KPI instantané. Le format des mesures est documenté dans
 [../firmware/docs/DIAGNOSTICS.md](../firmware/docs/DIAGNOSTICS.md).
 
-La surveillance continue lorsque l'onglet passe en arrière-plan, sans lancer
-de lectures simultanées ni rattraper les intervalles manqués. Le navigateur peut
-toutefois ralentir les timers d'un onglet masqué ; la cadence exacte n'est donc
-garantie que lorsque la page reste active.
+Elle ne lance pas de lectures simultanées et ne rattrape pas les intervalles
+manqués. Le navigateur peut toutefois ralentir ou suspendre les timers d'un
+onglet masqué ; aucune page web ne peut collecter lorsqu'elle est déchargée,
+fermée ou lorsque l'ordinateur est en veille.
 
 ## Streaming web
 

@@ -67,6 +67,7 @@ particle compile photon firmware --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Phase 8, dispatcher et ordonnanceur cooperatif | 2.3.1 | 111 880 | 13 788 | 111 884 | 19 192 |
 | 2026-08-17 | Serveur LAN phase 0, avant implementation | 2.3.1 | 111 880 | 13 788 | 111 884 | 19 192 |
 | 2026-08-17 | Serveur LAN phase 1, commandes separees des transports | 2.3.1 | 111 672 | 13 788 | 111 676 | 19 400 |
+| 2026-08-19 | Serveur LAN v1 complet et mode Stream 76 | 2.3.1 | 118 296 | 15 204 | 118 300 | 12 776 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
@@ -256,3 +257,40 @@ un reboot et trente changements de mode à `B:1`, le diagnostic indiquait
 33 416 octets libres, un minimum global de 31 896 octets et aucun événement
 OOM. Particle Cloud répondait encore et le cube a été remis sur `M:Off,B:1,`
 avec une luminosité interne de 2.
+
+## Mesures finales archivées — serveur LAN v1
+
+La compilation reproductible du 19 août 2026 correspond aux sources finales
+du serveur LAN v1 et du mode de streaming HTTP. Elle est issue de
+`firmware/tools/compile.ps1`; les valeurs sont conservées dans l'artefact local
+`firmware/build/measurement.json` :
+
+| Variante Photon 2.3.1 | Flash | RAM statique | Binaire | Marge Flash |
+| --- | ---: | ---: | ---: | ---: |
+| Baseline serveur, phase 0 | 111 880 | 13 788 | 111 884 | 19 192 |
+| API LAN complète, avant streaming | 117 608 | 15 196 | 117 612 | 13 464 |
+| API LAN complète et Stream 76 | 118 296 | 15 204 | 118 300 | 12 776 |
+| Écart final contre phase 0 | +6 416 | +1 416 | +6 416 | -6 416 |
+
+Le streaming ajoute 688 octets de Flash et 8 octets de RAM statique à l'API
+LAN complète. Son corps de 512 octets réutilise le buffer HTTP existant ; il ne
+réserve pas un second framebuffer réseau. Le détail de ce jalon est conservé
+dans [WEB_STREAMING.md](WEB_STREAMING.md).
+
+Dernières mesures runtime matérielles comparables archivées pendant le
+développement du serveur :
+
+| Jalon et charge | Libre courante | Minimum observé | OOM | Validation |
+| --- | ---: | ---: | ---: | --- |
+| Phase 3, 100 diagnostics LAN sur `LineSpin,S:0,B:1` | 34 024 | 31 832 | non relevé | `deviceInfo` Particle inchangé |
+| Phase 4, 90 lectures état et catalogues | 33 992 | 31 896 | non relevé | réponses identiques aux listes Particle |
+| Phase 5, commandes puis 30 changements de mode à `B:1` | 33 416 | 31 896 | 0 | LAN et Particle disponibles après reboot |
+| Baseline immédiatement avant Stream 76 | 33 936 | 30 608 | non relevé | 100 appels `/health` réussis |
+
+Ces lignes proviennent de scénarios différents et ne doivent pas être
+soustraites comme une mesure de fuite. Elles confirment les validations courtes
+effectivement réalisées. La compilation finale est mesurée, mais aucune valeur
+de mémoire runtime après plusieurs heures de streaming n'a été relevée : les
+tests d'endurance, la coupure Wi-Fi prolongée et la validation visuelle complète
+restent explicitement ouverts en phase 9. Aucun succès d'endurance n'est déduit
+de cette archive documentaire.

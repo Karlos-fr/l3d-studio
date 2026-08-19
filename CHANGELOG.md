@@ -6,6 +6,34 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Serveur LAN v1 et diagnostics
+
+- Ajout d'un serveur HTTP local optionnel sur le port 8080, sans allocation
+  dynamique applicative, avec parseur borné, client unique, timeouts et CORS.
+- Exposition de la santé, des diagnostics, de l'état, des catalogues et des
+  commandes historiques par des routes versionnées partageant la logique
+  métier Particle.
+- Ajout des transports **LAN**, **Particle** et **Automatique** dans L3D Studio,
+  avec configuration locale de l'adresse et test de `/health`.
+- Ajout de la surveillance ponctuelle ou périodique, de l'historique circulaire
+  et des courbes SVG mémoire, temps de frame et FPS.
+- Maintien best effort de la surveillance dans un onglet en arrière-plan, sans
+  requêtes superposées ni rafale de rattrapage.
+- Documentation du contrat HTTP, des limites, erreurs, exemples `curl`, KPI,
+  contraintes navigateur, absence volontaire de sécurité et rollback par
+  `L3D_LOCAL_API_ENABLED=0`.
+- Mesure finale de compilation : 118 296 octets de Flash, 15 204 octets de RAM
+  statique, binaire de 118 300 octets et marge Flash de 12 776 octets.
+
+### Streaming web
+
+- Ajout du mode `Stream` 76 et de la route binaire RGB332 de 512 octets, avec
+  timeout de trois secondes et retour automatique au mode `Off`.
+- Ajout d'un moteur web sans file d'attente, d'un aperçu 3D rotatif et d'une vue
+  par couches, avec cadence, vitesse et luminosité modifiables à chaud.
+- Ajout d'un registre d'animations, de la sphère rebondissante et du lecteur de
+  sprites 8x8 avec les cinq séquences CC0 de Lil' Birb.
+
 ### Nettoyage de la documentation firmware
 
 - Suppression des rapports d'optimisation détaillés animation par animation,
@@ -113,8 +141,8 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 - Tests d'endurance, de reconnexion Wi-Fi et Particle Cloud.
 - Validation du parcours d'authentification avec un compte Particle utilisant
   la MFA.
-- API LAN locale, protocole firmware v2, EEPROM versionnée et réactivation
-  éventuelle des modes archivés.
+- Protocole firmware v2, EEPROM versionnée et réactivation éventuelle des modes
+  archivés.
 
 ## 2026-08-17 — Refactorisation et optimisation du firmware
 

@@ -119,6 +119,94 @@ Le serveur est appelé à chaque point de coopération des animations longues.
 Les diagnostics restent ainsi disponibles entre deux images internes même si
 la fonction historique ne revient pas immédiatement dans `loop()`.
 
+## Différences entre LAN et Particle
+
+Les deux transports utilisent le même producteur numérique et exposent les
+mêmes clés. Ils diffèrent uniquement par leur acheminement :
+
+| Aspect | LAN | Particle Cloud |
+| --- | --- | --- |
+| Déclenchement | `GET /api/v1/diagnostics` | `Function("GETDIAG")` |
+| Lecture | réponse HTTP immédiate | lectures répétées de `deviceInfo` jusqu'à la bonne séquence `y` |
+| Portée | même réseau local | accès distant via Internet et Particle |
+| Authentification | aucune dans la v1 | token Particle et TLS Cloud |
+| Data Operations | aucune | appel de fonction et lectures de variable comptabilisés |
+| Séquence | générée pour la requête LAN | retournée par la fonction, puis vérifiée dans `deviceInfo` |
+| Latence affichée | aller-retour HTTP direct | fonction plus attente et lectures de la variable |
+| Dépendance | Wi-Fi local prêt | Wi-Fi, Internet et connexion Particle prêts |
+| Effet sur `deviceInfo` | aucun | réponse temporaire pendant 15 secondes |
+
+Le mode **Automatique** de L3D Studio privilégie le LAN et utilise Particle en
+repli. Un instantané provenant d'un transport n'est pas plus précis que l'autre
+une fois produit. En revanche, comparer directement leurs latences n'est pas un
+benchmark du firmware : le chemin Particle inclut le Cloud et son protocole
+différé. La remise à zéro reste toujours explicite sur les deux transports.
+
+## KPI et interprétation des courbes
+
+L3D Studio conserve un historique circulaire borné. La fenêtre **5 minutes**
+filtre l'affichage sans supprimer les mesures ; **Tout l'historique** montre les
+points encore présents dans le buffer. Une rupture est insérée après une
+interruption ou un redémarrage afin de ne pas relier artificiellement deux
+périodes sans données.
+
+### Courbe Mémoire
+
+| Série | Source | Interprétation |
+| --- | --- | --- |
+| Libre | `f` | mémoire disponible au moment de la demande ; de petites variations sont normales |
+| Minimum global | `n` | plus faible valeur depuis le démarrage ou le dernier reset explicite |
+| Minimum du mode | `q` | plus faible valeur depuis l'entrée dans le mode courant ou son reset statistique |
+
+Les minimums ne peuvent que rester stables ou baisser entre deux resets. Une
+baisse ponctuelle suivie d'une valeur libre stable décrit un pic d'utilisation.
+Une baisse régulière de `f`, `n` ou `q` à charge comparable peut signaler une
+fuite, une fragmentation ou un état de plus en plus coûteux. Comparer de
+préférence un même mode et une même séquence, car changer d'animation change
+légitimement sa consommation. `o >= 0` ou une hausse de `z` indique un refus
+d'allocation et doit être considéré comme anormal.
+
+### Courbe Temps de frame
+
+| Série | Source | Interprétation |
+| --- | --- | --- |
+| Dernière | `l` | durée de la dernière frame, utile pour voir les variations immédiates |
+| Moyenne | `g` | tendance du mode courant, moins sensible à une frame isolée |
+| Pire | `w` | plus longue frame observée dans les statistiques courantes |
+
+Les valeurs firmware sont en microsecondes et l'application les affiche en
+millisecondes. La durée englobe les temporisations historiques de l'animation :
+elle représente son rythme visible, pas uniquement son temps CPU. Un pic isolé
+de `l` peut provenir du réseau ou d'une transition. Une hausse durable de `g`,
+accompagnée d'une baisse des FPS, indique un ralentissement réel. `w` reste
+élevé après un seul pic jusqu'au changement de mode ou au reset statistique.
+
+### Courbe FPS
+
+La série utilise `p / 10`. Elle évolue à l'inverse de la durée moyenne : une
+animation comportant volontairement de longues pauses peut avoir peu de FPS
+sans dysfonctionnement. Rechercher surtout une dégradation progressive dans un
+même mode et avec les mêmes réglages. Les animations web en streaming possèdent
+leurs propres compteurs de frames envoyées et ignorées ; ils ne doivent pas être
+confondus avec ce FPS firmware.
+
+### Repères et autres indicateurs
+
+- **Mode** (`m`, `x`) : sépare des consommations ou rythmes non comparables ;
+- **Redémarrage** (`u`, `r`, `d`) : l'uptime repart et la cause permet de
+  distinguer mise à jour, reset demandé et panic ;
+- **Interruption** : aucune mesure n'a été reçue pendant cette portion ;
+- **OOM** (`o`, `z`) : taille du dernier refus et compteur cumulé ;
+- **Wi-Fi / Particle** (`i`, `k`) : distinguent un cube actif localement d'une
+  perte de connexion Cloud ;
+- **Latence L3D Studio** : mesure le transport complet, tandis que
+  `X-L3D-Service-Us` mesure seulement le service interne LAN lorsqu'il est
+  présent.
+
+Les courbes aident à détecter une dérive ; elles ne prouvent pas à elles seules
+sa cause. Confirmer une anomalie en reproduisant le même mode, la même vitesse
+et une luminosité de test `B:1`.
+
 ## Format compact version 1
 
 | Clé | Valeur |
