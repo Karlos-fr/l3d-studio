@@ -5,7 +5,6 @@
 // ne conserve aucun historique et ne gere aucun timer.
 // ============================================================================
 
-import type { ParticleClient } from "../particle/client";
 import type { AppState } from "../ui/state";
 import { createTransportForState } from "../ui/transport";
 import type { DiagnosticsSample } from "./types";
@@ -15,16 +14,14 @@ import type { DiagnosticsSample } from "./types";
 //
 // Parametres :
 // - state : configuration de transport courante.
-// - particleClient : client Particle partage.
 //
 // Retour :
 // - valeurs brutes accompagnees de la source, de l'heure et de la latence.
 // ----------------------------------------------------------------------------
 export async function readDiagnosticsSample(
   state: AppState,
-  particleClient: ParticleClient,
 ): Promise<DiagnosticsSample> {
-  return readDiagnosticsOperation(state, particleClient, false);
+  return readDiagnosticsOperation(state, false);
 }
 
 // ----------------------------------------------------------------------------
@@ -32,16 +29,14 @@ export async function readDiagnosticsSample(
 //
 // Parametres :
 // - state : configuration de transport courante.
-// - particleClient : client Particle partage.
 //
 // Retour :
 // - nouvel echantillon obtenu apres le reset demande.
 // ----------------------------------------------------------------------------
 export async function resetDiagnosticsSample(
   state: AppState,
-  particleClient: ParticleClient,
 ): Promise<DiagnosticsSample> {
-  return readDiagnosticsOperation(state, particleClient, true);
+  return readDiagnosticsOperation(state, true);
 }
 
 // ----------------------------------------------------------------------------
@@ -49,7 +44,6 @@ export async function resetDiagnosticsSample(
 //
 // Parametres :
 // - state : configuration de transport courante.
-// - particleClient : client Particle partage.
 // - resetRequested : vrai uniquement pour une action utilisateur confirmee.
 //
 // Retour :
@@ -57,11 +51,10 @@ export async function resetDiagnosticsSample(
 // ----------------------------------------------------------------------------
 async function readDiagnosticsOperation(
   state: AppState,
-  particleClient: ParticleClient,
   resetRequested: boolean,
 ): Promise<DiagnosticsSample> {
   const startedAt = performance.now();
-  const transport = createTransportForState(state, particleClient);
+  const transport = createTransportForState(state);
   const response = resetRequested
     ? await transport.resetDiagnostics()
     : await transport.readDiagnostics();
@@ -69,7 +62,6 @@ async function readDiagnosticsOperation(
     capturedAtMilliseconds: Date.now(),
     source: response.source,
     latencyMilliseconds: Math.max(0, performance.now() - startedAt),
-    dataOperations: response.dataOperations ?? 0,
     diagnostics: response.value,
   };
 }

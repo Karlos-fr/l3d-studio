@@ -34,7 +34,7 @@ const SCHEDULER_SOURCE = readFirmwareSource("core/animation_scheduler.cpp");
 const MODE_IDS_SOURCE = readFirmwareSource("config/mode_ids.h");
 
 // Source du catalogue Particle historique.
-const CLOUD_METADATA_SOURCE = readFirmwareSource("cloud/metadata.cpp");
+const CATALOG_METADATA_SOURCE = readFirmwareSource("core/catalog_metadata.cpp");
 
 // Opcodes numeriques attendus dans la VM version 1.
 const EXPECTED_OPCODES = [
@@ -282,8 +282,8 @@ function calculateSin8Value(_value, index) {
 
 test("la VM bytecode reste modulaire et desactivable", testModularFeatureFlag);
 test("le mode bytecode ne deborde pas le catalogue Particle historique", () => {
-  assert.match(CLOUD_METADATA_SOURCE, /modeStruct\[i\]\.modeId == BYTECODE/u);
-  assert.match(CLOUD_METADATA_SOURCE, /continue;/u);
+  assert.match(CATALOG_METADATA_SOURCE, /modeStruct\[i\]\.modeId == BYTECODE/u);
+  assert.match(CATALOG_METADATA_SOURCE, /continue;/u);
 });
 test("la VM bytecode reutilise un etat fixe partage", testSharedFixedStorage);
 test("le cycle de vie protege le scratch lors des fautes", testLifecycleAndSafeFault);

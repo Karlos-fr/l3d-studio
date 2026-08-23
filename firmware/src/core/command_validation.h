@@ -1,5 +1,5 @@
 // ============================================================================
-// CommandValidation - Implementation des validations Cloud sans allocation
+// CommandValidation - Implementation des validations LAN sans allocation
 // ----------------------------------------------------------------------------
 // Ce module valide les caracteres et entiers recus par les commandes firmware.
 // Il ne modifie ni l'etat des modes, ni le framebuffer, ni l'EEPROM.

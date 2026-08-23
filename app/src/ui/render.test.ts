@@ -22,7 +22,7 @@ function runStreamingPanelRenderTests(): void {
   // Verifie les controles d'animation proposes au premier chargement.
   // --------------------------------------------------------------------------
   it("affiche l'atelier Animations par defaut", () => {
-    const state = createInitialState(null, null);
+    const state = createInitialState(null);
     const root: RenderRoot = { innerHTML: "" };
     renderApp(root as HTMLElement, state);
     expect(root.innerHTML).toContain("show-streaming-animations");
@@ -35,7 +35,7 @@ function runStreamingPanelRenderTests(): void {
   // Verifie que Peinture remplace les reglages de cadence par quatre outils.
   // --------------------------------------------------------------------------
   it("affiche uniquement les outils essentiels du peintre", () => {
-    const state = createInitialState(null, null);
+    const state = createInitialState(null);
     state.streaming.workspace = "painting";
     const root: RenderRoot = { innerHTML: "" };
     renderApp(root as HTMLElement, state);

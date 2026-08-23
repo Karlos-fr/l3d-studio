@@ -7,7 +7,6 @@
 
 import type {
   SparkPixelsAuxSwitch,
-  SparkPixelsDeviceInfoEntry,
   SparkPixelsModeDefinition,
   SparkPixelsModeParameters,
   SparkPixelsModeSummary,
@@ -22,14 +21,11 @@ const COLOR_COUNT_PATTERN = /(?:^|,)C:(\d+)/;
 // Expression reguliere du nombre de switches declare par un mode.
 const SWITCH_COUNT_PATTERN = /(?:^|,)S:(\d+)/;
 
-// Expression reguliere des entrees `Libelle:"Valeur",` de `deviceInfo`.
-const DEVICE_INFO_ENTRY_PATTERN = /([^:,]+):"([^"]*)",?/g;
-
 // ----------------------------------------------------------------------------
 // Parse une liste de modes separee par des points-virgules.
 //
 // Parametres :
-// - modeList : chaine publiee par la variable Particle `modeList`.
+// - modeList : catalogue compact renvoye par la route LAN des modes.
 //
 // Retour :
 // - liste de modes avec leur nom et leur position dans la liste firmware.
@@ -49,7 +45,7 @@ export function parseModeList(modeList: string): SparkPixelsModeSummary[] {
 // Parse la liste de parametres parallele a `modeList`.
 //
 // Parametres :
-// - modeParamList : chaine publiee par la variable Particle `modeParmList`.
+// - modeParamList : parametres compacts renvoyes par la route LAN des modes.
 //
 // Retour :
 // - liste de parametres de mode dans l'ordre firmware.
@@ -66,8 +62,8 @@ export function parseModeParamList(modeParamList: string): SparkPixelsModeParame
 // Fusionne `modeList` et `modeParmList` en definitions de modes exploitables.
 //
 // Parametres :
-// - modeList : chaine publiee par la variable Particle `modeList`.
-// - modeParamList : chaine publiee par la variable Particle `modeParmList`.
+// - modeList : noms compacts renvoyes par le serveur LAN.
+// - modeParamList : parametres compacts renvoyes par le serveur LAN.
 //
 // Retour :
 // - liste de modes avec leurs parametres associes par index.
@@ -89,7 +85,7 @@ export function parseModeDefinitions(
 // Parse la liste des interrupteurs auxiliaires globaux.
 //
 // Parametres :
-// - auxSwitchList : chaine publiee par la variable Particle `auxSwtchList`.
+// - auxSwitchList : catalogue compact renvoye par la route LAN des switches.
 //
 // Retour :
 // - liste d'interrupteurs auxiliaires globaux.
@@ -101,22 +97,6 @@ export function parseAuxSwitchList(auxSwitchList: string): SparkPixelsAuxSwitch[
     .filter((rawEntry) => rawEntry.length > 0)
     .map(parseAuxSwitchEntry)
     .filter((auxSwitch): auxSwitch is SparkPixelsAuxSwitch => auxSwitch !== null);
-}
-
-// ----------------------------------------------------------------------------
-// Parse les informations device publiees par le firmware.
-//
-// Parametres :
-// - deviceInfo : chaine publiee par la variable Particle `deviceInfo`.
-//
-// Retour :
-// - liste d'entrees libellees dans l'ordre firmware.
-// ----------------------------------------------------------------------------
-export function parseDeviceInfo(deviceInfo: string): SparkPixelsDeviceInfoEntry[] {
-  return Array.from(deviceInfo.matchAll(DEVICE_INFO_ENTRY_PATTERN), (match) => ({
-    label: (match[1] ?? "").trim(),
-    value: match[2] ?? "",
-  })).filter((entry) => entry.label.length > 0);
 }
 
 // ----------------------------------------------------------------------------

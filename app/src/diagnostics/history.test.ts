@@ -94,7 +94,6 @@ function createMonitorState(): DiagnosticsMonitorState {
     chartWindow: "recent",
     lastError: null,
     consecutiveErrors: 0,
-    estimatedParticleDataOperations: 0,
     warningMessage: null,
   };
 }
@@ -119,7 +118,6 @@ function createSample(
     capturedAtMilliseconds,
     source: "lan",
     latencyMilliseconds: 1,
-    dataOperations: 0,
     diagnostics: {
       formatVersion: 1,
       sequence: capturedAtMilliseconds,

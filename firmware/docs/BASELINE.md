@@ -346,3 +346,20 @@ HTTP 200. Après cinq secondes sans nouvelle requête, `/state` indiquait encore
 `Stream`, ce qui valide le maintien au-delà du timeout animé de trois secondes.
 L'ancienne route `/cube-painter` a renvoyé 404 et le cube a ensuite été remis
 sur `M:Off,S:0,B:1,`.
+
+## Suppression des API applicatives Particle — 23 août 2026
+
+Le retrait des trois fonctions, des onze variables, du chemin différé des
+diagnostics et du buffer `deviceInfo` donne la compilation Photon 2.3.1
+suivante :
+
+| Variante | Flash | RAM statique | Binaire | Marge Flash |
+| --- | ---: | ---: | ---: | ---: |
+| Avant retrait des API applicatives Particle | 122 688 | 15 228 | 122 692 | 8 384 |
+| Pilotage LAN uniquement | 120 560 | 14 596 | 120 564 | 10 512 |
+| Écart | **-2 128** | **-632** | **-2 128** | **+2 128** |
+
+La connexion système Particle reste active pour Device OS et le flash OTA.
+Les tests hôte et le build TypeScript passent ; la compilation firmware réussit
+sans secret incorporé. La validation matérielle de cette variante reste à
+effectuer à `B:1` avant tout déploiement de référence.

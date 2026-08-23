@@ -1,8 +1,8 @@
 // ============================================================================
 // CommandTransportSeparation - Tests hote des frontieres de commandes
 // ----------------------------------------------------------------------------
-// Ce fichier verifie que Particle ne porte plus la logique metier et que les
-// entrees a buffers fixes restent bornees avant tout effet de bord.
+// Ce fichier verifie que le LAN repose sur une logique metier a buffers fixes
+// et qu'aucune entree applicative Particle n'est encore publiee.
 // ============================================================================
 
 import assert from "node:assert/strict";
@@ -65,22 +65,11 @@ function extractFunction(source, signature, nextSignature) {
 }
 
 // ----------------------------------------------------------------------------
-// Verifie que chaque callback Particle restant delegue sans logique intermediaire.
+// Verifie que le firmware ne publie plus de fonction ou variable applicative.
 // ----------------------------------------------------------------------------
-test("les trois callbacks Particle sont de simples adaptateurs", () => {
-  const cloud = readFirmwareSource("src/cloud/command_parser.cpp");
-  assert.match(
-    cloud,
-    /int SetMode\(String command\) \{\s*return recordCommandResult\(\s*setModeFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
-  );
-  assert.match(
-    cloud,
-    /int FnRouter\(String command\) \{\s*return recordCommandResult\(\s*routeCommandFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
-  );
-  assert.match(
-    cloud,
-    /int SetText\(String command\) \{\s*return recordCommandResult\(\s*setTextFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
-  );
+test("aucune API applicative Particle n'est publiee", () => {
+  const main = stripComments(readFirmwareSource("src/main.cpp"));
+  assert.doesNotMatch(main, /Particle\.(?:function|variable)\s*\(/u);
 });
 
 // ----------------------------------------------------------------------------

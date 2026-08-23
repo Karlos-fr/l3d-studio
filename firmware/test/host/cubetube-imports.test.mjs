@@ -215,7 +215,7 @@ test("La palette CubeTube reste bornée à 80 et 75 par canal", () => {
 // ----------------------------------------------------------------------------
 test("Les tables de métadonnées restent constantes en flash", () => {
   const stateSource = readFirmwareSource("src/core/legacy_state.h");
-  const metadataSource = readFirmwareSource("src/cloud/metadata.cpp");
+  const metadataSource = readFirmwareSource("src/core/catalog_metadata.cpp");
   assert.match(stateSource, /static const modeParams modeStruct\[\]/u);
   assert.match(stateSource, /static const switchParams switchTitleStruct\[\]/u);
   assert.doesNotMatch(

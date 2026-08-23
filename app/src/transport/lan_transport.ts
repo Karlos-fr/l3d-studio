@@ -2,7 +2,7 @@
 // LanTransport - Implementation du transport Spark Pixels local
 // ----------------------------------------------------------------------------
 // Ce fichier adapte le client LAN aux types metier communs. Il ne choisit pas
-// le transport et ne connait ni Particle Cloud ni le DOM.
+// le transport et ne connait pas le DOM.
 // ============================================================================
 
 import type { LanClient, LanCommandResponse } from "../lan/types";
@@ -39,7 +39,6 @@ export function createLanTransport(client: LanClient): SparkPixelsTransport {
           switches: [...state.switches],
           modes: modes.modes,
           auxSwitches: auxSwitches.switches,
-          deviceInfoEntries: [],
           wifiRssi: null,
           debugMessage: null,
         },
@@ -52,11 +51,11 @@ export function createLanTransport(client: LanClient): SparkPixelsTransport {
     },
 
     async readDiagnostics() {
-      return { source: "lan", value: await client.diagnostics(), dataOperations: 0 };
+      return { source: "lan", value: await client.diagnostics() };
     },
 
     async resetDiagnostics() {
-      return { source: "lan", value: await client.resetDiagnostics(), dataOperations: 0 };
+      return { source: "lan", value: await client.resetDiagnostics() };
     },
 
     sendCommand: (command) => mapLanCommand(client.command(command)),

@@ -13,14 +13,6 @@ import {
 } from "../diagnostics/history";
 import { resetDiagnosticsSample } from "../diagnostics/reader";
 import type { DiagnosticsChartWindow } from "../diagnostics/types";
-import { ParticleCloudError, type ParticleClient } from "../particle/client";
-import {
-  clearParticleSession,
-  createSessionFromToken,
-  isParticleSessionExpired,
-  saveParticleSession,
-  type ParticleSessionStorage,
-} from "../particle/session";
 import {
   buildGetColorCommand,
   buildGetSwitchStateCommand,
@@ -34,15 +26,12 @@ import {
 } from "../sparkpixels/protocol";
 import {
   SparkPixelsCommandRefusedError,
-  type TransportPreference,
 } from "../transport/types";
-import { saveAppPreferences } from "./preferences";
+import { saveAppPreferences, type AppPreferencesStorage } from "./preferences";
 import {
   canCallAdvancedFunction,
   canSendSetModeCommand,
   getSelectedModeDefinition,
-  isSelectedDeviceOnline,
-  resetFirmwareState,
   type AppState,
 } from "./state";
 import { createTransportForState } from "./transport";
@@ -56,9 +45,8 @@ import type { StreamingWorkspace } from "./state";
 export interface UiEventContext {
   rootElement: HTMLElement;
   state: AppState;
-  particleClient: ParticleClient;
   diagnosticsMonitor: DiagnosticsMonitor;
-  storage: ParticleSessionStorage;
+  storage: AppPreferencesStorage;
   rerender: () => void;
   startStreaming: (targetFps: StreamingFps) => Promise<void>;
   selectStreamingAnimation: (animationId: string) => void;
@@ -76,17 +64,8 @@ export interface UiEventContext {
   ) => Promise<void>;
 }
 
-// Selecteur du formulaire de connexion Particle.
-const LOGIN_FORM_SELECTOR = "[data-form='login']";
-
 // Selecteur des boutons d'action declaratifs.
 const ACTION_BUTTON_SELECTOR = "[data-action]";
-
-// Nom de l'action qui deconnecte la session Particle.
-const LOGOUT_ACTION = "logout";
-
-// Nom de l'action qui recharge la liste des devices.
-const REFRESH_DEVICES_ACTION = "refresh-devices";
 
 // Nom de l'action qui lit l'etat firmware du cube.
 const LOAD_FIRMWARE_STATE_ACTION = "load-firmware-state";
@@ -155,7 +134,6 @@ const STATE_FIELD_SELECTOR = "[data-field]";
 // - ajoute des gestionnaires submit, click, input et change.
 // ----------------------------------------------------------------------------
 export function attachAppEvents(context: UiEventContext): void {
-  attachLoginForm(context);
   attachActionButtons(context);
   attachStateFields(context);
   attachPainterCanvasEvents(context);
@@ -237,51 +215,6 @@ function attachPainterCanvasEvents(context: UiEventContext): void {
   painterCanvas.addEventListener("pointermove", continuePainterStroke);
   painterCanvas.addEventListener("pointerup", finishPainterStroke);
   painterCanvas.addEventListener("pointercancel", finishPainterStroke);
-}
-
-// ----------------------------------------------------------------------------
-// Charge les donnees initiales si une session Particle existe deja.
-//
-// Parametres :
-// - context : dependances necessaires au chargement.
-//
-// Effet de bord :
-// - appelle Particle Cloud pour lister les devices quand un token existe.
-// ----------------------------------------------------------------------------
-export async function hydrateAuthenticatedSession(context: UiEventContext): Promise<void> {
-  if (context.state.session === null) {
-    return;
-  }
-
-  if (isParticleSessionExpired(context.state.session, Date.now())) {
-    handleExpiredSession(context);
-    return;
-  }
-
-  context.particleClient.setToken(context.state.session.accessToken);
-  await loadDevices(context);
-}
-
-// ----------------------------------------------------------------------------
-// Branche le formulaire de connexion Particle.
-//
-// Parametres :
-// - context : dependances necessaires au login.
-//
-// Effet de bord :
-// - ajoute un gestionnaire submit au formulaire de connexion.
-// ----------------------------------------------------------------------------
-function attachLoginForm(context: UiEventContext): void {
-  const formElement = context.rootElement.querySelector<HTMLFormElement>(LOGIN_FORM_SELECTOR);
-
-  if (formElement === null) {
-    return;
-  }
-
-  formElement.addEventListener("submit", (event) => {
-    event.preventDefault();
-    void handleLogin(context, formElement);
-  });
 }
 
 // ----------------------------------------------------------------------------
@@ -424,39 +357,6 @@ function clearDiagnosticsChartTooltip(event: Event): void {
 }
 
 // ----------------------------------------------------------------------------
-// Traite la connexion Particle.
-//
-// Parametres :
-// - context : dependances necessaires au login.
-// - formElement : formulaire contenant email et mot de passe.
-//
-// Effet de bord :
-// - appelle Particle OAuth, persiste le token et recharge les devices.
-// ----------------------------------------------------------------------------
-async function handleLogin(context: UiEventContext, formElement: HTMLFormElement): Promise<void> {
-  if (context.state.isBusy) {
-    return;
-  }
-
-  const formData = new FormData(formElement);
-  const email = String(formData.get("email") ?? "");
-  const password = String(formData.get("password") ?? "");
-
-  await runBusyTask(context, "Connexion a Particle...", async () => {
-    const tokenResponse = await context.particleClient.login(email, password);
-    const session = createSessionFromToken(tokenResponse, Date.now(), null);
-
-    context.state.session = session;
-    context.state.connectionStatus = "Connecte";
-    context.state.statusMessage = "Connexion Particle reussie.";
-    context.particleClient.setToken(session.accessToken);
-    saveParticleSession(context.storage, session);
-    formElement.reset();
-    await loadDevices(context);
-  });
-}
-
-// ----------------------------------------------------------------------------
 // Route une action utilisateur vers son gestionnaire.
 //
 // Parametres :
@@ -464,7 +364,7 @@ async function handleLogin(context: UiEventContext, formElement: HTMLFormElement
 // - action : nom de l'action declaree dans le DOM.
 //
 // Effet de bord :
-// - modifie l'etat ou appelle Particle selon l'action.
+// - modifie l'etat ou appelle le serveur LAN selon l'action.
 // ----------------------------------------------------------------------------
 async function handleAction(context: UiEventContext, action: string): Promise<void> {
   if (context.state.isBusy) {
@@ -473,16 +373,6 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
 
   if (action.startsWith("bytecode-")) {
     await context.handleBytecodeAction(action);
-    return;
-  }
-
-  if (action === LOGOUT_ACTION) {
-    handleLogout(context);
-    return;
-  }
-
-  if (action === REFRESH_DEVICES_ACTION) {
-    await loadDevices(context);
     return;
   }
 
@@ -582,58 +472,6 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
 }
 
 // ----------------------------------------------------------------------------
-// Deconnecte la session Particle locale.
-//
-// Parametres :
-// - context : dependances necessaires a la deconnexion.
-//
-// Effet de bord :
-// - supprime la session locale et remet l'application en etat initial.
-// ----------------------------------------------------------------------------
-function handleLogout(context: UiEventContext): void {
-  context.stopStreaming();
-  stopDiagnosticsMonitoring(context);
-  clearParticleSession(context.storage);
-  context.particleClient.setToken(null);
-  Object.assign(context.state, {
-    session: null,
-    devices: [],
-    selectedDeviceId: null,
-    connectionStatus: "Non connecte",
-    statusMessage: "Session Particle supprimee localement.",
-    lastResponse: null,
-  });
-  resetFirmwareState(context.state);
-  context.rerender();
-}
-
-// ----------------------------------------------------------------------------
-// Supprime une session Particle expiree avant tout appel Cloud.
-//
-// Parametres :
-// - context : dependances necessaires a la suppression locale.
-//
-// Effet de bord :
-// - efface le token local et force un nouveau login utilisateur.
-// ----------------------------------------------------------------------------
-function handleExpiredSession(context: UiEventContext): void {
-  context.stopStreaming();
-  stopDiagnosticsMonitoring(context);
-  clearParticleSession(context.storage);
-  context.particleClient.setToken(null);
-  Object.assign(context.state, {
-    session: null,
-    devices: [],
-    selectedDeviceId: null,
-    connectionStatus: "Non connecte",
-    statusMessage: "Session Particle expiree. Reconnecte-toi pour obtenir un nouveau token.",
-    lastResponse: null,
-  });
-  resetFirmwareState(context.state);
-  context.rerender();
-}
-
-// ----------------------------------------------------------------------------
 // Met a jour l'etat depuis un champ de formulaire.
 //
 // Parametres :
@@ -656,14 +494,7 @@ function handleFieldChange(
     return;
   }
 
-  if (fieldName === "device-id") {
-    updateSelectedDevice(context, fieldElement.value);
-  } else if (fieldName === "transport-preference") {
-    context.stopStreaming();
-    stopDiagnosticsMonitoring(context);
-    context.state.transportPreference = fieldElement.value as TransportPreference;
-    context.state.lastTransportUsed = null;
-  } else if (fieldName === "lan-host") {
+  if (fieldName === "lan-host") {
     context.stopStreaming();
     stopDiagnosticsMonitoring(context);
     context.state.lanHost = fieldElement.value.trim();
@@ -761,36 +592,6 @@ function handleFieldChange(
 }
 
 // ----------------------------------------------------------------------------
-// Charge la liste des devices Particle.
-//
-// Parametres :
-// - context : dependances necessaires a l'appel Particle.
-//
-// Effet de bord :
-// - met a jour la liste des devices et le device selectionne.
-// ----------------------------------------------------------------------------
-async function loadDevices(context: UiEventContext): Promise<void> {
-  await runBusyTask(context, "Chargement des devices Particle...", async () => {
-    const devices = await context.particleClient.listDevices();
-    const previousDeviceId = context.state.selectedDeviceId;
-
-    context.state.devices = devices;
-    context.state.selectedDeviceId =
-      devices.find((device) => device.id === previousDeviceId)?.id ?? devices[0]?.id ?? null;
-    if (
-      context.state.selectedDeviceId !== previousDeviceId ||
-      !isSelectedDeviceOnline(context.state)
-    ) {
-      stopDiagnosticsMonitoring(context);
-    }
-    context.state.statusMessage =
-      devices.length === 0 ? "Aucun device Particle visible." : `${devices.length} device(s) charge(s).`;
-
-    persistSelectedDevice(context);
-  });
-}
-
-// ----------------------------------------------------------------------------
 // Charge l'etat firmware initial du cube selectionne.
 //
 // Parametres :
@@ -801,13 +602,13 @@ async function loadDevices(context: UiEventContext): Promise<void> {
 // ----------------------------------------------------------------------------
 async function loadFirmwareState(context: UiEventContext): Promise<void> {
   if (!canCallAdvancedFunction(context.state)) {
-    context.state.statusMessage = "Configure une adresse LAN ou selectionne un Photon online.";
+    context.state.statusMessage = "Configure l'adresse LAN du Photon.";
     context.rerender();
     return;
   }
 
   await runBusyTask(context, "Lecture du firmware SparkPixelsMega...", async () => {
-    const response = await createTransportForState(context.state, context.particleClient).readCube();
+    const response = await createTransportForState(context.state).readCube();
     const snapshot = response.value;
     context.state.lastTransportUsed = response.source;
     context.state.currentModeName = snapshot.modeName;
@@ -817,7 +618,6 @@ async function loadFirmwareState(context: UiEventContext): Promise<void> {
     context.state.currentSpeedIndex = snapshot.speedIndex;
     context.state.modes = snapshot.modes;
     context.state.auxSwitches = snapshot.auxSwitches;
-    context.state.deviceInfoEntries = snapshot.deviceInfoEntries;
     context.state.wifiRssi = snapshot.wifiRssi;
     context.state.debugMessage = snapshot.debugMessage;
     if (snapshot.colors.length > 0) context.state.colorValues = snapshot.colors;
@@ -849,6 +649,7 @@ async function testLanConnection(context: UiEventContext): Promise<void> {
     context.state.lanHost = host;
     context.state.lanPort = port;
     context.state.lastTransportUsed = "lan";
+    context.state.connectionStatus = "LAN connecté";
     context.state.lanTestStatus = `Photon joignable : firmware ${health.firmwareRevision}, Device OS ${health.deviceOsVersion}.`;
     context.state.statusMessage = "Connexion LAN validee.";
     saveAppPreferences(context.storage, context.state);
@@ -890,7 +691,7 @@ async function resetDiagnostics(context: UiEventContext): Promise<void> {
   const restartMonitoring = context.state.diagnostics.enabled;
   context.diagnosticsMonitor.stop();
   await runBusyTask(context, "Remise a zero des diagnostics...", async () => {
-    const sample = await resetDiagnosticsSample(context.state, context.particleClient);
+    const sample = await resetDiagnosticsSample(context.state);
     appendDiagnosticsSample(context.state.diagnostics, sample);
     context.state.lastTransportUsed = sample.source;
     context.state.statusMessage = `Diagnostics remis a zero via ${sample.source}.`;
@@ -937,7 +738,7 @@ async function sendSetText(context: UiEventContext): Promise<void> {
   }
 
   await runBusyTask(context, "Envoi du texte persistant...", async () => {
-    const response = await createTransportForState(context.state, context.particleClient).sendText(text);
+    const response = await createTransportForState(context.state).sendText(text);
 
     context.state.lastTransportUsed = response.source;
     context.state.lastResponse = JSON.stringify(
@@ -957,7 +758,7 @@ async function sendSetText(context: UiEventContext): Promise<void> {
 // - context : dependances necessaires a l'appel reseau.
 //
 // Effet de bord :
-// - appelle FnRouter et affiche la reponse Particle.
+// - appelle le routeur LAN et affiche sa reponse.
 // ----------------------------------------------------------------------------
 async function setTimezone(context: UiEventContext): Promise<void> {
   const command = validateOrShowMessage(context, () =>
@@ -989,7 +790,7 @@ async function callFnRouter(context: UiEventContext, command: string): Promise<v
   }
 
   await runBusyTask(context, "Appel FnRouter...", async () => {
-    const transport = createTransportForState(context.state, context.particleClient);
+    const transport = createTransportForState(context.state);
     const response = await transport.sendCommand(command);
 
     context.state.lastTransportUsed = response.source;
@@ -1038,7 +839,7 @@ async function getFirmwareColor(context: UiEventContext): Promise<void> {
 // - context : dependances necessaires a l'appel reseau.
 //
 // Effet de bord :
-// - appelle FnRouter et affiche la reponse Particle.
+// - appelle le routeur LAN et affiche sa reponse.
 // ----------------------------------------------------------------------------
 async function getFirmwareSwitchState(context: UiEventContext): Promise<void> {
   const command = validateOrShowMessage(context, () =>
@@ -1085,7 +886,7 @@ async function sendSetMode(context: UiEventContext): Promise<void> {
       switches: context.state.switchValues.slice(0, selectedMode.parameters.switchLabels.length),
       text: selectedMode.parameters.acceptsText ? context.state.textValue : undefined,
     });
-    const response = await createTransportForState(context.state, context.particleClient).sendMode(command);
+    const response = await createTransportForState(context.state).sendMode(command);
 
     context.state.lastTransportUsed = response.source;
     context.state.currentModeName = context.state.selectedModeName;
@@ -1119,86 +920,10 @@ async function runBusyTask(
     await task();
   } catch (error) {
     context.state.statusMessage = getErrorMessage(error);
-    handleSessionError(context, error);
   } finally {
     context.state.isBusy = false;
     context.rerender();
   }
-}
-
-// ----------------------------------------------------------------------------
-// Traite les erreurs Particle qui invalident la session locale.
-//
-// Parametres :
-// - context : dependances necessaires a la suppression de session.
-// - error : erreur recue pendant un appel Particle.
-//
-// Effet de bord :
-// - efface le token local si Particle refuse l'authentification.
-// ----------------------------------------------------------------------------
-function handleSessionError(context: UiEventContext, error: unknown): void {
-  if (!(error instanceof ParticleCloudError)) {
-    return;
-  }
-
-  const shouldClearSession =
-    error.status === 401 || error.status === 403 || error.code === "missing_token";
-
-  if (!shouldClearSession) {
-    return;
-  }
-
-  stopDiagnosticsMonitoring(context);
-  clearParticleSession(context.storage);
-  context.particleClient.setToken(null);
-  Object.assign(context.state, {
-    session: null,
-    devices: [],
-    selectedDeviceId: null,
-    connectionStatus: "Non connecte",
-    statusMessage: `${getErrorMessage(error)} Reconnecte-toi pour obtenir un nouveau token.`,
-    lastResponse: null,
-  });
-  resetFirmwareState(context.state);
-}
-
-// ----------------------------------------------------------------------------
-// Met a jour le device selectionne et la session locale.
-//
-// Parametres :
-// - context : dependances necessaires a la persistance.
-// - deviceId : identifiant Particle selectionne.
-//
-// Effet de bord :
-// - modifie le device selectionne, persiste la session et vide l'etat firmware.
-// ----------------------------------------------------------------------------
-function updateSelectedDevice(context: UiEventContext, deviceId: string): void {
-  context.stopStreaming();
-  stopDiagnosticsMonitoring(context);
-  context.state.selectedDeviceId = deviceId;
-  resetFirmwareState(context.state);
-  persistSelectedDevice(context);
-}
-
-// ----------------------------------------------------------------------------
-// Persiste le device selectionne dans la session locale.
-//
-// Parametres :
-// - context : dependances necessaires a la persistance.
-//
-// Effet de bord :
-// - ecrit la session mise a jour dans le stockage local.
-// ----------------------------------------------------------------------------
-function persistSelectedDevice(context: UiEventContext): void {
-  if (context.state.session === null) {
-    return;
-  }
-
-  context.state.session = {
-    ...context.state.session,
-    deviceId: context.state.selectedDeviceId,
-  };
-  saveParticleSession(context.storage, context.state.session);
 }
 
 // ----------------------------------------------------------------------------
@@ -1303,34 +1028,6 @@ function getErrorMessage(error: unknown): string {
     if (error.category === "connection") return "Le Photon est inaccessible a l'adresse LAN configuree.";
     if (error.category === "command-refused") return `Commande LAN refusee : ${error.result}.`;
     return `Protocole LAN invalide : ${error.message}`;
-  }
-
-  if (error instanceof ParticleCloudError) {
-    if (error.code === "missing_token") {
-      return "Token Particle absent ou invalide.";
-    }
-
-    if (error.code === "invalid_grant") {
-      return "Identifiants Particle invalides.";
-    }
-
-    if (error.code === "mfa_required") {
-      return "MFA Particle requise. Ce flux simple login/mot de passe ne la prend pas encore en charge.";
-    }
-
-    if (error.code === "invalid_request" && error.message.toLowerCase().includes("access token")) {
-      return "Token Particle refuse par le Cloud.";
-    }
-
-    if (error.message === "Timed out.") {
-      return "Le Photon ne repond pas. Verifie qu'il est online et connecte au Cloud Particle.";
-    }
-
-    if (error.status === 404) {
-      return "Ressource Particle introuvable : device, variable ou fonction inconnue.";
-    }
-
-    return `Erreur Particle : ${error.message}`;
   }
 
   if (error instanceof Error) {

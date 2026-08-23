@@ -2,7 +2,7 @@
 // Main - Implementation de l'orchestration applicative
 // ----------------------------------------------------------------------------
 // Ce fichier initialise l'application et connecte les modules UI. Il ne porte
-// pas les appels Particle Cloud ni la construction du protocole firmware.
+// pas les appels LAN ni la construction du protocole firmware.
 // ============================================================================
 
 import "./styles.css";
@@ -10,10 +10,8 @@ import { appendDiagnosticsSample } from "./diagnostics/history";
 import { createDiagnosticsMonitor } from "./diagnostics/monitor";
 import { readDiagnosticsSample } from "./diagnostics/reader";
 import type { DiagnosticsSample } from "./diagnostics/types";
-import { createParticleClient } from "./particle/client";
 import { createLanClient, LanClientError, normalizeLanHost, normalizeLanPort } from "./lan/client";
-import { loadParticleSession } from "./particle/session";
-import { attachAppEvents, hydrateAuthenticatedSession } from "./ui/events";
+import { attachAppEvents } from "./ui/events";
 import { loadAppPreferences } from "./ui/preferences";
 import { renderApp } from "./ui/render";
 import { updateDiagnosticsView } from "./ui/diagnostics_render";
@@ -89,12 +87,8 @@ function bootstrapApplication(): void {
   // Derniere largeur traitee afin d'eviter une boucle de ResizeObserver.
   let previousDiagnosticsWidth = 0;
 
-  const session = loadParticleSession(window.localStorage);
   const preferences = loadAppPreferences(window.localStorage);
-  const particleClient = createParticleClient({
-    token: session?.accessToken,
-  });
-  const state = createInitialState(session, preferences);
+  const state = createInitialState(preferences);
   state.bytecode.library = loadBytecodeLibrary(window.localStorage);
 
   // Framebuffer du peintre restaure independamment de l'animation courante.
@@ -656,7 +650,7 @@ function bootstrapApplication(): void {
     anchor.download = "l3d-animations.json";
     anchor.click();
     URL.revokeObjectURL(url);
-    state.bytecode.operationMessage = "Bibliothèque exportée sans configuration ni token Particle.";
+    state.bytecode.operationMessage = "Bibliothèque exportée sans configuration réseau.";
     rerender();
   }
 
@@ -843,16 +837,16 @@ function bootstrapApplication(): void {
   });
 
   // ----------------------------------------------------------------------------
-  // Lit un echantillon avec l'etat et le client Particle courants.
+  // Lit un echantillon avec l'adresse LAN courante.
   //
   // Retour :
   // - promesse du prochain echantillon de diagnostics.
   //
   // Effet de bord :
-  // - appelle le transport LAN ou Particle configure.
+  // - appelle le serveur LAN configure.
   // ----------------------------------------------------------------------------
   function readCurrentDiagnosticsSample(): Promise<DiagnosticsSample> {
-    return readDiagnosticsSample(state, particleClient);
+    return readDiagnosticsSample(state);
   }
 
   // ----------------------------------------------------------------------------
@@ -866,7 +860,6 @@ function bootstrapApplication(): void {
     attachAppEvents({
       rootElement: mountedRootElement,
       state,
-      particleClient,
       diagnosticsMonitor,
       storage: window.localStorage,
       rerender,
@@ -907,25 +900,6 @@ function bootstrapApplication(): void {
   diagnosticsResizeObserver.observe(mountedRootElement);
 
   rerender();
-  void hydrateAuthenticatedSession({
-    rootElement: mountedRootElement,
-    state,
-    particleClient,
-    diagnosticsMonitor,
-    storage: window.localStorage,
-    rerender,
-    startStreaming,
-    selectStreamingAnimation,
-    updateStreamingCadence,
-    updateStreamingSettings,
-    stopStreaming,
-    selectStreamingWorkspace,
-    selectPainterTool,
-    paintStreamingVoxel,
-    clearPainter,
-    handleBytecodeAction,
-    handleBytecodeField,
-  });
 }
 
 bootstrapApplication();

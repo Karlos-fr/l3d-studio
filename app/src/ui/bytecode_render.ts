@@ -130,7 +130,7 @@ export function renderBytecodePanel(state: AppState): string {
           <button class="danger-action" data-action="bytecode-delete-program" type="button" ${lanAvailable && photon?.installed && !state.isBusy ? "" : "disabled"}>Supprimer du Photon</button>
         </div>
         <p data-bytecode-operation-message>${escapeHtml(bytecode.operationMessage)}</p>
-        <p class="field-help">Installation exclusivement par le LAN configuré ci-dessus, sans repli Particle Cloud.</p>
+        <p class="field-help">Installation exclusivement par le LAN configuré ci-dessus.</p>
       </div>
     </section>
   `;

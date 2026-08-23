@@ -64,18 +64,13 @@ test("le producteur commun conserve le format compact version 1", () => {
 });
 
 // ----------------------------------------------------------------------------
-// Verifie que Particle utilise encore la sequence et le buffer historiques.
+// Verifie que le diagnostic ne conserve aucun chemin applicatif Particle.
 // ----------------------------------------------------------------------------
-test("Particle conserve son parcours differe par deviceInfo", () => {
+test("les diagnostics sont exposes uniquement par le LAN", () => {
   const diagnostics = readFirmwareSource("src/diagnostics/runtime_diagnostics.cpp");
   const header = readFirmwareSource("src/diagnostics/runtime_diagnostics.h");
-  assert.match(header, /#define diagnosticsText deviceInfo/u);
-  assert.match(diagnostics, /diagnosticsRequestSequence/u);
-  assert.match(
-    diagnostics,
-    /diagnosticsWriteSnapshot\(\s*diagnosticsText,\s*DIAGNOSTICS_TEXT_LENGTH,\s*resetRequested,\s*sequence\)/u,
-  );
-  assert.match(diagnostics, /diagnosticsTextValidUntil = millis\(\) \+ 15000UL/u);
+  assert.doesNotMatch(header, /deviceInfo|GetDiagnostics|diagnosticsProcessRequests/u);
+  assert.doesNotMatch(diagnostics, /deviceInfo|diagnosticsRequestSequence/u);
 });
 
 // ----------------------------------------------------------------------------

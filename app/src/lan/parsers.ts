@@ -2,7 +2,7 @@
 // LanParsers - Implementation des parseurs purs de l'API locale
 // ----------------------------------------------------------------------------
 // Ce fichier valide les formats texte versionnes du Photon. Il ne connait ni
-// fetch, ni Particle Cloud, ni le DOM de l'application.
+// fetch, ni le DOM de l'application.
 // ============================================================================
 
 import { parseAuxSwitchList, parseModeDefinitions } from "../sparkpixels/parsers";

@@ -77,47 +77,35 @@ test("le code applicatif ne contient plus d'allocation dynamique", () => {
 });
 
 // ----------------------------------------------------------------------------
-// Verifie que les commandes Cloud ne creent plus de sous-chaines temporaires.
+// Verifie que les commandes LAN travaillent directement sur des buffers fixes.
 // ----------------------------------------------------------------------------
-test("le parseur Cloud travaille directement sur le buffer Particle", () => {
-  // Adaptateurs Particle des commandes historiques.
-  const parser = fs.readFileSync(
-    path.join(sourceRoot, "cloud/command_parser.cpp"),
-    "utf8",
-  );
+test("le routeur LAN travaille directement sur des buffers fixes", () => {
   // Coeur metier independant de Particle et des String.
   const dispatch = fs.readFileSync(
     path.join(sourceRoot, "core/command_dispatch.cpp"),
     "utf8",
   );
   assert.doesNotMatch(stripComments(dispatch), /\.(?:substring|charAt|indexOf|trim|toUpperCase)\s*\(/u);
-  assert.doesNotMatch(parser, /FnRouter\(tempBuf\)|SetText\(""\)|GetDiagnostics\("/u);
-  assert.match(parser, /setModeFromBuffer\(command\.c_str\(\), command\.length\(\)\)/u);
-  assert.match(parser, /routeCommandFromBuffer\(command\.c_str\(\), command\.length\(\)\)/u);
-  assert.match(parser, /setTextFromBuffer\(command\.c_str\(\), command\.length\(\)\)/u);
+  assert.match(dispatch, /setModeFromBuffer\(const char\* commandText, size_t commandLength\)/u);
+  assert.match(dispatch, /routeCommandFromBuffer\(const char\* commandText, size_t commandLength\)/u);
+  assert.match(dispatch, /setTextFromBuffer\(const char\* text, size_t textLength\)/u);
   assert.match(dispatch, /boundedTextCopyRange\(/u);
   assert.match(dispatch, /parseHexText\(/u);
 });
 
 // ----------------------------------------------------------------------------
-// Verifie que String reste limite aux signatures imposees par Particle Cloud.
+// Verifie que les sources applicatives ne declarent plus de String dynamique.
 // ----------------------------------------------------------------------------
-test("String reste uniquement aux trois frontieres Cloud", () => {
-  // Toutes les sources afin de compter les definitions de callbacks Particle.
+test("aucune String applicative ne subsiste", () => {
   let definitions = "";
   for (const sourcePath of listSources(sourceRoot)) {
     if (sourcePath.endsWith(".cpp")) {
       definitions += `${fs.readFileSync(sourcePath, "utf8")}\n`;
     }
   }
-  // Signatures autorisees : les trois callbacks imposes par Particle.
-  const stringSignatures = [...definitions.matchAll(
-    /(?:SetMode\(String|FnRouter\(String|SetText\(String)/gu,
-  )];
-  assert.equal(stringSignatures.length, 3);
   assert.doesNotMatch(
     stripComments(definitions),
-    /\bString\s+[A-Za-z_][A-Za-z0-9_]*\s*[=;]/u,
+    /\bString\b/u,
   );
 });
 

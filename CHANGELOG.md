@@ -6,6 +6,16 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Pilotage applicatif exclusivement par le LAN
+
+- Suppression des fonctions et variables applicatives publiées sur Particle.
+- Suppression du client Cloud, de la session, du choix de device et des
+  transports Particle/Automatique dans L3D Studio.
+- Suppression du chemin Particle des diagnostics et du buffer `deviceInfo`.
+- Conservation de la connexion système Particle uniquement pour Device OS, la
+  synchronisation horaire et le flash OTA.
+- Mise à jour des tests et de la documentation autour de l'API LAN unique.
+
 ### Peinture web RGB332 et retrait de CubePainter
 
 - Ajout dans L3D Studio d'un atelier **Peinture** avec couleur, crayon, gomme,

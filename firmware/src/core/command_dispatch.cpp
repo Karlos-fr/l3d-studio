@@ -358,8 +358,8 @@ int setModeFromBuffer(const char* commandText, size_t commandLength) {
 // - valeur historique de la commande ou code COMMAND_ERROR negatif.
 //
 // Effet de bord :
-// - peut regler l'heure, les switches auxiliaires, les diagnostics ou demander
-//   un redemarrage differe.
+// - peut regler l'heure, les switches auxiliaires ou demander un redemarrage
+//   differe.
 // ----------------------------------------------------------------------------
 int routeCommandFromBuffer(const char* commandText, size_t commandLength) {
     size_t trimmedBegin = findTrimmedTextBegin(commandText, commandLength);
@@ -377,14 +377,6 @@ int routeCommandFromBuffer(const char* commandText, size_t commandLength) {
         return COMMAND_ERROR_TOO_LONG;
 	int beginIdx = 0;
 	int colonIdx = findTextCharacter(commandText, commandLength, ':');
-
-#if L3D_DIAGNOSTICS_ENABLED
-    // Conserve les diagnostics sur le routeur historique et deviceInfo.
-    if(textRangeEqualsIgnoreAsciiCase(commandText, commandLength, "GETDIAG"))
-        return GetDiagnostics(FALSE);
-    if(textRangeEqualsIgnoreAsciiCase(commandText, commandLength, "RESETDIAG"))
-        return GetDiagnostics(TRUE);
-#endif
 
     if(colonIdx <= 0)
         return COMMAND_ERROR_MALFORMED;

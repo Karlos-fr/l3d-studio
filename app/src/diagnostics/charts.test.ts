@@ -186,7 +186,6 @@ function createSample(capturedAtMilliseconds: number): DiagnosticsSample {
     capturedAtMilliseconds,
     source: "lan",
     latencyMilliseconds: 2,
-    dataOperations: 0,
     diagnostics: {
       formatVersion: 1,
       sequence: capturedAtMilliseconds,

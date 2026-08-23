@@ -14,7 +14,7 @@ Le projet doit rester simple :
 - CSS simple
 - Vitest pour les tests unitaires
 - Pas de framework UI sauf decision explicite ulterieure
-- Pas de backend tant que le pilotage Particle Cloud suffit
+- Pas de backend : l'application appelle directement le serveur LAN du Photon
 
 ## Regles Generales
 
@@ -22,7 +22,7 @@ Le projet doit rester simple :
   `firmware/` ; l'ancienne archive `download/` a été retirée du dépôt de travail.
 - Preferer des modules petits et explicites.
 - Isoler le protocole Spark Pixels de l'interface utilisateur.
-- Isoler les appels Particle Cloud dans un client dedie.
+- Isoler les appels HTTP locaux dans un client LAN dedie.
 - Ne jamais committer de token Particle, d'identifiant secret ou de configuration personnelle.
 - Les commentaires de code source doivent etre en francais.
 
@@ -32,8 +32,8 @@ Garder le projet decoupe en modules petits et concentres.
 
 Pour ce projet TypeScript, preferer un fichier par responsabilite claire, par exemple :
 
-- `particle/client.ts` pour les appels Particle Cloud ;
-- `particle/types.ts` pour les types Particle Cloud ;
+- `lan/client.ts` pour les appels au serveur local ;
+- `lan/types.ts` pour les types de l'API LAN ;
 - `sparkpixels/protocol.ts` pour construire les commandes firmware ;
 - `sparkpixels/parsers.ts` pour parser les variables publiees par le firmware ;
 - `ui/render.ts` pour produire ou mettre a jour le DOM ;
@@ -232,7 +232,7 @@ Preferer les commentaires utiles qui expliquent :
 - les frontieres entre modules ;
 - les hypotheses ;
 - les effets de bord ;
-- les contraintes Particle Cloud ;
+- les contraintes du serveur LAN embarque ;
 - les contraintes du firmware `SparkPixelsMega`.
 
 Eviter les commentaires vides qui repetent simplement le code.
@@ -247,7 +247,7 @@ Le code applicatif doit tendre vers cette separation :
 app/src/
   main.ts
   styles.css
-  particle/
+  lan/
     client.ts
     types.ts
   sparkpixels/
@@ -262,23 +262,21 @@ app/src/
 
 ### Frontieres importantes
 
-- `particle/` connait l'API Particle Cloud, mais pas les modes Spark Pixels.
+- `lan/` connait l'API HTTP locale, mais pas le DOM.
 - `sparkpixels/` connait le protocole du firmware, mais pas le DOM.
-- `ui/` connait le DOM, mais delegue les commandes au protocole et au client Particle.
+- `ui/` connait le DOM, mais delegue les commandes au protocole et au client LAN.
 - `main.ts` assemble les modules et initialise l'application.
 - Les tests doivent cibler en priorite les parseurs et generateurs de commandes.
 
-### API Particle Cloud
+### API LAN
 
-Utiliser l'API Particle actuelle :
-
-- domaine : `https://api.particle.io/v1`
-- authentification : header `Authorization: Bearer <token>`
-
-Ne pas reprendre tel quel l'ancien modele Android :
-
-- ancien domaine `api.spark.io`
-- token passe en query string `access_token=...`
+- L'application utilise exclusivement le serveur HTTP local du Photon.
+- Ne pas ajouter de transport Particle Cloud, de session, de token ou de repli
+  automatique dans l'application.
+- Le firmware ne doit publier aucune `Particle.function` ni
+  `Particle.variable` applicative.
+- La connexion système Particle reste autorisée pour Device OS, la
+  synchronisation horaire et le flash OTA.
 
 ### Protocole Spark Pixels
 
@@ -301,7 +299,7 @@ L'interface ne doit pas assembler ces chaines directement.
 - Le firmware actif du refactor se trouve dans `firmware/`.
 - La baseline historique reste décrite par ses mesures et ses empreintes dans
   `firmware/docs/BASELINE.md` ; aucune copie `download/` n'est conservée.
-- Les IDs de modes, les noms historiques, le protocole Particle et le rendu
+- Les IDs de modes, les noms historiques, le protocole de commande et le rendu
   visuel doivent rester compatibles pendant les phases de securisation.
 - Une optimisation ne doit pas etre melangee avec une evolution fonctionnelle
   sans tache et mesure distinctes.
@@ -326,7 +324,7 @@ L'interface ne doit pas assembler ces chaines directement.
 - Preferer un scratch statique partage aux buffers temporaires concurrents,
   uniquement lorsque les durees de vie sont mutuellement exclusives et
   documentees.
-- Toute commande Cloud doit etre bornee et validee avant de modifier l'etat,
+- Toute commande LAN doit etre bornee et validee avant de modifier l'etat,
   un framebuffer ou l'EEPROM.
 - Toute coordonnee ou tout index doit etre valide avant une ecriture dans un
   buffer. Les primitives de rendu doivent rester la frontiere de controle.

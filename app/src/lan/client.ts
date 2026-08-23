@@ -2,7 +2,7 @@
 // LanClient - Implementation du client HTTP local du Photon
 // ----------------------------------------------------------------------------
 // Ce fichier borne les appels fetch et parse les reponses LAN. Il ne connait
-// ni Particle Cloud, ni le DOM, ni la strategie de choix du transport.
+// ni le DOM, ni la construction des commandes metier.
 // ============================================================================
 
 import {
@@ -185,10 +185,10 @@ export function createLanClient(config: LanClientConfig): LanClient {
     // Invalide les deux banques transactionnelles.
     deleteBytecode: () =>
       requestLan(fetchFn, baseUrl, "/bytecode/delete", "POST", "", timeoutMilliseconds, parseLanBytecodeStatus),
-    // Lance le mode bytecode sans repli Particle.
+    // Lance le mode bytecode par le serveur local.
     runBytecode: () =>
       requestLan(fetchFn, baseUrl, "/bytecode/run", "POST", "", timeoutMilliseconds, parseLanCommandResponse),
-    // Revient au mode Off sans repli Particle.
+    // Revient au mode Off par le serveur local.
     stopBytecode: () =>
       requestLan(fetchFn, baseUrl, "/bytecode/stop", "POST", "", timeoutMilliseconds, parseLanCommandResponse),
   };
@@ -249,7 +249,7 @@ async function getBytecodeProgram(
 }
 
 // ----------------------------------------------------------------------------
-// Installe un conteneur bytecode sans repli vers Particle Cloud.
+// Installe un conteneur bytecode par le serveur local.
 //
 // Parametres :
 // - fetchFn : implementation fetch utilisee.

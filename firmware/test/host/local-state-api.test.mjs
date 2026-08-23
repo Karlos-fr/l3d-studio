@@ -45,12 +45,12 @@ test("la route state expose mode, reglages, reseau et dernier resultat", () => {
 });
 
 // ----------------------------------------------------------------------------
-// Verifie que chaque transport pourra conserver le dernier resultat commun.
+// Verifie que le serveur LAN conserve le dernier resultat commun.
 // ----------------------------------------------------------------------------
-test("les adaptateurs Particle memorisent le dernier code retourne", () => {
-  const cloud = readFirmwareSource("src/cloud/command_parser.cpp");
+test("le serveur LAN memorise le dernier code retourne", () => {
+  const server = readFirmwareSource("src/network/local_api_server.cpp");
   const dispatch = readFirmwareSource("src/core/command_dispatch.cpp");
-  assert.equal((cloud.match(/return recordCommandResult\(/gu) ?? []).length, 3);
+  assert.match(server, /recordCommandResult\(/u);
   assert.match(dispatch, /lastCommandResult = result;\s*return result;/u);
 });
 

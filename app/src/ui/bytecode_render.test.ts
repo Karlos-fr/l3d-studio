@@ -13,7 +13,7 @@ import { createInitialState } from "./state";
 // ----------------------------------------------------------------------------
 function runBytecodeRenderTests(): void {
   it("affiche editeur, exemples, simulateur, bibliotheque et actions LAN", () => {
-    const state = createInitialState(null, null);
+    const state = createInitialState(null);
     state.lanHost = "192.0.2.25";
     const html = renderBytecodePanel(state);
     for (const text of ["Rain", "Sphère", "Fireworks", "Plasma"]) {
@@ -34,7 +34,7 @@ function runBytecodeRenderTests(): void {
       expect(html).toContain(`data-action="${action}"`);
     }
     expect(html).toContain("data-bytecode-preview");
-    expect(html).toContain("sans repli Particle Cloud");
+    expect(html).toContain("exclusivement par le LAN");
   });
 }
 

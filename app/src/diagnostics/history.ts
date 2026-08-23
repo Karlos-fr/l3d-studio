@@ -68,7 +68,6 @@ export function appendDiagnosticsSample(
   state.latestSample = sample;
   state.lastError = null;
   state.consecutiveErrors = 0;
-  state.estimatedParticleDataOperations += sample.dataOperations;
   state.warningMessage = findDiagnosticsWarning(previousSample, sample);
 }
 

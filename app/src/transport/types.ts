@@ -1,21 +1,18 @@
 // ============================================================================
 // TransportTypes - Declaration de l'abstraction Spark Pixels
 // ----------------------------------------------------------------------------
-// Ce fichier decrit les operations communes LAN et Particle. Il ne lance aucun
+// Ce fichier decrit les operations du serveur LAN. Il ne lance aucun
 // appel reseau et ne connait pas le DOM de l'application.
 // ============================================================================
 
-import type { SparkPixelsAuxSwitch, SparkPixelsDeviceInfoEntry, SparkPixelsModeDefinition } from "../sparkpixels/types";
+import type { SparkPixelsAuxSwitch, SparkPixelsModeDefinition } from "../sparkpixels/types";
 import type { LanDiagnostics } from "../lan/types";
 
-export type TransportPreference = "automatic" | "lan" | "particle";
-
-export type TransportKind = "lan" | "particle";
+export type TransportKind = "lan";
 
 export interface TransportResult<TValue> {
   source: TransportKind;
   value: TValue;
-  dataOperations?: number;
 }
 
 export interface SparkPixelsCommandResult {
@@ -49,7 +46,6 @@ export interface SparkPixelsCubeSnapshot {
   switches: boolean[];
   modes: SparkPixelsModeDefinition[];
   auxSwitches: SparkPixelsAuxSwitch[];
-  deviceInfoEntries: SparkPixelsDeviceInfoEntry[];
   wifiRssi: number | null;
   debugMessage: string | null;
 }

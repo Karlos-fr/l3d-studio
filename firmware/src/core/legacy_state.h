@@ -218,7 +218,6 @@ char modeNameList[MAX_PUBLISHED_STRING_SIZE]  = "None";  //Holds all mode info c
 char modeParamList[MAX_PUBLISHED_STRING_SIZE] = "None";
 char auxSwitchList[MAX_PUBLISHED_STRING_SIZE] = "None";
 char currentModeName[TEXT_LENGTH]             = "None";  //Holds current selected mode
-char deviceInfo[MAX_PUBLISHED_STRING_SIZE]    = "";
 char debug[200];                    //We might want some debug text for development
 int micValue = 0;
 
@@ -1434,9 +1433,6 @@ int colorZone(uint32_t c1, uint32_t c2, uint32_t c3, uint32_t c4, bool loop);
 bool isThereEnoughRoomInModeParamList(int textSize);
 
 // Déclarations anticipées auparavant générées par le préprocesseur Particle INO.
-int FnRouter(String command);
-int SetMode(String command);
-int SetText(String command);
 int routeCommandFromBuffer(const char* commandText, size_t commandLength);
 int setModeFromBuffer(const char* commandText, size_t commandLength);
 int setTextFromBuffer(const char* text, size_t textLength);

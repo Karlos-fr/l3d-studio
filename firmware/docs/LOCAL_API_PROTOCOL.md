@@ -15,8 +15,9 @@ référence aux tests du firmware, à L3D Studio et aux appels manuels.
 - Connexion : une requête, une réponse, puis fermeture.
 - Sécurité : aucune authentification ni aucun chiffrement dans cette version.
 
-Le serveur reste limité au LAN. Il ne doit pas être exposé directement sur
-Internet et Particle Cloud reste actif pendant toute la migration.
+Le serveur reste limité au LAN et ne doit pas être exposé directement sur
+Internet. La connexion système Particle reste active pour Device OS et l'OTA,
+mais elle n'expose aucune API applicative.
 
 ## Constantes prévues
 
@@ -383,8 +384,7 @@ les codes historiques de commandes commençant actuellement à `-100`.
 - découverte mDNS ou UDP ;
 - WebSocket et Server-Sent Events ;
 - accès depuis Internet ;
-- désactivation de Particle Cloud ;
-- modification ou suppression des métadonnées historiques.
+- désactivation de la connexion système utilisée par Device OS et l'OTA ;
 
 ## Contraintes des navigateurs
 
@@ -420,10 +420,9 @@ diagnostics à zéro et envoyer des frames. Le joker CORS `*` est cohérent avec
 ce choix temporaire ; il ne constitue pas une protection.
 
 Le Photon doit rester sur un LAN de confiance. Ne pas ouvrir ni rediriger le
-port 8080 sur Internet et ne pas placer le cube sur un réseau public. Particle
-Cloud conserve son authentification et reste le transport à employer hors du
-réseau local. L'authentification LAN est explicitement reportée à une version
-ultérieure.
+port 8080 sur Internet et ne pas placer le cube sur un réseau public. Aucun
+transport applicatif distant de repli n'est fourni. L'authentification LAN est
+explicitement reportée à une version ultérieure.
 
 ## Rollback fonctionnel
 
@@ -441,5 +440,6 @@ particle flash <nom-ou-id-du-photon> firmware/build/l3d-studio-firmware-1.4-phot
 
 Ce rollback retire le serveur, ses routes LAN et ses buffers à la compilation.
 Il ne restaure pas un ancien firmware et ne modifie ni les IDs, ni l'EEPROM.
-Particle Cloud, les animations natives et les commandes historiques restent
-disponibles. Remettre la valeur à `1` et recompiler pour réactiver l'API.
+La connexion système Particle reste disponible pour l'OTA, mais aucune commande
+applicative n'est alors exposée. Remettre la valeur à `1` et recompiler pour
+réactiver l'API.

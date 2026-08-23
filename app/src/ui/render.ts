@@ -8,10 +8,8 @@
 import {
   canCallAdvancedFunction,
   canSendSetModeCommand,
-  getSelectedDevice,
   getSelectedModeDefinition,
   hasAvailableConfiguredTransport,
-  isSelectedDeviceOnline,
   type AppState,
 } from "./state";
 import { renderDiagnosticsPanel } from "./diagnostics_render";
@@ -19,7 +17,7 @@ import { isLanTestConfigurationValid } from "./lan_controls";
 import { listStreamingAnimations } from "../streaming/registry";
 import { renderBytecodePanel } from "./bytecode_render";
 
-// Libelle affiche quand aucune valeur Particle n'est encore disponible.
+// Libelle affiche quand aucune valeur LAN n'est encore disponible.
 const EMPTY_VALUE_LABEL = "Non lu";
 
 // Nombre de couleurs maximum expose par les controles MVP.
@@ -41,7 +39,6 @@ export function renderApp(rootElement: HTMLElement, state: AppState): void {
       ${renderHeader(state)}
       <div class="app-main">
         ${renderTransportPanel(state)}
-        ${state.session === null ? renderLoginPanel(state) : renderDevicePanel(state)}
         ${renderWorkspace(state)}
       </div>
     </section>
@@ -64,43 +61,7 @@ function renderHeader(state: AppState): string {
         <h1 class="app-title">${escapeHtml(state.applicationName)}</h1>
         <span class="app-status">${escapeHtml(state.connectionStatus)}</span>
       </div>
-      ${
-        state.session === null
-          ? ""
-          : '<button class="secondary-action" type="button" data-action="logout">Deconnexion</button>'
-      }
     </header>
-  `;
-}
-
-// ----------------------------------------------------------------------------
-// Rend le panneau de connexion Particle.
-//
-// Parametres :
-// - state : etat applicatif a afficher.
-//
-// Retour :
-// - fragment HTML du formulaire de connexion.
-// ----------------------------------------------------------------------------
-function renderLoginPanel(state: AppState): string {
-  return `
-    <section class="panel">
-      <h2>Connexion Particle</h2>
-      <form class="form-grid" data-form="login">
-        <label>
-          Email Particle
-          <input autocomplete="username" name="email" required type="email" />
-        </label>
-        <label>
-          Mot de passe
-          <input autocomplete="current-password" name="password" required type="password" />
-        </label>
-        <button class="primary-action" type="submit" ${state.isBusy ? "disabled" : ""}>
-          ${state.isBusy ? "Connexion..." : "Se connecter"}
-        </button>
-      </form>
-      ${renderStatusMessage(state)}
-    </section>
   `;
 }
 
@@ -108,10 +69,10 @@ function renderLoginPanel(state: AppState): string {
 // Rend la configuration du transport et du serveur local.
 //
 // Parametres :
-// - state : etat applicatif contenant la preference et l'adresse LAN.
+// - state : etat applicatif contenant l'adresse LAN.
 //
 // Retour :
-// - fragment HTML utilisable avec ou sans session Particle.
+// - fragment HTML de configuration locale.
 // ----------------------------------------------------------------------------
 function renderTransportPanel(state: AppState): string {
   const actualTransport = state.lastTransportUsed ?? "Aucun";
@@ -123,14 +84,6 @@ function renderTransportPanel(state: AppState): string {
         <span class="status-pill">Dernier : ${escapeHtml(actualTransport)}</span>
       </div>
       <div class="form-grid">
-        <label>
-          Transport
-          <select data-field="transport-preference">
-            <option value="automatic" ${state.transportPreference === "automatic" ? "selected" : ""}>Automatique</option>
-            <option value="lan" ${state.transportPreference === "lan" ? "selected" : ""}>LAN</option>
-            <option value="particle" ${state.transportPreference === "particle" ? "selected" : ""}>Particle</option>
-          </select>
-        </label>
         <label>
           Adresse ou nom local du Photon
           <input data-field="lan-host" inputmode="url" placeholder="photon.local ou 192.168.1.50" value="${escapeHtml(state.lanHost)}" />
@@ -168,69 +121,7 @@ function renderWorkspace(state: AppState): string {
     ${renderBytecodePanel(state)}
     ${renderAdvancedPanel(state)}
     ${renderDiagnosticsPanel(state)}
-    ${renderDeviceInfoPanel(state)}
     ${renderResponsePanel(state)}
-  `;
-}
-
-// ----------------------------------------------------------------------------
-// Rend le panneau de selection du device Particle.
-//
-// Parametres :
-// - state : etat applicatif a afficher.
-//
-// Retour :
-// - fragment HTML du panneau devices.
-// ----------------------------------------------------------------------------
-function renderDevicePanel(state: AppState): string {
-  const selectedDevice = getSelectedDevice(state);
-  const onlineLabel = selectedDevice === null ? "Aucun device" : isSelectedDeviceOnline(state) ? "Online" : "Offline";
-
-  return `
-    <section class="panel">
-      <div class="panel-heading">
-        <h2>Device Particle</h2>
-        <span class="status-pill ${isSelectedDeviceOnline(state) ? "is-online" : "is-offline"}">${onlineLabel}</span>
-        <button class="secondary-action" type="button" data-action="refresh-devices" ${state.isBusy ? "disabled" : ""}>
-          Rafraichir
-        </button>
-      </div>
-      ${
-        state.devices.length === 0
-          ? "<p>Aucun device charge. Utilise le bouton de rafraichissement.</p>"
-          : renderDeviceSelect(state)
-      }
-      ${renderStatusMessage(state)}
-    </section>
-  `;
-}
-
-// ----------------------------------------------------------------------------
-// Rend la liste deroulante des devices Particle.
-//
-// Parametres :
-// - state : etat applicatif contenant les devices.
-//
-// Retour :
-// - fragment HTML de selection device.
-// ----------------------------------------------------------------------------
-function renderDeviceSelect(state: AppState): string {
-  const options = state.devices
-    .map((device) => {
-      const selected = device.id === state.selectedDeviceId ? "selected" : "";
-      const status = device.connected || device.online === true ? "online" : "offline";
-
-      return `<option value="${escapeHtml(device.id)}" ${selected}>${escapeHtml(device.name)} (${status})</option>`;
-    })
-    .join("");
-
-  return `
-    <label>
-      Photon
-      <select data-field="device-id">
-        ${options}
-      </select>
-    </label>
   `;
 }
 
@@ -723,40 +614,7 @@ function renderFnRouterControls(state: AppState): string {
 }
 
 // ----------------------------------------------------------------------------
-// Rend les informations detaillees exposees par le firmware.
-//
-// Parametres :
-// - state : etat applicatif a afficher.
-//
-// Retour :
-// - fragment HTML des informations device.
-// ----------------------------------------------------------------------------
-function renderDeviceInfoPanel(state: AppState): string {
-  if (state.deviceInfoEntries.length === 0) {
-    return "";
-  }
-
-  const entries = state.deviceInfoEntries
-    .map((entry) => {
-      return `
-        <div>
-          <dt>${escapeHtml(entry.label)}</dt>
-          <dd>${escapeHtml(entry.value)}</dd>
-        </div>
-      `;
-    })
-    .join("");
-
-  return `
-    <section class="panel metrics-panel">
-      <h2>Device Info</h2>
-      <dl class="metrics-grid">${entries}</dl>
-    </section>
-  `;
-}
-
-// ----------------------------------------------------------------------------
-// Rend le panneau de derniere reponse Particle.
+// Rend le panneau de derniere reponse LAN.
 //
 // Parametres :
 // - state : etat applicatif a afficher.
@@ -778,19 +636,6 @@ function renderResponsePanel(state: AppState): string {
 }
 
 // ----------------------------------------------------------------------------
-// Rend le message de statut courant.
-//
-// Parametres :
-// - state : etat applicatif a afficher.
-//
-// Retour :
-// - fragment HTML du message de statut.
-// ----------------------------------------------------------------------------
-function renderStatusMessage(state: AppState): string {
-  return `<p class="status-message">${escapeHtml(state.statusMessage)}</p>`;
-}
-
-// ----------------------------------------------------------------------------
 // Rend la raison qui empeche ou autorise l'envoi de commande.
 //
 // Parametres :
@@ -808,12 +653,8 @@ function renderCommandReadiness(state: AppState): string {
     return '<p class="status-message">Commande prete a envoyer.</p>';
   }
 
-  if (state.selectedDeviceId === null) {
-    return '<p class="status-message">Selectionne un device Particle avant d envoyer une commande.</p>';
-  }
-
-  if (!isSelectedDeviceOnline(state)) {
-    return '<p class="status-message">Le Photon selectionne est offline. Reconnecte-le avant d envoyer une commande.</p>';
+  if (!hasAvailableConfiguredTransport(state)) {
+    return '<p class="status-message">Configure l adresse LAN du Photon avant d envoyer une commande.</p>';
   }
 
   if (getSelectedModeDefinition(state) === null) {

@@ -17,7 +17,7 @@ function runLanControlsTests(): void {
   // Verifie que l'adresse du cube active le bouton avant toute perte de focus.
   // --------------------------------------------------------------------------
   it("active le test des la saisie d'une adresse LAN", () => {
-    const state = createInitialState(null, null);
+    const state = createInitialState(null);
     const button = { disabled: true };
     const rootElement = createRootDouble(button);
 
@@ -32,7 +32,7 @@ function runLanControlsTests(): void {
   // Verifie que les configurations incompletes restent protegees.
   // --------------------------------------------------------------------------
   it("refuse un hote vide ou un port hors plage", () => {
-    const state = createInitialState(null, null);
+    const state = createInitialState(null);
     expect(isLanTestConfigurationValid(state)).toBe(false);
     state.lanHost = "192.168.1.25";
     state.lanPort = 65_536;

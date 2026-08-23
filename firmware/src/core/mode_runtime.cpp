@@ -71,9 +71,9 @@ void runDemo() {
         if(textMode == 3) {endOfMessage = strlen(message)*8;}	// Show Welcome Message
         if(textMode >= 4) {endOfMessage = SIDE*map(strlen(message), 1, 63, 1, SIDE)+(strlen(message))*8;}
         cubeGreeting(textMode, frameCount, pos);
-        // La sequence conserve la main plusieurs frames. La demande differee
-        // est traitee apres le rendu, avec une pile redevenue courte.
-        diagnosticsProcessRequests();
+        // La sequence conserve la main plusieurs frames : le serveur LAN doit
+        // continuer a progresser entre deux rendus de texte.
+        localApiProcess();
 
         frameCount++;
         pos += posInc;

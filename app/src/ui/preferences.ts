@@ -5,12 +5,16 @@
 // ne stocke pas les identifiants Particle et ne lance aucun appel reseau.
 // ============================================================================
 
-import type { ParticleSessionStorage } from "../particle/session";
-import type { TransportPreference } from "../transport/types";
 import type { AppState } from "./state";
 
+// Contrat minimal de stockage utilise par les preferences locales.
+export interface AppPreferencesStorage {
+  getItem(key: string): string | null;
+  setItem(key: string, value: string): void;
+  removeItem(key: string): void;
+}
+
 export interface AppPreferences {
-  transportPreference?: TransportPreference;
   lanHost?: string;
   lanPort?: number;
   selectedModeName: string | null;
@@ -35,7 +39,7 @@ const UI_PREFERENCES_STORAGE_KEY = "l3d-studio.ui.preferences";
 // Retour :
 // - preferences locales, ou `null` si absentes ou illisibles.
 // ----------------------------------------------------------------------------
-export function loadAppPreferences(storage: ParticleSessionStorage): AppPreferences | null {
+export function loadAppPreferences(storage: AppPreferencesStorage): AppPreferences | null {
   const rawValue = storage.getItem(UI_PREFERENCES_STORAGE_KEY);
 
   if (rawValue === null) {
@@ -60,9 +64,8 @@ export function loadAppPreferences(storage: ParticleSessionStorage): AppPreferen
 // Effet de bord :
 // - ecrit les reglages locaux serialises dans le stockage.
 // ----------------------------------------------------------------------------
-export function saveAppPreferences(storage: ParticleSessionStorage, state: AppState): void {
+export function saveAppPreferences(storage: AppPreferencesStorage, state: AppState): void {
   const preferences: AppPreferences = {
-    transportPreference: state.transportPreference,
     lanHost: state.lanHost,
     lanPort: state.lanPort,
     selectedModeName: state.selectedModeName,

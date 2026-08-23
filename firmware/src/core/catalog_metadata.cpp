@@ -1,14 +1,14 @@
 ﻿#ifdef L3D_UNITY_BUILD
 
 // ============================================================================
-// Metadata - Construction bornee des variables Cloud historiques
+// CatalogMetadata - Construction bornee des catalogues LAN
 // ----------------------------------------------------------------------------
-// Ce module assemble les listes et informations publiees par Particle. Il ne
+// Ce module assemble les listes de modes et de switches servies par le LAN. Il ne
 // modifie pas le protocole de commande ni le rendu des animations.
 // ============================================================================
 
 // ----------------------------------------------------------------------------
-// Construit les listes historiques des modes et de leurs parametres.
+// Construit les listes compactes des modes et de leurs parametres.
 //
 // Effet de bord :
 // - remplit `modeNameList`, `modeParamList` et `debug` avec des ecritures
@@ -17,7 +17,7 @@
 void makeModeList(void) {
     for(int i=0; i<sizeof modeStruct / sizeof modeStruct[0]; i++) {
 #if L3D_BYTECODE_ENABLED
-        // Le catalogue Particle historique est deja a sa limite de 621 octets.
+        // Le format compact est deja proche de sa limite de 621 octets.
         // La phase 4 publiera ce mode installable par son API LAN dediee.
         if(modeStruct[i].modeId == BYTECODE)
             continue;
@@ -207,25 +207,6 @@ int updateAuxSwitches(int id) {
 }
 
 
-// ----------------------------------------------------------------------------
-// Construit la chaine historique d'informations du Photon.
-//
-// Effet de bord :
-// - remplace `deviceInfo` par une chaine bornee contenant reseau, build,
-//   memoire libre et heure courante.
-// ----------------------------------------------------------------------------
-void makeDeviceInfo(void) {
-	IPAddress myIp = WiFi.localIP();
-	boundedTextFormat(deviceInfo, sizeof(deviceInfo), "Local IP Address:\"%d.%d.%d.%d\",", myIp[0], myIp[1], myIp[2], myIp[3]);
-	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "SSID:\"%s\",", WiFi.SSID());
-	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "WiFi Strength:\"%i\",", WiFi.RSSI());
-	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Firmware ID:\"%s\",", BUILD_FILE_NAME);
-	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Firmware Rev:\"%s\",", BUILD_REVISION);
-	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Particle Build Version:\"%s\",", System.version().c_str());
-	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Free Memory (bytes):\"%i\",", System.freeMemory());
-	boundedTextAppendFormat(deviceInfo, sizeof(deviceInfo), "Current Time On Device:\"%i:%i:%i %s %s %i %i\",", Time.hour(), Time.minute(), Time.second(), getWeekDay(), getMonth(), Time.day(), Time.year());
-}
-  
 char* getWeekDay(void) {
   	int weekDay = Time.weekday();   
   	

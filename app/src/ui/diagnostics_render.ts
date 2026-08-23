@@ -20,7 +20,7 @@ const DIAGNOSTICS_LIVE_SELECTOR = "[data-diagnostics-live]";
 // - state : etat applicatif et historique de diagnostics.
 //
 // Retour :
-// - section HTML distincte des informations Particle historiques.
+// - section HTML autonome pour les mesures du serveur LAN.
 // ----------------------------------------------------------------------------
 export function renderDiagnosticsPanel(state: AppState): string {
   const diagnosticsState = state.diagnostics;
@@ -207,10 +207,9 @@ function renderDiagnosticsSample(state: AppState): string {
       <div><dt>FPS moyen</dt><dd>${(values.fpsTimesTen / 10).toFixed(1)}</dd></div>
       <div><dt>Uptime</dt><dd>${values.uptimeSeconds} s</dd></div>
       <div><dt>Mode / frames</dt><dd>${values.modeId} / ${values.frameCount}</dd></div>
-      <div><dt>Wi-Fi / Particle</dt><dd>${formatBooleanState(values.wifiReady)} / ${formatBooleanState(values.particleConnected)}</dd></div>
+      <div><dt>Wi-Fi / Cloud OTA</dt><dd>${formatBooleanState(values.wifiReady)} / ${formatBooleanState(values.particleConnected)}</dd></div>
       <div><dt>Reset / OOM</dt><dd>${values.resetReason} / ${values.outOfMemoryCount}</dd></div>
     </dl>
-    <p>Data Operations Particle estimees pour les diagnostics : ${state.diagnostics.estimatedParticleDataOperations}.</p>
   `;
 }
 

@@ -27,7 +27,7 @@ struct RuntimeDiagnosticsState {
     int16_t resetReason;
 };
 
-// Mesures runtime partagees par les transports Particle et LAN.
+// Mesures runtime exposees par le serveur LAN.
 static RuntimeDiagnosticsState runtimeDiagnostics = {};
 
 // Taille de la derniere allocation refusee, modifiable par le handler systeme.
@@ -35,18 +35,6 @@ static volatile int diagnosticsOutOfMemoryBytes = -1;
 
 // Nombre d'evenements memoire recus depuis le demarrage.
 static volatile uint32_t diagnosticsOutOfMemoryCount = 0;
-
-// Demande Particle en attente de traitement entre deux frames.
-static volatile bool diagnosticsRefreshRequested = false;
-
-// Indique si la prochaine demande Particle doit remettre les statistiques a zero.
-static volatile bool diagnosticsResetRequested = false;
-
-// Sequence attribuee aux demandes Particle recues.
-static volatile int32_t diagnosticsRequestSequence = 0;
-
-// Date jusqu'a laquelle deviceInfo contient un diagnostic Particle.
-static uint32_t diagnosticsTextValidUntil = 0;
 
 // ----------------------------------------------------------------------------
 // Integre une mesure libre dans les minimums global et du mode.
@@ -214,30 +202,6 @@ int diagnosticsWriteSnapshot(
 }
 
 // ----------------------------------------------------------------------------
-// Traite la demande Particle differee entre deux frames.
-//
-// Effet de bord :
-// - ecrit temporairement le diagnostic dans deviceInfo pendant quinze secondes.
-// ----------------------------------------------------------------------------
-void diagnosticsProcessRequests(void) {
-    if(!diagnosticsRefreshRequested)
-        return;
-
-    bool resetRequested = diagnosticsResetRequested;
-    int32_t sequence = diagnosticsRequestSequence;
-    diagnosticsRefreshRequested = false;
-    diagnosticsResetRequested = false;
-
-    if(diagnosticsWriteSnapshot(
-            diagnosticsText,
-            DIAGNOSTICS_TEXT_LENGTH,
-            resetRequested,
-            sequence) < 0)
-        diagnosticsText[0] = '\0';
-    diagnosticsTextValidUntil = millis() + 15000UL;
-}
-
-// ----------------------------------------------------------------------------
 // Capture le debut d'une frame et detecte un changement de mode implicite.
 //
 // Parametres :
@@ -301,42 +265,6 @@ void diagnosticsEndFrame(void) {
 void diagnosticsModeChanged(int modeId) {
     runtimeDiagnostics.modeChangeCount++;
     diagnosticsResetModeStats(modeId);
-}
-
-// ----------------------------------------------------------------------------
-// Indique si les metadonnees historiques peuvent remplacer le diagnostic.
-//
-// Parametres :
-// - currentMillis : horodatage courant compatible avec le debordement millis.
-//
-// Retour :
-// - vrai hors de la fenetre Particle de quinze secondes.
-// ----------------------------------------------------------------------------
-bool diagnosticsMayRefreshDeviceInfo(uint32_t currentMillis) {
-    return diagnosticsTextValidUntil == 0 ||
-        static_cast<int32_t>(currentMillis - diagnosticsTextValidUntil) >= 0;
-}
-
-// ----------------------------------------------------------------------------
-// Programme la production differee des diagnostics compacts pour Particle.
-//
-// Parametres :
-// - resetRequested : vrai pour remettre les minimums a zero avant la mesure.
-//
-// Retour :
-// - numero de sequence associe a la future reponse.
-//
-// Effet de bord :
-// - positionne les drapeaux lus ensuite hors du callback Particle Cloud.
-// ----------------------------------------------------------------------------
-int GetDiagnostics(bool resetRequested) {
-    diagnosticsResetRequested = resetRequested;
-    if(diagnosticsRequestSequence >= 2147483647L)
-        diagnosticsRequestSequence = 1;
-    else
-        diagnosticsRequestSequence++;
-    diagnosticsRefreshRequested = true;
-    return diagnosticsRequestSequence;
 }
 
 #endif

@@ -34,7 +34,7 @@ export const MAX_FIRMWARE_BRIGHTNESS = 255;
 // Nombre maximal de caracteres texte transmis dans un segment `W:`.
 export const MAX_SET_MODE_TEXT_LENGTH = 63;
 
-// Nombre maximal de caracteres texte transmis par la fonction Particle `SetText`.
+// Nombre maximal de caracteres transmis par la route LAN de texte persistant.
 export const MAX_SET_TEXT_LENGTH = 63;
 
 // Index minimal de couleur lu par `GETCOLOR`.
@@ -65,7 +65,7 @@ const HEX_COLOR_PATTERN = /^#?[0-9a-fA-F]{6}$/;
 // - options : mode, vitesse, luminosite, couleurs, switches et texte a envoyer.
 //
 // Retour :
-// - commande terminee par une virgule, prete pour le parametre Particle `arg`.
+// - commande terminee par une virgule, prete pour la route LAN de mode.
 // ----------------------------------------------------------------------------
 export function buildSetModeCommand(options: SparkPixelsSetModeOptions): string {
   const segments: string[] = [];
@@ -126,7 +126,7 @@ export function buildSetAuxSwitchCommand(id: number, enabled: boolean): string {
 // - index : index du switch local a lire, entre 1 et 4.
 //
 // Retour :
-// - commande prete pour la fonction Particle `Function`.
+// - commande prete pour la route LAN generique.
 // ----------------------------------------------------------------------------
 export function buildGetSwitchStateCommand(index: number): string {
   return `GETSWITCHSTATE:${validateLocalSwitchIndex(index)}`;
@@ -139,7 +139,7 @@ export function buildGetSwitchStateCommand(index: number): string {
 // - index : index de couleur a lire, entre 1 et 6.
 //
 // Retour :
-// - commande prete pour la fonction Particle `Function`.
+// - commande prete pour la route LAN generique.
 // ----------------------------------------------------------------------------
 export function buildGetColorCommand(index: number): string {
   return `GETCOLOR:${validateColorIndex(index)}`;
@@ -152,7 +152,7 @@ export function buildGetColorCommand(index: number): string {
 // - offset : decalage horaire Particle a appliquer.
 //
 // Retour :
-// - commande prete pour la fonction Particle `Function`.
+// - commande prete pour la route LAN generique.
 // ----------------------------------------------------------------------------
 export function buildSetTimezoneCommand(offset: number): string {
   return `SETTIMEZONE:${validateTimezoneOffset(offset)}`;
@@ -162,14 +162,14 @@ export function buildSetTimezoneCommand(offset: number): string {
 // Construit une commande `REBOOT` pour `FnRouter`.
 //
 // Retour :
-// - commande prete pour la fonction Particle `Function`.
+// - commande prete pour la route LAN generique.
 // ----------------------------------------------------------------------------
 export function buildRebootCommand(): string {
   return "REBOOT:";
 }
 
 // ----------------------------------------------------------------------------
-// Valide le texte persistant envoye a la fonction Particle `SetText`.
+// Valide le texte persistant envoye a la route LAN dediee.
 //
 // Parametres :
 // - text : texte a persister dans le firmware.
@@ -209,7 +209,7 @@ export function convertAppBrightnessToFirmwareValue(brightnessPercent: number): 
 // Convertit une luminosite firmware vers un pourcentage d'interface.
 //
 // Parametres :
-// - firmwareBrightness : luminosite lue depuis la variable Particle `brightness`.
+// - firmwareBrightness : luminosite lue depuis la route LAN d'etat.
 //
 // Retour :
 // - pourcentage arrondi entre 0 et 100.

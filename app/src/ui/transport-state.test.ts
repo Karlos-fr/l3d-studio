@@ -1,25 +1,23 @@
 // ============================================================================
 // TransportStateTest - Tests de configuration locale de l'interface
 // ----------------------------------------------------------------------------
-// Ce fichier verifie la persistance du transport et l'usage LAN sans session
-// Particle. Il ne construit pas de DOM et ne lance aucun appel reseau.
+// Ce fichier verifie la persistance de l'adresse LAN. Il ne construit pas de
+// DOM et ne lance aucun appel reseau.
 // ============================================================================
 
 import { describe, expect, it } from "vitest";
-import type { ParticleSessionStorage } from "../particle/session";
 import { createInitialState, hasAvailableConfiguredTransport } from "./state";
-import { loadAppPreferences, saveAppPreferences } from "./preferences";
+import { loadAppPreferences, saveAppPreferences, type AppPreferencesStorage } from "./preferences";
 
 // ----------------------------------------------------------------------------
 // Execute les tests de configuration du transport.
 // ----------------------------------------------------------------------------
 function runTransportStateTests(): void {
   // --------------------------------------------------------------------------
-  // Verifie que le LAN explicite ne depend pas d'une session Particle.
+  // Verifie qu'une adresse LAN suffit a rendre les commandes disponibles.
   // --------------------------------------------------------------------------
-  it("autorise le LAN sans connexion Particle", () => {
-    const state = createInitialState(null, {
-      transportPreference: "lan",
+  it("autorise le LAN configure", () => {
+    const state = createInitialState({
       lanHost: "photon.local",
       lanPort: 8080,
       selectedModeName: null,
@@ -30,17 +28,15 @@ function runTransportStateTests(): void {
       textValue: "",
     });
 
-    expect(state.session).toBeNull();
     expect(hasAvailableConfiguredTransport(state)).toBe(true);
   });
 
   // --------------------------------------------------------------------------
-  // Verifie la sauvegarde et la restauration des trois champs de transport.
+  // Verifie la sauvegarde et la restauration de l'adresse et du port LAN.
   // --------------------------------------------------------------------------
-  it("persiste le choix, l'adresse et le port LAN", () => {
+  it("persiste l'adresse et le port LAN", () => {
     const storage = createMemoryStorage();
-    const state = createInitialState(null, null);
-    state.transportPreference = "automatic";
+    const state = createInitialState(null);
     state.lanHost = "photon.local";
     state.lanPort = 9090;
 
@@ -48,7 +44,6 @@ function runTransportStateTests(): void {
     const preferences = loadAppPreferences(storage);
 
     expect(preferences).toMatchObject({
-      transportPreference: "automatic",
       lanHost: "photon.local",
       lanPort: 9090,
     });
@@ -61,7 +56,7 @@ function runTransportStateTests(): void {
 // Retour :
 // - implementation compatible avec la persistance applicative.
 // ----------------------------------------------------------------------------
-function createMemoryStorage(): ParticleSessionStorage {
+function createMemoryStorage(): AppPreferencesStorage {
   const values = new Map<string, string>();
   return {
     getItem: (key) => values.get(key) ?? null,

@@ -388,7 +388,7 @@ Timer demoTimer(2*60*1000, advanceDemo);
 #include "config/mode_ids.h"
 #include "core/shared_types.h"
 #include "core/bounded_text.h"
-#include "cloud/command_validation.h"
+#include "core/command_validation.h"
 #include "core/command_dispatch.h"
 #include "bytecode/bytecode_format.h"
 #include "bytecode/bytecode_validator.h"
@@ -406,31 +406,14 @@ Timer demoTimer(2*60*1000, advanceDemo);
 #include "network/stream_frames.h"
 
 // ----------------------------------------------------------------------------
-// Initialise les endpoints Particle, le hardware et l'etat persistant.
+// Initialise le hardware, le serveur LAN et l'etat persistant.
 //
 // Effet de bord :
-// - enregistre les fonctions Cloud, initialise les LED, l'EEPROM, le microphone
-//   et les diagnostics.
+// - initialise les LED, l'EEPROM, le microphone et les diagnostics.
 // ----------------------------------------------------------------------------
 void setup() {
     diagnosticsSetupEarly();
 
-    Particle.function("Function",     FnRouter);
-    Particle.function("SetMode",      SetMode);
-    Particle.function("SetText",      SetText);
-    
-    Particle.variable("micValue",     micValue);
-    Particle.variable("debug",        debug);
-    Particle.variable("wifi",         wifi);
-    Particle.variable("hour",         hour);
-    Particle.variable("speed",        speedIndex);
-    Particle.variable("brightness",   brightness);
-    Particle.variable("modeList",	  modeNameList);
-    Particle.variable("modeParmList", modeParamList);
-    Particle.variable("auxSwtchList", auxSwitchList);
-    Particle.variable("mode",         currentModeName);
-    Particle.variable("deviceInfo",   deviceInfo);
-        
     pinMode(PIXEL_PIN, OUTPUT);
 	
 	//Initialize
@@ -458,9 +441,8 @@ void setup() {
     //clearEEPROM();    // Pre-0.4.9 firmware
     //EEPROM.clear();   // >= 0.4.9 firmware
     /*****************************************/
-	makeModeList();		 //Assemble Spark Cloud available modes variable
-    makeAuxSwitchList(); //Assemble Spark Cloud available aux switches variable
-    makeDeviceInfo();	 //Assemble Spark Cloud available device info variable
+	makeModeList();		 // Assemble le catalogue des modes servi par le LAN.
+	makeAuxSwitchList(); // Assemble le catalogue des switches servi par le LAN.
     initEEPROM();		 //Check EEPROM area and initialize globals (if values were previoulsy set)
     
     //Get Threads ready
@@ -479,7 +461,7 @@ void setup() {
     localApiSetup();
 }
 
-#include "cloud/metadata.cpp"
+#include "core/catalog_metadata.cpp"
 
 // ----------------------------------------------------------------------------
 // Orchestre le rendu courant et les taches periodiques du firmware.
@@ -489,7 +471,6 @@ void setup() {
 //   peut demander une synchronisation horaire ou un redemarrage.
 // ----------------------------------------------------------------------------
 void loop() {
-	diagnosticsProcessRequests();
     localApiProcess();
 
     if(run) {
@@ -512,13 +493,9 @@ void loop() {
  
     if(currentMillis - previousMillis > 5000) {
     //if(currentMillis - previousMillis > oneMinuteInterval) {
-        Serial.printf("Info=%s\n",deviceInfo);
         previousMillis = currentMillis;
         hour = Time.hour();    //used to check for correct time zone
         wifi = WiFi.RSSI();
-		if(diagnosticsMayRefreshDeviceInfo(currentMillis))
-			makeDeviceInfo();
-
         //Put other timing stuff in here to speed up main loop
         //Time sync interval: 24 hours
         if (currentMillis - lastSync > 24*60*60*1000) {
@@ -649,7 +626,6 @@ void loop() {
 
 #include "core/command_dispatch.cpp"
 
-#include "cloud/command_parser.cpp"
 
 #include "diagnostics/runtime_diagnostics.cpp"
 

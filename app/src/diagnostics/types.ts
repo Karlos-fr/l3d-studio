@@ -17,7 +17,6 @@ export interface DiagnosticsSample {
   capturedAtMilliseconds: number;
   source: TransportKind;
   latencyMilliseconds: number;
-  dataOperations: number;
   diagnostics: LanDiagnostics;
 }
 
@@ -36,6 +35,5 @@ export interface DiagnosticsMonitorState {
   chartWindow: DiagnosticsChartWindow;
   lastError: string | null;
   consecutiveErrors: number;
-  estimatedParticleDataOperations: number;
   warningMessage: string | null;
 }

@@ -5,16 +5,14 @@
 // Il ne lit pas Particle Cloud et ne construit pas de commande firmware.
 // ============================================================================
 
-import type { ParticleDeviceSummary, ParticleStoredSession } from "../particle/types";
 import type { DiagnosticsMonitorState } from "../diagnostics/types";
 import { createDiagnosticsHistory } from "../diagnostics/history";
 import type {
   SparkPixelsAuxSwitch,
-  SparkPixelsDeviceInfoEntry,
   SparkPixelsModeDefinition,
 } from "../sparkpixels/types";
 import type { AppPreferences } from "./preferences";
-import type { TransportKind, TransportPreference } from "../transport/types";
+import type { TransportKind } from "../transport/types";
 import type { StreamingFps } from "../streaming/engine";
 import { DEFAULT_STREAMING_ANIMATION_ID } from "../streaming/registry";
 import type { LanBytecodeStatus } from "../lan/types";
@@ -60,7 +58,6 @@ export interface BytecodeUiState {
 export interface AppState {
   applicationName: string;
   connectionStatus: string;
-  transportPreference: TransportPreference;
   lanHost: string;
   lanPort: number;
   lastTransportUsed: TransportKind | null;
@@ -68,15 +65,11 @@ export interface AppState {
   diagnostics: DiagnosticsMonitorState;
   streaming: StreamingUiState;
   bytecode: BytecodeUiState;
-  session: ParticleStoredSession | null;
-  devices: ParticleDeviceSummary[];
-  selectedDeviceId: string | null;
   currentModeName: string | null;
   currentBrightnessPercent: number;
   currentSpeedIndex: number;
   modes: SparkPixelsModeDefinition[];
   auxSwitches: SparkPixelsAuxSwitch[];
-  deviceInfoEntries: SparkPixelsDeviceInfoEntry[];
   selectedModeName: string | null;
   colorValues: string[];
   switchValues: boolean[];
@@ -95,11 +88,8 @@ export interface AppState {
 // Nom affiche dans l'en-tete de l'application.
 const APPLICATION_NAME = "L3D Studio";
 
-// Statut initial affiche avant toute connexion Particle.
-const INITIAL_CONNECTION_STATUS = "Non connecte";
-
-// Transport initial qui privilegie le LAN lorsque son adresse est configuree.
-const INITIAL_TRANSPORT_PREFERENCE: TransportPreference = "automatic";
+// Statut initial affiche avant toute lecture du serveur local.
+const INITIAL_CONNECTION_STATUS = "LAN non teste";
 
 // Adresse LAN initialement vide afin de ne pas versionner une configuration personnelle.
 const INITIAL_LAN_HOST = "";
@@ -132,22 +122,19 @@ const DEFAULT_MODE_COLORS = ["FFFFFF", "FF0000", "00FF00", "0000FF", "FFFF00", "
 // Cree l'etat initial de la coquille applicative.
 //
 // Parametres :
-// - session : session Particle chargee depuis le stockage local, quand elle existe.
 // - preferences : derniers reglages locaux sauvegardes, quand ils existent.
 //
 // Retour :
 // - etat minimal utilise par le premier rendu.
 // ----------------------------------------------------------------------------
 export function createInitialState(
-  session: ParticleStoredSession | null,
   preferences: AppPreferences | null,
 ): AppState {
   const initialProgram = BYTECODE_REFERENCE_PROGRAMS[0];
   if (initialProgram === undefined) throw new Error("Le corpus bytecode est vide.");
   return {
     applicationName: APPLICATION_NAME,
-    connectionStatus: session === null ? INITIAL_CONNECTION_STATUS : "Session restauree",
-    transportPreference: preferences?.transportPreference ?? INITIAL_TRANSPORT_PREFERENCE,
+    connectionStatus: INITIAL_CONNECTION_STATUS,
     lanHost: preferences?.lanHost ?? INITIAL_LAN_HOST,
     lanPort: preferences?.lanPort ?? INITIAL_LAN_PORT,
     lastTransportUsed: null,
@@ -160,7 +147,6 @@ export function createInitialState(
       chartWindow: "recent",
       lastError: null,
       consecutiveErrors: 0,
-      estimatedParticleDataOperations: 0,
       warningMessage: null,
     },
     streaming: {
@@ -196,15 +182,11 @@ export function createInitialState(
       photonStatus: null,
       operationMessage: "Configure l'adresse LAN pour lire le Photon.",
     },
-    session,
-    devices: [],
-    selectedDeviceId: session?.deviceId ?? null,
     currentModeName: null,
     currentBrightnessPercent: preferences?.brightnessPercent ?? INITIAL_BRIGHTNESS_PERCENT,
     currentSpeedIndex: preferences?.speedIndex ?? INITIAL_SPEED_INDEX,
     modes: [],
     auxSwitches: [],
-    deviceInfoEntries: [],
     selectedModeName: preferences?.selectedModeName ?? null,
     colorValues: preferences?.colorValues ?? [...DEFAULT_MODE_COLORS],
     switchValues: preferences?.switchValues ?? [false, false, false, false],
@@ -216,7 +198,7 @@ export function createInitialState(
     wifiRssi: null,
     debugMessage: null,
     isBusy: false,
-    statusMessage: session === null ? "Connecte-toi a Particle pour charger les devices." : "Session chargee.",
+    statusMessage: "Configure l'adresse LAN du Photon puis lis le cube.",
     lastResponse: null,
   };
 }
@@ -236,38 +218,6 @@ export function getSelectedModeDefinition(state: AppState): SparkPixelsModeDefin
   }
 
   return state.modes.find((mode) => mode.name === state.selectedModeName) ?? null;
-}
-
-// ----------------------------------------------------------------------------
-// Retourne le device Particle actuellement selectionne.
-//
-// Parametres :
-// - state : etat applicatif courant.
-//
-// Retour :
-// - device selectionne, ou `null` si aucun device ne correspond.
-// ----------------------------------------------------------------------------
-export function getSelectedDevice(state: AppState): ParticleDeviceSummary | null {
-  if (state.selectedDeviceId === null) {
-    return null;
-  }
-
-  return state.devices.find((device) => device.id === state.selectedDeviceId) ?? null;
-}
-
-// ----------------------------------------------------------------------------
-// Indique si le device Particle selectionne est connecte.
-//
-// Parametres :
-// - state : etat applicatif courant.
-//
-// Retour :
-// - `true` si le device selectionne est online, sinon `false`.
-// ----------------------------------------------------------------------------
-export function isSelectedDeviceOnline(state: AppState): boolean {
-  const selectedDevice = getSelectedDevice(state);
-
-  return selectedDevice?.connected === true || selectedDevice?.online === true;
 }
 
 // ----------------------------------------------------------------------------
@@ -294,7 +244,7 @@ export function canSendSetModeCommand(state: AppState): boolean {
 // - state : etat applicatif courant.
 //
 // Retour :
-// - `true` si un device Particle online est selectionne et aucune action ne tourne.
+// - `true` si une adresse LAN est configuree et aucune action ne tourne.
 // ----------------------------------------------------------------------------
 export function canCallAdvancedFunction(state: AppState): boolean {
   return state.isBusy === false && hasAvailableConfiguredTransport(state);
@@ -307,48 +257,8 @@ export function canCallAdvancedFunction(state: AppState): boolean {
 // - state : etat applicatif courant.
 //
 // Retour :
-// - vrai pour un LAN configure ou un device Particle online compatible.
+// - vrai quand l'adresse du serveur LAN est configuree.
 // ----------------------------------------------------------------------------
 export function hasAvailableConfiguredTransport(state: AppState): boolean {
-  const lanAvailable = state.lanHost.trim().length > 0;
-  const particleAvailable = state.selectedDeviceId !== null && isSelectedDeviceOnline(state);
-  if (state.transportPreference === "lan") return lanAvailable;
-  if (state.transportPreference === "particle") return particleAvailable;
-  return lanAvailable || particleAvailable;
-}
-
-// ----------------------------------------------------------------------------
-// Reinitialise l'etat dependant du firmware apres un changement de device.
-//
-// Parametres :
-// - state : etat applicatif a modifier.
-//
-// Effet de bord :
-// - vide les donnees de mode et remet les controles aux valeurs par defaut.
-// ----------------------------------------------------------------------------
-export function resetFirmwareState(state: AppState): void {
-  state.currentModeName = null;
-  state.currentBrightnessPercent = INITIAL_BRIGHTNESS_PERCENT;
-  state.currentSpeedIndex = INITIAL_SPEED_INDEX;
-  state.modes = [];
-  state.auxSwitches = [];
-  state.deviceInfoEntries = [];
-  state.selectedModeName = null;
-  state.colorValues = [...DEFAULT_MODE_COLORS];
-  state.switchValues = [false, false, false, false];
-  state.textValue = "";
-  state.wifiRssi = null;
-  state.debugMessage = null;
-  state.lastResponse = null;
-  state.lastTransportUsed = null;
-  state.diagnostics.enabled = false;
-  state.diagnostics.latestSample = null;
-  state.diagnostics.history = createDiagnosticsHistory(
-    state.diagnostics.history.capacity,
-  );
-  state.diagnostics.chartWindow = "recent";
-  state.diagnostics.lastError = null;
-  state.diagnostics.consecutiveErrors = 0;
-  state.diagnostics.estimatedParticleDataOperations = 0;
-  state.diagnostics.warningMessage = null;
+  return state.lanHost.trim().length > 0;
 }
