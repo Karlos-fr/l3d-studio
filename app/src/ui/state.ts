@@ -75,8 +75,8 @@ export interface AppState {
   connectionStatus: string;
   lanHost: string;
   lanPort: number;
+  autoConnect: boolean;
   lastTransportUsed: TransportKind | null;
-  lanTestStatus: string | null;
   diagnostics: DiagnosticsMonitorState;
   streaming: StreamingUiState;
   bytecode: BytecodeUiState;
@@ -172,8 +172,8 @@ export function createInitialState(
     connectionStatus: INITIAL_CONNECTION_STATUS,
     lanHost: preferences?.lanHost ?? INITIAL_LAN_HOST,
     lanPort: preferences?.lanPort ?? INITIAL_LAN_PORT,
+    autoConnect: preferences?.autoConnect ?? false,
     lastTransportUsed: null,
-    lanTestStatus: null,
     diagnostics: {
       enabled: false,
       intervalSeconds: INITIAL_DIAGNOSTICS_INTERVAL_SECONDS,

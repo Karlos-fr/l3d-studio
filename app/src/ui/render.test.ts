@@ -52,6 +52,7 @@ function runWorkspaceRenderTests(): void {
     state.wifiReady = true;
     state.lastCommandResult = 0;
     state.firmwareRevision = "1.4";
+    state.deviceOsVersion = "2.3.1";
     state.uptimeSeconds = 183_845;
     // Racine qui capture les quatre cartes et leur bandeau.
     const root: RenderRoot = { innerHTML: "" };
@@ -60,8 +61,39 @@ function runWorkspaceRenderTests(): void {
     expect(root.innerHTML).toContain("Peinture");
     expect(root.innerHTML).toContain("Image fixe");
     expect(root.innerHTML).toContain("Statut :</strong> Prêt");
+    expect(root.innerHTML).toContain("Device OS</strong> 2.3.1");
     expect(root.innerHTML).toContain("Firmware</strong> 1.4");
     expect(root.innerHTML).toContain("Uptime</strong> 2 j 03:04:05");
+    expect(root.innerHTML.indexOf("Device OS</strong>")).toBeGreaterThan(
+      root.innerHTML.indexOf("Statut :</strong>"),
+    );
+  });
+
+  // --------------------------------------------------------------------------
+  // Verifie le panneau centre avec une seule action de connexion.
+  // --------------------------------------------------------------------------
+  it("simplifie les actions du panneau de connexion", () => {
+    // Etat qui force l'ouverture de la configuration LAN.
+    const state = createInitialState(null);
+    state.connectionPanelOpen = true;
+    // Racine qui capture le panneau sans navigateur reel.
+    const root: RenderRoot = { innerHTML: "" };
+    renderApp(root as HTMLElement, state);
+    expect(root.innerHTML).toContain('data-action="connect-lan"');
+    expect(root.innerHTML).toContain('data-field="auto-connect"');
+    expect(root.innerHTML).toContain('role="tooltip"');
+    expect(root.innerHTML).toContain("connection-summary-icon");
+    expect(root.innerHTML).toContain("connection-close-action");
+    expect(root.innerHTML).not.toContain("sidebar-connection");
+    expect(root.innerHTML).not.toContain("Tester le LAN");
+    expect(root.innerHTML).not.toContain("Lire le cube");
+    expect(root.innerHTML).not.toContain("Dernier :");
+    expect(root.innerHTML).not.toContain("Connecté : firmware");
+
+    state.lastTransportUsed = "lan";
+    renderApp(root as HTMLElement, state);
+    expect(root.innerHTML).toContain('data-action="disconnect-lan"');
+    expect(root.innerHTML).toContain("Déconnexion");
   });
 
   // --------------------------------------------------------------------------

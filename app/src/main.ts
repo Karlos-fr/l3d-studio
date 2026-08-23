@@ -11,7 +11,7 @@ import { createDiagnosticsMonitor } from "./diagnostics/monitor";
 import { readDiagnosticsSample } from "./diagnostics/reader";
 import type { DiagnosticsSample } from "./diagnostics/types";
 import { createLanClient, LanClientError, normalizeLanHost, normalizeLanPort } from "./lan/client";
-import { attachAppEvents } from "./ui/events";
+import { attachAppEvents, connectLan, type UiEventContext } from "./ui/events";
 import { loadAppPreferences } from "./ui/preferences";
 import { renderApp } from "./ui/render";
 import { updateDiagnosticsView } from "./ui/diagnostics_render";
@@ -878,7 +878,19 @@ function bootstrapApplication(): void {
   // ----------------------------------------------------------------------------
   function rerender(): void {
     renderApp(mountedRootElement, state);
-    attachAppEvents({
+    attachAppEvents(createUiEventContext());
+    updateStreamingView(mountedRootElement, state, getStreamingPreviewFramebuffer());
+    updateBytecodePreview(mountedRootElement, bytecodeSimulation.framebuffer);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Assemble les dependances partagees par les evenements du DOM.
+  //
+  // Retour :
+  // - contexte lie a l'etat et aux services de la session courante.
+  // ----------------------------------------------------------------------------
+  function createUiEventContext(): UiEventContext {
+    return {
       rootElement: mountedRootElement,
       state,
       diagnosticsMonitor,
@@ -895,9 +907,7 @@ function bootstrapApplication(): void {
       clearPainter,
       handleBytecodeAction,
       handleBytecodeField,
-    });
-    updateStreamingView(mountedRootElement, state, getStreamingPreviewFramebuffer());
-    updateBytecodePreview(mountedRootElement, bytecodeSimulation.framebuffer);
+    };
   }
 
   // ----------------------------------------------------------------------------
@@ -921,6 +931,12 @@ function bootstrapApplication(): void {
   diagnosticsResizeObserver.observe(mountedRootElement);
 
   rerender();
+
+  // Une seule tentative est lancee au demarrage lorsque le navigateur a
+  // conserve une destination et que l'utilisateur a active cette preference.
+  if (state.autoConnect && state.lanHost.trim().length > 0) {
+    void connectLan(createUiEventContext());
+  }
 }
 
 bootstrapApplication();

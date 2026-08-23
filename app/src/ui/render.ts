@@ -14,7 +14,7 @@ import {
   type AppState,
 } from "./state";
 import { renderDiagnosticsPanel } from "./diagnostics_render";
-import { isLanTestConfigurationValid } from "./lan_controls";
+import { isLanConnectionConfigurationValid } from "./lan_controls";
 import { listStreamingAnimations } from "../streaming/registry";
 import { renderBytecodePanel } from "./bytecode_render";
 
@@ -84,10 +84,6 @@ function renderDesktopSidebar(state: AppState): string {
         <span class="app-brand-mark">L3D</span><span>Studio</span>
       </div>
       ${renderWorkspaceNavigation(state, "desktop")}
-      <button class="sidebar-connection ${state.connectionPanelOpen ? "is-active" : ""}" data-action="toggle-connection" type="button" aria-controls="connection-panel" aria-expanded="${state.connectionPanelOpen}" aria-pressed="${state.connectionPanelOpen}">
-        <span class="nav-symbol" aria-hidden="true">${renderConnectionIcon()}</span>
-        <span>Connexion</span>
-      </button>
     </aside>
   `;
 }
@@ -109,7 +105,7 @@ function renderHeader(state: AppState): string {
     ? "Photon non configuré"
     : `${state.lanHost}:${state.lanPort}`;
   // Indicateur visuel derive d'un test ou d'un transport deja utilise.
-  const connected = state.lastTransportUsed !== null || state.lanTestStatus?.includes("réussi") === true;
+  const connected = state.lastTransportUsed !== null;
   // Libelle coherent meme lorsqu'une lecture reussit avant le test explicite.
   const connectionLabel = connected ? "LAN connecté" : state.connectionStatus;
   return `
@@ -124,6 +120,7 @@ function renderHeader(state: AppState): string {
           <strong>${escapeHtml(connectionLabel)}</strong>
           <small>${escapeHtml(destination)}</small>
         </span>
+        <span class="connection-summary-icon" aria-hidden="true">${renderConnectionIcon()}</span>
       </button>
       <p class="global-status" role="status">${escapeHtml(state.statusMessage)}</p>
     </header>
@@ -140,18 +137,19 @@ function renderHeader(state: AppState): string {
 // - fragment HTML de configuration locale.
 // ----------------------------------------------------------------------------
 function renderTransportPanel(state: AppState): string {
-  const actualTransport = state.lastTransportUsed ?? "Aucun";
-  const lanDisabled = !isLanTestConfigurationValid(state) || state.isBusy;
+  // Etat du bouton unique selon la validite de l'adresse et l'activite courante.
+  const connected = state.lastTransportUsed !== null;
+  // Une deconnexion locale reste toujours possible hors tache en cours.
+  const connectionDisabled = state.isBusy || (!connected && !isLanConnectionConfigurationValid(state));
   return `
     <section class="panel connection-panel" id="connection-panel" aria-label="Configuration de la connexion LAN">
       <div class="panel-heading">
         <h2>Transport du cube</h2>
-        <div class="button-row">
-          <span class="status-pill">Dernier : ${escapeHtml(actualTransport)}</span>
-          <button class="icon-action" data-action="toggle-connection" type="button" aria-label="Fermer la configuration LAN">×</button>
-        </div>
+        <button class="connection-close-action" data-action="toggle-connection" type="button" aria-label="Fermer la configuration LAN" title="Fermer">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 7 10 10M17 7 7 17" /></svg>
+        </button>
       </div>
-      <div class="form-grid">
+      <div class="form-grid connection-form-grid">
         <label>
           Adresse ou nom local du Photon
           <input data-field="lan-host" inputmode="url" placeholder="photon.local ou 192.168.1.50" value="${escapeHtml(state.lanHost)}" />
@@ -160,14 +158,20 @@ function renderTransportPanel(state: AppState): string {
           Port LAN
           <input data-field="lan-port" max="65535" min="1" type="number" value="${state.lanPort}" />
         </label>
-        <button class="secondary-action" data-action="test-lan" type="button" ${lanDisabled ? "disabled" : ""}>
-          Tester le LAN
-        </button>
-        <button class="primary-action" data-action="load-firmware-state" type="button" ${state.isBusy || !hasAvailableConfiguredTransport(state) ? "disabled" : ""}>
-          Lire le cube
+        <div class="connection-auto-field">
+          <label class="inline-control connection-auto-control">
+            <input data-field="auto-connect" type="checkbox" ${state.autoConnect ? "checked" : ""} />
+            <span>Connexion automatique</span>
+          </label>
+          <span class="connection-hint">
+            <button class="connection-hint-button" type="button" aria-label="Informations sur la mémorisation de la connexion" aria-describedby="connection-storage-hint">i</button>
+            <span class="connection-hint-tooltip" id="connection-storage-hint" role="tooltip">Adresse et port conservés dans ce navigateur.</span>
+          </span>
+        </div>
+        <button class="primary-action connection-submit" data-action="${connected ? "disconnect-lan" : "connect-lan"}" data-role="lan-connection-toggle" type="button" ${connectionDisabled ? "disabled" : ""}>
+          ${state.isBusy ? "Connexion…" : connected ? "Déconnexion" : "Connexion"}
         </button>
       </div>
-      ${state.lanTestStatus === null ? "" : `<p>${escapeHtml(state.lanTestStatus)}</p>`}
     </section>
   `;
 }
@@ -551,6 +555,7 @@ function renderFirmwareStatePanel(state: AppState): string {
       </dl>
       <div class="cube-info-strip">
         <span class="cube-info-status ${cubeStatus.tone}"><i aria-hidden="true"></i><strong>Statut :</strong> ${escapeHtml(cubeStatus.label)}</span>
+        <span><strong>Device OS</strong> ${escapeHtml(state.deviceOsVersion ?? EMPTY_VALUE_LABEL)}</span>
         <span><strong>Firmware</strong> ${escapeHtml(state.firmwareRevision ?? EMPTY_VALUE_LABEL)}</span>
         <span><strong>Uptime</strong> ${escapeHtml(formatUptime(uptimeSeconds))}</span>
       </div>

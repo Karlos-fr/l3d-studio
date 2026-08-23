@@ -5,7 +5,7 @@
 // SparkPixels. Il ne construit pas le HTML et ne stocke pas le mot de passe.
 // ============================================================================
 
-import { createLanClient, LanClientError, normalizeLanHost, normalizeLanPort } from "../lan/client";
+import { LanClientError, normalizeLanHost, normalizeLanPort } from "../lan/client";
 import type { DiagnosticsMonitor } from "../diagnostics/monitor";
 import {
   appendDiagnosticsSample,
@@ -36,7 +36,7 @@ import {
 } from "./state";
 import { createTransportForState } from "./transport";
 import { updateDiagnosticsView } from "./diagnostics_render";
-import { syncLanTestButton } from "./lan_controls";
+import { syncLanConnectionButton } from "./lan_controls";
 import { normalizeStreamingFps, type StreamingFps } from "../streaming/engine";
 import type { PainterTool } from "../painting/model";
 import { getStreamingLayerVoxelAtPoint } from "./streaming_render";
@@ -67,11 +67,11 @@ export interface UiEventContext {
 // Selecteur des boutons d'action declaratifs.
 const ACTION_BUTTON_SELECTOR = "[data-action]";
 
-// Nom de l'action qui lit l'etat firmware du cube.
-const LOAD_FIRMWARE_STATE_ACTION = "load-firmware-state";
+// Nom de l'action unique qui valide le LAN puis lit l'etat du cube.
+const CONNECT_LAN_ACTION = "connect-lan";
 
-// Nom de l'action qui teste uniquement la route de sante LAN.
-const TEST_LAN_ACTION = "test-lan";
+// Nom de l'action qui ferme la session logique locale sans couper le Photon.
+const DISCONNECT_LAN_ACTION = "disconnect-lan";
 
 // Nom de l'action qui force un echantillon de diagnostics.
 const REFRESH_DIAGNOSTICS_ACTION = "refresh-diagnostics";
@@ -428,13 +428,13 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
     return;
   }
 
-  if (action === LOAD_FIRMWARE_STATE_ACTION) {
-    await loadFirmwareState(context);
+  if (action === CONNECT_LAN_ACTION) {
+    await connectLan(context);
     return;
   }
 
-  if (action === TEST_LAN_ACTION) {
-    await testLanConnection(context);
+  if (action === DISCONNECT_LAN_ACTION) {
+    disconnectLan(context);
     return;
   }
 
@@ -550,16 +550,16 @@ function handleFieldChange(
     context.stopStreaming();
     stopDiagnosticsMonitoring(context);
     context.state.lanHost = fieldElement.value.trim();
-    context.state.lanTestStatus = null;
     context.state.lastTransportUsed = null;
-    syncLanTestButton(context.rootElement, context.state);
+    syncLanConnectionButton(context.rootElement, context.state);
   } else if (fieldName === "lan-port") {
     context.stopStreaming();
     stopDiagnosticsMonitoring(context);
     context.state.lanPort = Number.parseInt(fieldElement.value, 10);
-    context.state.lanTestStatus = null;
     context.state.lastTransportUsed = null;
-    syncLanTestButton(context.rootElement, context.state);
+    syncLanConnectionButton(context.rootElement, context.state);
+  } else if (fieldName === "auto-connect" && fieldElement instanceof HTMLInputElement) {
+    context.state.autoConnect = fieldElement.checked;
   } else if (fieldName === "diagnostics-enabled" && fieldElement instanceof HTMLInputElement) {
     context.state.diagnostics.enabled = fieldElement.checked;
     if (fieldElement.checked) {
@@ -697,22 +697,24 @@ async function copyLastResponse(context: UiEventContext): Promise<void> {
 }
 
 // ----------------------------------------------------------------------------
-// Charge l'etat firmware initial du cube selectionne.
+// Valide la connexion LAN puis charge l'etat complet du cube selectionne.
 //
 // Parametres :
 // - context : dependances necessaires au transport configure.
 //
 // Effet de bord :
-// - lit les variables firmware et met a jour les controles de mode.
+// - normalise la destination, lit sante et etat puis actualise l'interface.
 // ----------------------------------------------------------------------------
-async function loadFirmwareState(context: UiEventContext): Promise<void> {
+export async function connectLan(context: UiEventContext): Promise<void> {
   if (!canCallAdvancedFunction(context.state)) {
     context.state.statusMessage = "Configure l'adresse LAN du Photon.";
     context.rerender();
     return;
   }
 
-  await runBusyTask(context, "Lecture du firmware SparkPixelsMega...", async () => {
+  await runBusyTask(context, "Connexion au cube et lecture de son état...", async () => {
+    context.state.lanHost = normalizeLanHost(context.state.lanHost);
+    context.state.lanPort = normalizeLanPort(context.state.lanPort);
     const response = await createTransportForState(context.state).readCube();
     const snapshot = response.value;
     context.state.lastTransportUsed = response.source;
@@ -732,6 +734,7 @@ async function loadFirmwareState(context: UiEventContext): Promise<void> {
     context.state.deviceOsVersion = snapshot.deviceOsVersion;
     context.state.uptimeSeconds = snapshot.uptimeSeconds;
     context.state.debugMessage = snapshot.debugMessage;
+    context.state.connectionStatus = "LAN connecté";
     if (snapshot.colors.length > 0) context.state.colorValues = snapshot.colors;
     if (snapshot.switches.length > 0) context.state.switchValues = snapshot.switches;
     context.state.selectedModeName =
@@ -739,38 +742,42 @@ async function loadFirmwareState(context: UiEventContext): Promise<void> {
       context.state.selectedModeName ??
       context.state.modes[0]?.name ??
       null;
-    context.state.statusMessage = `Etat du cube charge via ${response.source}.`;
+    context.state.statusMessage = "Connexion LAN validée et état du cube chargé.";
     saveAppPreferences(context.storage, context.state);
   });
 }
 
 // ----------------------------------------------------------------------------
-// Teste uniquement la route de sante de l'adresse LAN saisie.
+// Ferme la session logique LAN conservee par l'interface.
 //
 // Parametres :
-// - context : dependances et configuration utilisateur courante.
+// - context : etat, moniteurs et moteur de streaming de la session courante.
 //
 // Effet de bord :
-// - lance un GET sans commande et affiche la version du firmware joignable.
+// - arrete les activites reseau locales et efface les donnees lues du cube ;
+// - ne coupe ni le Wi-Fi ni le serveur HTTP du Photon.
 // ----------------------------------------------------------------------------
-async function testLanConnection(context: UiEventContext): Promise<void> {
-  await runBusyTask(context, "Test de la connexion LAN...", async () => {
-    const host = normalizeLanHost(context.state.lanHost);
-    const port = normalizeLanPort(context.state.lanPort);
-    const health = await createLanClient({ host, port }).health();
-    context.state.lanHost = host;
-    context.state.lanPort = port;
-    context.state.lastTransportUsed = "lan";
-    context.state.wifiReady = health.wifiReady;
-    context.state.particleConnected = health.particleConnected;
-    context.state.firmwareRevision = health.firmwareRevision;
-    context.state.deviceOsVersion = health.deviceOsVersion;
-    context.state.uptimeSeconds = health.uptimeSeconds;
-    context.state.connectionStatus = "LAN connecté";
-    context.state.lanTestStatus = `Photon joignable : firmware ${health.firmwareRevision}, Device OS ${health.deviceOsVersion}.`;
-    context.state.statusMessage = "Connexion LAN validee.";
-    saveAppPreferences(context.storage, context.state);
-  });
+function disconnectLan(context: UiEventContext): void {
+  context.stopStreaming(false);
+  stopDiagnosticsMonitoring(context);
+  context.state.lastTransportUsed = null;
+  context.state.connectionStatus = "LAN déconnecté";
+  context.state.currentModeName = null;
+  context.state.currentPlaybackKind = null;
+  context.state.modes = [];
+  context.state.auxSwitches = [];
+  context.state.wifiRssi = null;
+  context.state.wifiReady = null;
+  context.state.particleConnected = null;
+  context.state.lastCommandResult = null;
+  context.state.firmwareRevision = null;
+  context.state.deviceOsVersion = null;
+  context.state.uptimeSeconds = null;
+  context.state.debugMessage = null;
+  context.state.diagnostics.latestSample = null;
+  context.state.diagnostics.lastError = null;
+  context.state.statusMessage = "Interface déconnectée du cube.";
+  context.rerender();
 }
 
 // ----------------------------------------------------------------------------

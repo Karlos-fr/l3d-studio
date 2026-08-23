@@ -17,8 +17,14 @@ Ouvrir ensuite l'adresse affichée par Vite, généralement
 `http://127.0.0.1:5173/`.
 
 Dans **Transport du cube**, saisir l'IPv4 du Photon, conserver le port `8080`,
-puis utiliser **Tester le LAN** et **Lire le cube**. L'adresse reste uniquement
-dans `localStorage` et n'est jamais versionnée.
+puis utiliser **Connexion** pour valider le LAN et charger l'état du cube en une
+seule opération. Le panneau s'ouvre depuis l'icône de connexion en haut à
+droite. L'option **Se connecter automatiquement** relance cette lecture une
+fois au prochain chargement. L'adresse, le port et cette préférence restent
+uniquement dans `localStorage` et ne sont jamais versionnés.
+Après une lecture réussie, le même bouton devient **Déconnexion** : il arrête
+les échanges de l'application et efface son état courant sans couper le Wi-Fi
+ni le serveur HTTP du Photon.
 
 ## Fonctionnalités
 

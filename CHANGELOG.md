@@ -8,6 +8,16 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ### Refonte de l'écran Cube
 
+- Recentrage du panneau de connexion, remplacement de la fermeture textuelle
+  par un SVG et fusion de **Tester le LAN** avec **Lire le cube** dans une
+  action unique **Connexion**.
+- Retrait de l'entrée Connexion de la barre latérale, ajout de son icône dans
+  l'état LAN de l'en-tête et option de connexion automatique persistée dans le
+  navigateur.
+- Regroupement sur une ligne de l'adresse, du port, de la connexion automatique
+  et du bouton Connexion/Déconnexion, avec une aide contextuelle non permanente.
+- Ajout de la version Device OS dans le bandeau de l'écran Cube et retrait du
+  message de connexion technique sous le formulaire LAN.
 - Séparation des animations embarquées dans un espace dédié placé après Cube.
 - Centrage des quatre indicateurs Mode, Luminosité, Vitesse et RSSI avec des
   pictogrammes SVG colorés.

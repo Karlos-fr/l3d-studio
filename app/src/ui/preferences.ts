@@ -18,6 +18,7 @@ export interface AppPreferences {
   activeWorkspace?: AppWorkspace;
   lanHost?: string;
   lanPort?: number;
+  autoConnect?: boolean;
   selectedModeName: string | null;
   brightnessPercent: number;
   speedIndex: number;
@@ -70,6 +71,7 @@ export function saveAppPreferences(storage: AppPreferencesStorage, state: AppSta
     activeWorkspace: state.activeWorkspace,
     lanHost: state.lanHost,
     lanPort: state.lanPort,
+    autoConnect: state.autoConnect,
     selectedModeName: state.selectedModeName,
     brightnessPercent: state.currentBrightnessPercent,
     speedIndex: state.currentSpeedIndex,

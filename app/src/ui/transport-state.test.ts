@@ -48,6 +48,21 @@ function runTransportStateTests(): void {
       lanPort: 9090,
     });
   });
+
+  // --------------------------------------------------------------------------
+  // Verifie la sauvegarde du choix de connexion automatique.
+  // --------------------------------------------------------------------------
+  it("persiste la connexion automatique", () => {
+    const storage = createMemoryStorage();
+    const state = createInitialState(null);
+    state.autoConnect = true;
+
+    saveAppPreferences(storage, state);
+    const preferences = loadAppPreferences(storage);
+
+    expect(preferences).toMatchObject({ autoConnect: true });
+    expect(createInitialState(preferences).autoConnect).toBe(true);
+  });
 }
 
 // ----------------------------------------------------------------------------

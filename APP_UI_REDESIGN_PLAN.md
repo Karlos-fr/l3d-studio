@@ -54,6 +54,10 @@ occupé, succès, erreur et indisponible avec les données déjà présentes dan
 - [x] Afficher dans l'en-tête le statut LAN et la destination active.
 - [x] Ouvrir la configuration LAN dans un panneau compact depuis l'en-tête ou
   l'entrée Connexion.
+- [x] Centrer ce panneau et regrouper le test LAN avec la lecture du cube dans
+  une seule action Connexion.
+- [x] Retirer l'entrée Connexion de la barre latérale, placer son icône dans
+  l'état LAN de l'en-tête et proposer une connexion automatique mémorisée.
 - [x] Vérifier la navigation au clavier, le focus visible et les libellés ARIA.
 
 ## Phase 2 — Construire les espaces Cube et Animations
