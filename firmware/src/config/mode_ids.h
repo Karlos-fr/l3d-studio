@@ -78,6 +78,9 @@
 #define TRANQUILITY                  74 //credit: CubeTube Library
 #define GYROPHARE_FR                 75 //credit: L3D Studio
 #define STREAM                       76 //credit: L3D Studio
+#if L3D_BYTECODE_ENABLED
+#define BYTECODE                     77 //credit: L3D Studio
+#endif
 
 /* ======================= ADD NEW AUX SWITCH ID HERE. ======================= */
 // AUX SWITCH ID Defines

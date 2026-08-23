@@ -7,6 +7,7 @@
 
 import {
   parseLanAuxSwitches,
+  parseLanBytecodeStatus,
   parseLanCommandResponse,
   parseLanDiagnostics,
   parseLanHealth,
@@ -17,6 +18,7 @@ import type {
   LanClient,
   LanClientConfig,
   LanCommandResponse,
+  LanBytecodeStatus,
   LanErrorCategory,
 } from "./types";
 
@@ -172,7 +174,132 @@ export function createLanClient(config: LanClientConfig): LanClient {
     // Transmet une frame RGB332 binaire complete.
     streamFrame: (frame: Uint8Array, signal?: AbortSignal) =>
       postStreamFrame(fetchFn, baseUrl, frame, timeoutMilliseconds, signal),
+    // Lit les capacites du stockage bytecode local.
+    bytecodeStatus: () =>
+      requestLan(fetchFn, baseUrl, "/bytecode", "GET", "", timeoutMilliseconds, parseLanBytecodeStatus),
+    // Relit le conteneur binaire installe.
+    bytecodeProgram: () => getBytecodeProgram(fetchFn, baseUrl, timeoutMilliseconds),
+    // Installe le conteneur dans la banque inactive.
+    installBytecode: (program: Uint8Array) =>
+      postBytecodeProgram(fetchFn, baseUrl, program, timeoutMilliseconds),
+    // Invalide les deux banques transactionnelles.
+    deleteBytecode: () =>
+      requestLan(fetchFn, baseUrl, "/bytecode/delete", "POST", "", timeoutMilliseconds, parseLanBytecodeStatus),
+    // Lance le mode bytecode sans repli Particle.
+    runBytecode: () =>
+      requestLan(fetchFn, baseUrl, "/bytecode/run", "POST", "", timeoutMilliseconds, parseLanCommandResponse),
+    // Revient au mode Off sans repli Particle.
+    stopBytecode: () =>
+      requestLan(fetchFn, baseUrl, "/bytecode/stop", "POST", "", timeoutMilliseconds, parseLanCommandResponse),
   };
+}
+
+// ----------------------------------------------------------------------------
+// Relit un conteneur bytecode binaire depuis le Photon.
+//
+// Parametres :
+// - fetchFn : implementation fetch utilisee.
+// - baseUrl : racine locale versionnee.
+// - timeoutMilliseconds : duree maximale de l'appel.
+//
+// Retour :
+// - copie bornee du conteneur persistant.
+// ----------------------------------------------------------------------------
+async function getBytecodeProgram(
+  fetchFn: typeof fetch,
+  baseUrl: string,
+  timeoutMilliseconds: number,
+): Promise<Uint8Array> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMilliseconds);
+  try {
+    const response = await fetchFn(`${baseUrl}/bytecode/program`, {
+      method: "GET",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const responseText = await response.text();
+      const errorCode = readLanTransportError(responseText);
+      throw new LanClientError(
+        errorCode === null ? `Erreur LAN HTTP ${response.status}.` : `Lecture bytecode refusee (${errorCode}).`,
+        errorCode === null ? "protocol" : "command-refused",
+        response.status,
+        errorCode,
+        false,
+      );
+    }
+    const contentType = response.headers.get("Content-Type")?.split(";", 1)[0]?.trim().toLowerCase();
+    if (contentType !== "application/octet-stream") {
+      throw new LanClientError("Media type bytecode LAN invalide.", "protocol", response.status, null, false);
+    }
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length === 0 || bytes.length > 197) {
+      throw new LanClientError("Longueur bytecode LAN invalide.", "protocol", response.status, null, false);
+    }
+    return bytes;
+  } catch (error) {
+    if (error instanceof LanClientError) throw error;
+    if (controller.signal.aborted) {
+      throw new LanClientError("Delai LAN depasse.", "timeout", null, null, false);
+    }
+    throw new LanClientError("Photon inaccessible sur le LAN.", "connection", null, null, false);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Installe un conteneur bytecode sans repli vers Particle Cloud.
+//
+// Parametres :
+// - fetchFn : implementation fetch utilisee.
+// - baseUrl : racine locale versionnee.
+// - program : conteneur valide a copier dans le corps HTTP.
+// - timeoutMilliseconds : duree maximale de l'appel.
+//
+// Retour :
+// - statut relu par le firmware apres activation de la nouvelle banque.
+// ----------------------------------------------------------------------------
+async function postBytecodeProgram(
+  fetchFn: typeof fetch,
+  baseUrl: string,
+  program: Uint8Array,
+  timeoutMilliseconds: number,
+): Promise<LanBytecodeStatus> {
+  if (program.length === 0 || program.length > 197) {
+    throw new LanClientError("Longueur du programme bytecode invalide.", "protocol", null, null, false);
+  }
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMilliseconds);
+  try {
+    const body = program.slice().buffer as ArrayBuffer;
+    const response = await fetchFn(`${baseUrl}/bytecode/program`, {
+      method: "POST",
+      headers: { "Content-Type": "application/octet-stream" },
+      body,
+      signal: controller.signal,
+    });
+    const responseText = await response.text();
+    if (!response.ok) {
+      const errorCode = readLanTransportError(responseText);
+      throw new LanClientError(
+        errorCode === null ? `Erreur LAN HTTP ${response.status}.` : `Installation bytecode refusee (${errorCode}).`,
+        errorCode === null ? "protocol" : "command-refused",
+        response.status,
+        errorCode,
+        true,
+      );
+    }
+    return parseLanBytecodeStatus(responseText);
+  } catch (error) {
+    if (error instanceof LanClientError) throw error;
+    if (controller.signal.aborted) {
+      throw new LanClientError("Installation bytecode expiree.", "timeout", null, null, true);
+    }
+    throw new LanClientError("Photon inaccessible pendant l'installation.", "connection", null, null, true);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -327,6 +454,18 @@ async function requestLan<TValue>(
       signal: controller.signal,
     });
     const responseText = await response.text();
+    if (!response.ok) {
+      const transportError = readLanTransportError(responseText);
+      if (transportError !== null) {
+        throw new LanClientError(
+          `Commande LAN refusee (${transportError}).`,
+          "command-refused",
+          response.status,
+          transportError,
+          requestDispatched,
+        );
+      }
+    }
     let parsedValue: TValue;
     try {
       parsedValue = parser(responseText);

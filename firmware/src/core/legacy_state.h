@@ -54,6 +54,9 @@ static const modeParams modeStruct[] =
 		{  GOLDRAIN,                    "GoldRain",             0,          1,      FALSE   },  //credit: Werner Moecke (based on Alex Hornstein's "Purple Rain")
 		{  GYROPHARE_FR,                "GyrophareFR",          0,          3,      FALSE   },  //credit: L3D Studio
 		{  STREAM,                      "Stream",               0,          0,      FALSE   },  //credit: L3D Studio
+#if L3D_BYTECODE_ENABLED
+		{  BYTECODE,                    "L3DProgram",           0,          0,      FALSE   },  //credit: L3D Studio
+#endif
 //		{  HYPER,                       "HyperBall",            0,          0,      FALSE   },  //credit: fool, mod by socaljj
         {  IFTTTWEATHER,                "IFTTT",                0,          0,      FALSE   },  //credit: Kevin Carlborg, Werner Moecke (code improvements)
 //        {  LIGHTNING,                   "Lightning",            0,          0,      FALSE   },  //credit: Bill Marrs
@@ -167,9 +170,15 @@ bool isFirstLap;
 bool shuffleMode;
 volatile bool stopDemo;		//Set to TRUE when the Interrupt Timer demoTimer gets triggered
 
-// Le registre actif publie 62 modes historiques et six evolutions explicites.
-static_assert(sizeof modeStruct / sizeof modeStruct[0] == 68,
-    "Le registre actif doit contenir exactement 68 modes");
+// Nombre attendu de modes actifs selon la presence de la VM installable.
+#if L3D_BYTECODE_ENABLED
+const uint8_t ACTIVE_MODE_COUNT = 69;
+#else
+const uint8_t ACTIVE_MODE_COUNT = 68;
+#endif
+
+static_assert(sizeof modeStruct / sizeof modeStruct[0] == ACTIVE_MODE_COUNT,
+    "Le registre actif doit conserver son nombre de modes contractuel");
 
 // Position du prochain mode dans l'ordre melange, comprise entre zero et 67.
 uint8_t shuffleIdx;
@@ -1003,6 +1012,9 @@ union SharedAnimationScratch {
     uint8_t crumbleRemaining[SIDE * SIDE];
     float spectrumSamples[2][ARRAY_SIZE];
     WhirlwindState whirlwind;
+#if L3D_BYTECODE_ENABLED
+    BytecodeVmStorage bytecode;
+#endif
 };
 static_assert(sizeof(uint16_t) * (int)(PIXEL_CNT * 0.1) <=
     sizeof(((SharedAnimationScratch*)0)->pixelOrder),
@@ -1023,6 +1035,11 @@ static_assert(sizeof(((SharedAnimationScratch*)0)->spectrumSamples) == 128,
     "Les deux tableaux FFT Spectrum doivent occuper 128 octets du scratch");
 static_assert(sizeof(SharedAnimationScratch) == PIXEL_CNT * BPP,
     "Le scratch partage ne doit pas ajouter un second framebuffer");
+#if L3D_BYTECODE_ENABLED
+static_assert(sizeof(((SharedAnimationScratch*)0)->bytecode) <=
+    sizeof(((SharedAnimationScratch*)0)->bytes),
+    "La VM bytecode doit reutiliser le scratch existant");
+#endif
 int CubePainter(String command);
 int cubePainterFromBuffer(const char* commandText, size_t commandLength);
 
@@ -1256,6 +1273,9 @@ static_assert(sizeof(SharedAnimationState) == sizeof(RainSalvosState),
 // Alias historiques limitant la modification des animations déjà auditées.
 #define sharedAnimationScratch sharedAnimationState.scratch
 #define drawingBuffer sharedAnimationScratch.bytes
+#if L3D_BYTECODE_ENABLED
+#define bytecodeStorage sharedAnimationScratch.bytecode
+#endif
 #define snakeVoxels sharedAnimationScratch.snakeVoxels
 #define crumbleRemaining sharedAnimationScratch.crumbleRemaining
 #define spectrumReal sharedAnimationScratch.spectrumSamples[0]

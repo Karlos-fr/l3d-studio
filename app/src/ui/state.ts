@@ -17,6 +17,10 @@ import type { AppPreferences } from "./preferences";
 import type { TransportKind, TransportPreference } from "../transport/types";
 import type { StreamingFps } from "../streaming/engine";
 import { DEFAULT_STREAMING_ANIMATION_ID } from "../streaming/registry";
+import type { LanBytecodeStatus } from "../lan/types";
+import type { BytecodeLibraryEntry } from "../bytecode/library";
+import { BYTECODE_REFERENCE_PROGRAMS } from "../bytecode/reference_programs";
+import type { BytecodeSimulationSnapshot } from "../bytecode/simulation";
 
 // Etat visible de la session de streaming web.
 export interface StreamingUiState {
@@ -31,6 +35,21 @@ export interface StreamingUiState {
   statusMessage: string;
 }
 
+// Etat visible de l'editeur et de la VM procedurale.
+export interface BytecodeUiState {
+  selectedSourceKey: string;
+  sourceName: string;
+  sourceText: string;
+  library: BytecodeLibraryEntry[];
+  compiledContainer: Uint8Array | null;
+  compiledSize: number;
+  compiledCapabilities: number;
+  compileMessage: string;
+  simulation: BytecodeSimulationSnapshot;
+  photonStatus: LanBytecodeStatus | null;
+  operationMessage: string;
+}
+
 export interface AppState {
   applicationName: string;
   connectionStatus: string;
@@ -41,6 +60,7 @@ export interface AppState {
   lanTestStatus: string | null;
   diagnostics: DiagnosticsMonitorState;
   streaming: StreamingUiState;
+  bytecode: BytecodeUiState;
   session: ParticleStoredSession | null;
   devices: ParticleDeviceSummary[];
   selectedDeviceId: string | null;
@@ -115,6 +135,8 @@ export function createInitialState(
   session: ParticleStoredSession | null,
   preferences: AppPreferences | null,
 ): AppState {
+  const initialProgram = BYTECODE_REFERENCE_PROGRAMS[0];
+  if (initialProgram === undefined) throw new Error("Le corpus bytecode est vide.");
   return {
     applicationName: APPLICATION_NAME,
     connectionStatus: session === null ? INITIAL_CONNECTION_STATUS : "Session restauree",
@@ -144,6 +166,25 @@ export function createInitialState(
       droppedFrames: 0,
       measuredFps: 0,
       statusMessage: "Streaming arrêté.",
+    },
+    bytecode: {
+      selectedSourceKey: `example:${initialProgram.id}`,
+      sourceName: "Rain",
+      sourceText: initialProgram.source,
+      library: [],
+      compiledContainer: null,
+      compiledSize: 0,
+      compiledCapabilities: 0,
+      compileMessage: "Source non compilée.",
+      simulation: {
+        state: "stopped",
+        instructionCount: 0,
+        shownFrames: 0,
+        measuredFps: 0,
+        lastFault: null,
+      },
+      photonStatus: null,
+      operationMessage: "Configure l'adresse LAN pour lire le Photon.",
     },
     session,
     devices: [],

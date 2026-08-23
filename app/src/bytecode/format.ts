@@ -163,6 +163,8 @@ export enum BytecodeErrorCode {
   NoProgram = -314,
   // Etat VM incompatible avec l'instruction.
   State = -315,
+  // Ecriture ou relecture EEPROM incoherente.
+  Storage = -316,
 }
 
 // Instruction decodee avec operandes logiques et taille binaire.

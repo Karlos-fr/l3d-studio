@@ -62,6 +62,11 @@ export interface UiEventContext {
   updateStreamingCadence: () => void;
   updateStreamingSettings: () => void;
   stopStreaming: (returnToOff?: boolean) => void;
+  handleBytecodeAction: (action: string) => Promise<void>;
+  handleBytecodeField: (
+    fieldElement: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+    commitChange: boolean,
+  ) => Promise<void>;
 }
 
 // Selecteur du formulaire de connexion Particle.
@@ -210,12 +215,17 @@ function attachActionButtons(context: UiEventContext): void {
 // - ajoute des gestionnaires input et change aux champs controles.
 // ----------------------------------------------------------------------------
 function attachStateFields(context: UiEventContext): void {
-  const fieldElements = context.rootElement.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+  const fieldElements = context.rootElement.querySelectorAll<
+    HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+  >(
     STATE_FIELD_SELECTOR,
   );
 
   fieldElements.forEach((fieldElement) => {
     fieldElement.addEventListener("input", () => {
+      if (fieldElement instanceof HTMLInputElement && fieldElement.type === "file") {
+        return;
+      }
       if (
         fieldElement.dataset.field === "aux-switch" ||
         fieldElement.dataset.field === "diagnostics-enabled" ||
@@ -358,6 +368,11 @@ async function handleLogin(context: UiEventContext, formElement: HTMLFormElement
 // ----------------------------------------------------------------------------
 async function handleAction(context: UiEventContext, action: string): Promise<void> {
   if (context.state.isBusy) {
+    return;
+  }
+
+  if (action.startsWith("bytecode-")) {
+    await context.handleBytecodeAction(action);
     return;
   }
 
@@ -506,10 +521,15 @@ function handleExpiredSession(context: UiEventContext): void {
 // ----------------------------------------------------------------------------
 function handleFieldChange(
   context: UiEventContext,
-  fieldElement: HTMLInputElement | HTMLSelectElement,
+  fieldElement: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
   commitChange: boolean,
 ): void {
   const fieldName = fieldElement.dataset.field ?? "";
+
+  if (fieldName.startsWith("bytecode-")) {
+    void context.handleBytecodeField(fieldElement, commitChange);
+    return;
+  }
 
   if (fieldName === "device-id") {
     updateSelectedDevice(context, fieldElement.value);

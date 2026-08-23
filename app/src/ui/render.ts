@@ -17,6 +17,7 @@ import {
 import { renderDiagnosticsPanel } from "./diagnostics_render";
 import { isLanTestConfigurationValid } from "./lan_controls";
 import { listStreamingAnimations } from "../streaming/registry";
+import { renderBytecodePanel } from "./bytecode_render";
 
 // Libelle affiche quand aucune valeur Particle n'est encore disponible.
 const EMPTY_VALUE_LABEL = "Non lu";
@@ -164,6 +165,7 @@ function renderWorkspace(state: AppState): string {
     ${renderFirmwareStatePanel(state)}
     ${renderModePanel(state)}
     ${renderStreamingPanel(state)}
+    ${renderBytecodePanel(state)}
     ${renderAdvancedPanel(state)}
     ${renderDiagnosticsPanel(state)}
     ${renderDeviceInfoPanel(state)}

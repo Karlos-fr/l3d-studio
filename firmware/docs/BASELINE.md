@@ -68,6 +68,7 @@ particle compile photon firmware --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Serveur LAN phase 0, avant implementation | 2.3.1 | 111 880 | 13 788 | 111 884 | 19 192 |
 | 2026-08-17 | Serveur LAN phase 1, commandes separees des transports | 2.3.1 | 111 672 | 13 788 | 111 676 | 19 400 |
 | 2026-08-19 | Serveur LAN v1 complet et mode Stream 76 | 2.3.1 | 118 296 | 15 204 | 118 300 | 12 776 |
+| 2026-08-23 | Bytecode v1, stockage transactionnel et routes LAN | 2.3.1 | 123 584 | 15 228 | 123 588 | 7 488 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire
@@ -112,14 +113,45 @@ comme repère historique jusqu'à l'instrumentation de la phase 2.
 
 Les artefacts locaux suivants sont régénérés dans `firmware/build/` :
 
-- `l3d-studio-photon-2.3.1.bin` ;
+- `l3d-studio-firmware-1.4-photon-2.3.1-bytecode-v1.bin` ;
 - `compile.log` ;
-- `measurement.json`.
+- `measurement.json` ;
+- `release.json`, manifeste public des versions, mesures et du SHA-256.
 
 Le dossier `build/` est ignoré par Git. Une compilation est considérée
 reproductible lorsque `flashBytes`, `staticRamBytes` et `binaryBytes` sont
 identiques aux valeurs de ce journal avec le même Device OS et les mêmes
 sources.
+
+## Livraison bytecode version 1
+
+La compilation de livraison du 23 août 2026 est identifiée par :
+
+| Champ | Valeur |
+| --- | --- |
+| Artefact | `l3d-studio-firmware-1.4-photon-2.3.1-bytecode-v1.bin` |
+| Firmware | Spark Pixels Mega `1.4` |
+| Cible | Photon Gen 2, Device OS `2.3.1` |
+| Format bytecode | `1` |
+| Bytecode actif | oui |
+| Taille | 123 588 octets |
+| Flash mesurée | 123 584 octets |
+| RAM statique | 15 228 octets |
+| Marge Flash | 7 488 octets |
+| SHA-256 | `B41087D2C946203950F1C1946E861E957E59656D8C8649D2107C57B9874CE920` |
+
+Le manifeste `firmware/build/release.json` est généré après la mesure, à partir
+du binaire exact. Il ne contient que le nom d'artefact, les versions publiques,
+l'état de la VM, les mesures, la date UTC et l'empreinte. Une recherche octet
+par octet dans le binaire et dans les sources a confirmé l'absence des valeurs
+privées non vides
+de `.env.local`. Le fichier `.env.local`, le journal et les artefacts restent
+ignorés par Git.
+
+Les limites, le langage et les opérations de cette livraison sont documentés
+dans [BYTECODE_LANGUAGE.md](BYTECODE_LANGUAGE.md),
+[BYTECODE_FORMAT.md](BYTECODE_FORMAT.md) et
+[BYTECODE_STORAGE_API.md](BYTECODE_STORAGE_API.md).
 
 ## État de validation
 

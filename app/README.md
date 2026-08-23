@@ -115,6 +115,36 @@ la réponse réseau s’est perdue.
 - diagnostics ponctuels ou périodiques ;
 - courbes de mémoire, temps de frame et FPS ;
 - repères de changement de mode, redémarrage, interruption et OOM.
+- éditeur assembleur d'animations procédurales avec Rain, Sphère, Fireworks et
+  Plasma comme exemples ;
+- compilation et simulation locale dans l'aperçu 3D, avec pause, graine,
+  instructions, FPS et faute ;
+- bibliothèque locale exportable et importable, sans service distant ;
+- installation, lecture, lancement et suppression du programme procédural par
+  le LAN uniquement, avec confirmation et vérification du CRC relu.
+
+## Animations procédurales
+
+La section **Animations procédurales** accepte directement le langage
+assembleur `.l3d` décrit dans
+[../firmware/docs/BYTECODE_LANGUAGE.md](../firmware/docs/BYTECODE_LANGUAGE.md).
+Compiler une source affiche sa taille et ses capacités avant de rendre les
+boutons de simulation et d'installation disponibles.
+
+Les sources utilisateur restent dans `localStorage`. L'export JSON contient
+uniquement identifiants, noms, sources et dates de modification : il ne contient
+ni token Particle, ni adresse LAN, ni préférence. L'import remplace la
+bibliothèque locale après validation intégrale du document.
+
+L'installation nécessite une adresse LAN valide. L3D Studio lit d'abord le
+statut du Photon, demande confirmation si un programme existe, écrit le binaire
+dans la banque inactive puis relit le conteneur et compare son CRC. Aucun appel
+Particle n'est utilisé comme repli silencieux. Le protocole et ses erreurs sont
+détaillés dans
+[../firmware/docs/BYTECODE_STORAGE_API.md](../firmware/docs/BYTECODE_STORAGE_API.md).
+Le format binaire, les versions, le CRC et les fautes sont la référence plus
+technique de
+[../firmware/docs/BYTECODE_FORMAT.md](../firmware/docs/BYTECODE_FORMAT.md).
 
 La syntaxe historique des commandes Spark Pixels est décrite dans
 [../docs/firmware-protocol.md](../docs/firmware-protocol.md).

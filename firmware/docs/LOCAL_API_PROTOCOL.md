@@ -10,7 +10,8 @@ référence aux tests du firmware, à L3D Studio et aux appels manuels.
 - Transport : TCP local, sous-ensemble HTTP/1.0 et HTTP/1.1.
 - Port par défaut : `8080`.
 - Préfixe des routes : `/api/v1`.
-- Type des corps : `text/plain; charset=utf-8`, sauf la frame RGB332 binaire.
+- Type des corps : `text/plain; charset=utf-8`, sauf les frames RGB332 et les
+  conteneurs bytecode binaires.
 - Connexion : une requête, une réponse, puis fermeture.
 - Sécurité : aucune authentification ni aucun chiffrement dans cette version.
 
@@ -59,6 +60,8 @@ curl.exe -H "Content-Type: text/plain" --data-binary "GETSWITCHSTATE:1" "$api/co
 curl.exe -H "Content-Type: text/plain" --data-binary "M:ColorAll,S:4,B:1,C1:0000FF," "$api/mode"
 curl.exe -H "Content-Type: text/plain" --data-binary "Bonjour" "$api/text"
 curl.exe -H "Content-Type: text/plain" --data-binary "I511,#FF0000," "$api/cube-painter"
+curl.exe "$api/bytecode"
+curl.exe -H "Content-Type: application/octet-stream" --data-binary "@programme.l3d.bin" "$api/bytecode/program"
 ```
 
 Équivalent dans un terminal POSIX :
@@ -95,7 +98,8 @@ Règles de validation :
 - un `POST` exige un `Content-Length` décimal, même lorsque sa valeur est zéro ;
 - un `GET` ou `OPTIONS` ne doit pas contenir de corps ;
 - un corps non vide exige `Content-Type: text/plain`, avec `charset=utf-8`
-  facultatif, ou `application/octet-stream` pour la seule route de frame ;
+  facultatif, ou `application/octet-stream` pour la frame et l'installation
+  d'un programme bytecode ;
 - les chemins sont comparés exactement et ne sont pas décodés comme des URL ;
 - tout dépassement est refusé avant copie dans le buffer correspondant ;
 - une commande n'est exécutée qu'après réception et validation du corps entier ;
@@ -303,6 +307,25 @@ Une longueur differente jusqu'a la capacite HTTP retourne `400`. Un corps qui
 depasse la capacite HTTP retourne `413`. Le type incorrect retourne `415` et
 une frame recue hors du mode Stream retourne `409` avec le code `-208`.
 
+### Animations procédurales bytecode
+
+Les routes suivantes gèrent le seul emplacement logique transactionnel :
+
+```text
+GET  /api/v1/bytecode
+GET  /api/v1/bytecode/program
+POST /api/v1/bytecode/program
+POST /api/v1/bytecode/delete
+POST /api/v1/bytecode/run
+POST /api/v1/bytecode/stop
+```
+
+Le programme binaire est limité à 197 octets et utilise
+`application/octet-stream` dans les deux directions. Les autres réponses sont
+des lignes clé-valeur versionnées. Installation, CRC, banques, erreurs et
+rollback sont spécifiés dans
+[`BYTECODE_STORAGE_API.md`](BYTECODE_STORAGE_API.md).
+
 ## Statuts et erreurs du transport
 
 | Statut | Code | Situation |
@@ -405,7 +428,7 @@ Définir `L3D_LOCAL_API_ENABLED` à `0` dans
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File firmware/tools/compile.ps1
-particle flash <nom-ou-id-du-photon> firmware/build/l3d-studio-photon-2.3.1.bin
+particle flash <nom-ou-id-du-photon> firmware/build/l3d-studio-firmware-1.4-photon-2.3.1-bytecode-v1.bin
 ```
 
 Ce rollback retire le serveur, ses routes LAN et ses buffers à la compilation.

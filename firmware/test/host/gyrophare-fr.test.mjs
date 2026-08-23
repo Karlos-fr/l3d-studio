@@ -91,7 +91,8 @@ test("GyrophareFR publie l'ID 75 et ses trois options", () => {
     state,
     /\{\s*GYROPHARE_FR,\s*"Bicolore",\s*"Reactif au son",\s*"Trainee"/u,
   );
-  assert.match(state, /modeStruct\[0\] == 68/u);
+  assert.match(state, /const uint8_t ACTIVE_MODE_COUNT = 69;/u);
+  assert.match(state, /modeStruct\[0\] == ACTIVE_MODE_COUNT/u);
 });
 
 // ----------------------------------------------------------------------------

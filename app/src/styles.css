@@ -486,6 +486,62 @@ select:focus-visible {
   color: var(--muted-text, #9fb3c8);
 }
 
+/* Atelier en deux colonnes qui reste utilisable sur un ecran etroit. */
+.bytecode-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+}
+
+/* Colonnes internes de l'editeur et de l'apercu. */
+.bytecode-editor-column,
+.bytecode-preview-column,
+.bytecode-device {
+  display: grid;
+  gap: 0.75rem;
+}
+
+/* Zone assembleur monospace suffisamment haute sans editeur lourd. */
+.bytecode-editor {
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  min-height: 22rem;
+  resize: vertical;
+  width: 100%;
+}
+
+/* Regroupement souple des actions procedurales. */
+.button-row,
+.bytecode-toolbar,
+.bytecode-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+/* Metriques compactes separees visuellement du code. */
+.bytecode-metrics span {
+  background: var(--surface-muted, #f4f6f8);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.55rem;
+}
+
+/* Le vrai champ fichier reste accessible dans son libelle bouton. */
+.file-action input {
+  max-width: 13rem;
+}
+
+/* L'apercu procedural reprend les proportions de la vue streaming. */
+.bytecode-preview {
+  min-height: 22rem;
+}
+
+@media (max-width: 860px) {
+  .bytecode-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 .streaming-preview-tabs {
   display: inline-flex;
   gap: 0.25rem;

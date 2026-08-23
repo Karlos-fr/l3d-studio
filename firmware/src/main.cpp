@@ -390,6 +390,11 @@ Timer demoTimer(2*60*1000, advanceDemo);
 #include "core/bounded_text.h"
 #include "cloud/command_validation.h"
 #include "core/command_dispatch.h"
+#include "bytecode/bytecode_format.h"
+#include "bytecode/bytecode_validator.h"
+#include "bytecode/bytecode_diagnostics.h"
+#include "bytecode/bytecode_storage.h"
+#include "bytecode/bytecode_vm.h"
 
 #include "core/legacy_state.h"
 #include "core/animation_lifecycle.h"
@@ -546,6 +551,16 @@ void loop() {
 #include "network/local_api_server.cpp"
 
 #include "core/animation_scheduler.cpp"
+
+#include "bytecode/bytecode_format.cpp"
+
+#include "bytecode/bytecode_validator.cpp"
+
+#include "bytecode/bytecode_diagnostics.cpp"
+
+#include "bytecode/bytecode_storage.cpp"
+
+#include "bytecode/bytecode_vm.cpp"
 
 // Les modules historiques inclus ci-dessous conservent leur syntaxe `delay`,
 // mais chaque attente sert desormais Particle Cloud et peut etre abregee.

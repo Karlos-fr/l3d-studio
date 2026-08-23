@@ -7,6 +7,7 @@
 
 import { describe, expect, it } from "vitest";
 import {
+  parseLanBytecodeStatus,
   parseLanAuxSwitches,
   parseLanCommandResponse,
   parseLanDiagnostics,
@@ -31,6 +32,10 @@ const MODES_RESPONSE = "v=1\nnames=Off;Text;\nparams=N;C:2,T:;\n";
 
 // Liste minimale d'un switch auxiliaire.
 const AUX_RESPONSE = "v=1\nswitches=2,Shuffle,ON,OFF,1;\n";
+
+// Statut complet d'un programme bytecode installe.
+const BYTECODE_STATUS_RESPONSE =
+  "v=1\nlayout=1\ninstalled=1\nslots=1\ncapacity=197\npayloadMax=185\nused=61\nfree=136\nbank=1\ngeneration=7\nformat=1\nvm=1\ncapabilities=5\ncrc=14A2\n";
 
 // ----------------------------------------------------------------------------
 // Execute les tests des parseurs LAN.
@@ -102,6 +107,24 @@ function runLanParserTests(): void {
     expect(modes.modes[1]?.parameters.acceptsText).toBe(true);
     expect(auxSwitches.switches[0]?.title).toBe("Shuffle");
     expect(auxSwitches.switches[0]?.enabled).toBe(true);
+  });
+
+  // --------------------------------------------------------------------------
+  // Verifie les capacites et le CRC du programme procedural.
+  // --------------------------------------------------------------------------
+  it("parse le statut bytecode transactionnel", () => {
+    expect(parseLanBytecodeStatus(BYTECODE_STATUS_RESPONSE)).toMatchObject({
+      installed: true,
+      capacityBytes: 197,
+      payloadMaximumBytes: 185,
+      usedBytes: 61,
+      bank: 1,
+      generation: 7,
+      capabilities: 5,
+      crc: 0x14A2,
+    });
+    expect(() => parseLanBytecodeStatus(BYTECODE_STATUS_RESPONSE.replace("14A2", "xyz")))
+      .toThrow("CRC bytecode LAN invalide");
   });
 
   // --------------------------------------------------------------------------

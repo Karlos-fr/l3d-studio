@@ -80,7 +80,7 @@ void streamTick(void) {
 
     const int standbyModeIndex = getModeIndexFromID(STANDBY);
     if(standbyModeIndex >= 0)
-        setNewMode(standbyModeIndex);
+        animationSchedulerRequestModeChange(standbyModeIndex);
 }
 
 #endif

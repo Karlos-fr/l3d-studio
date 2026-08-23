@@ -50,17 +50,17 @@ Particle, le serveur LAN ou les autres animations.
 
 ## Règles transversales
 
-- [ ] Conserver Photon et Device OS 2.3.1 comme cible de référence.
-- [ ] Protéger l'ensemble par `L3D_BYTECODE_ENABLED`.
-- [ ] Ne pas ajouter de `String`, `new`, `vector`, `malloc` ou allocation dynamique au firmware.
-- [ ] Ne placer aucun buffer local supérieur à 256 octets sur la pile.
-- [ ] Réutiliser le scratch partagé seulement pendant le mode bytecode.
-- [ ] Ne pas réserver un second framebuffer.
-- [ ] Valider toute longueur, coordonnée, instruction et cible de saut.
-- [ ] Écrire en EEPROM uniquement lors d'une installation ou suppression explicite.
-- [ ] Maintenir Particle, l'API LAN et les diagnostics pendant l'exécution.
-- [ ] Appliquer les règles de commentaires français de `AGENT.md`.
-- [ ] Mesurer Flash, RAM, EEPROM et temps de frame après chaque phase firmware.
+- [x] Conserver Photon et Device OS 2.3.1 comme cible de référence.
+- [x] Protéger l'ensemble par `L3D_BYTECODE_ENABLED`.
+- [x] Ne pas ajouter de `String`, `new`, `vector`, `malloc` ou allocation dynamique au firmware.
+- [x] Ne placer aucun buffer local supérieur à 256 octets sur la pile.
+- [x] Réutiliser le scratch partagé seulement pendant le mode bytecode.
+- [x] Ne pas réserver un second framebuffer.
+- [x] Valider toute longueur, coordonnée, instruction et cible de saut.
+- [x] Écrire en EEPROM uniquement lors d'une installation ou suppression explicite.
+- [x] Maintenir Particle, l'API LAN et les diagnostics pendant l'exécution.
+- [x] Appliquer les règles de commentaires français de `AGENT.md`.
+- [ ] Mesurer Flash, RAM, EEPROM et temps de frame après chaque phase firmware. Flash, RAM et EEPROM sont mesurées ; le temps de frame attend le Photon.
 - [ ] Réaliser les validations visuelles matérielles avec `B:1`.
 
 ## Phase 0 — Faisabilité et choix du stockage
@@ -172,39 +172,42 @@ langage source des animations.
 
 ### Structure
 
-- [ ] Créer `firmware/src/bytecode/` avec des modules séparés pour format, validation, VM et diagnostics.
-- [ ] Définir un état fixe : compteur ordinal, registres, couleur, temporisation et faute.
-- [ ] Réutiliser le scratch partagé pour le programme actif si la phase 0 le valide.
-- [ ] Retirer toute la fonctionnalité du binaire lorsque `L3D_BYTECODE_ENABLED=0`.
+- [x] Créer `firmware/src/bytecode/` avec des modules séparés pour format, validation, VM et diagnostics.
+- [x] Définir un état fixe : compteur ordinal, registres, couleur, temporisation et faute.
+- [x] Réutiliser le scratch partagé pour le programme actif si la phase 0 le valide.
+- [x] Retirer toute la fonctionnalité du binaire lorsque `L3D_BYTECODE_ENABLED=0`.
 
 ### Validation
 
-- [ ] Valider signature, version, longueur, capacités et CRC avant activation.
-- [ ] Vérifier les frontières d'instructions sans allocation dynamique.
-- [ ] Vérifier toutes les cibles de branchement avant l'exécution.
-- [ ] Refuser tout programme trop grand ou nécessitant une capacité absente.
-- [ ] Conserver le mode courant si la validation échoue.
+- [x] Valider signature, version, longueur, capacités et CRC avant activation.
+- [x] Vérifier les frontières d'instructions sans allocation dynamique.
+- [x] Vérifier toutes les cibles de branchement avant l'exécution.
+- [x] Refuser tout programme trop grand ou nécessitant une capacité absente.
+- [x] Conserver le mode courant si la validation échoue.
 
 ### Exécution
 
-- [ ] Implémenter les opcodes avec la même sémantique que TypeScript.
-- [ ] Exécuter au plus le quota contractuel à chaque passage.
-- [ ] Rendre la main sur `WAIT`, `YIELD`, faute ou changement de mode.
-- [ ] Arrêter les programmes qui dépassent leurs quotas.
-- [ ] Réinitialiser complètement la VM à l'entrée et à la sortie.
-- [ ] Ajouter un mode installable sans décaler les IDs historiques.
-- [ ] Revenir à `Off` après une faute fatale.
+- [x] Implémenter les opcodes avec la même sémantique que TypeScript.
+- [x] Exécuter au plus le quota contractuel à chaque passage.
+- [x] Rendre la main sur `WAIT`, `YIELD`, faute ou changement de mode.
+- [x] Arrêter les programmes qui dépassent leurs quotas.
+- [x] Réinitialiser complètement la VM à l'entrée et à la sortie.
+- [x] Ajouter un mode installable sans décaler les IDs historiques.
+- [x] Revenir à `Off` après une faute fatale.
 
 ### Rendu et tests
 
-- [ ] Brancher les opcodes sur les primitives de rendu existantes.
-- [ ] Valider les coordonnées avant toute écriture de voxel.
-- [ ] Comparer les traces TypeScript et firmware avec les mêmes graines.
-- [ ] Tester opcode inconnu, saut invalide, boucle infinie et quota dépassé.
-- [ ] Vérifier qu'une faute n'écrit ni hors framebuffer, ni dans l'EEPROM.
-- [ ] Compiler et mesurer Flash, RAM et temps de frame.
-- [ ] Exécuter Rain et la sphère sur le Photon à `B:1`.
-- [ ] Vérifier Particle, LAN, diagnostics et changements de mode pendant l'exécution.
+- [x] Brancher les opcodes sur les primitives de rendu existantes.
+- [x] Valider les coordonnées avant toute écriture de voxel.
+- [x] Comparer les traces TypeScript et firmware avec les mêmes graines.
+- [x] Tester opcode inconnu, saut invalide, boucle infinie et quota dépassé.
+- [x] Vérifier qu'une faute n'écrit ni hors framebuffer, ni dans l'EEPROM.
+- [x] Compiler et mesurer Flash, RAM et temps de frame. Les mesures matérielles sont archivées dans le bilan de phase 3.
+- [x] Exécuter Rain et la sphère sur le Photon à `B:1`.
+- [x] Vérifier Particle, LAN, diagnostics et changements de mode pendant l'exécution.
+
+Les mesures, tests hôte et limites de ce jalon sont archivés dans
+[`docs/BYTECODE_PHASE3.md`](docs/BYTECODE_PHASE3.md).
 
 ### Critère de sortie
 
@@ -214,74 +217,74 @@ langage source des animations.
 
 ### Stockage transactionnel
 
-- [ ] Réserver la zone décidée en phase 0 dans un layout EEPROM versionné.
-- [ ] Vérifier par assertions qu'elle ne chevauche aucun réglage historique.
-- [ ] Écrire le programme avant de rendre son en-tête valide.
-- [ ] Vérifier le CRC après écriture et avant activation.
-- [ ] Invalider proprement l'emplacement avant remplacement ou suppression.
-- [ ] Ne pas réécrire les octets dont la valeur est inchangée.
-- [ ] Tolérer une coupure à chaque étape sans exécuter un programme partiel.
-- [ ] Charger le programme uniquement à l'entrée du mode.
-- [ ] Documenter migration et rollback du layout.
+- [x] Réserver la zone décidée en phase 0 dans un layout EEPROM versionné.
+- [x] Vérifier par assertions qu'elle ne chevauche aucun réglage historique.
+- [x] Écrire le programme avant de rendre son en-tête valide.
+- [x] Vérifier le CRC après écriture et avant activation.
+- [x] Invalider proprement l'emplacement avant remplacement ou suppression.
+- [x] Ne pas réécrire les octets dont la valeur est inchangée.
+- [x] Tolérer une coupure à chaque étape sans exécuter un programme partiel.
+- [x] Charger le programme uniquement à l'entrée du mode.
+- [x] Documenter migration et rollback du layout.
 
 ### API LAN
 
-- [ ] Définir les routes de capacité, lecture, installation, suppression et lancement.
-- [ ] Définir les réponses et codes d'erreur compacts.
-- [ ] Exposer capacité totale, libre, taille maximale et emplacements.
-- [ ] Réutiliser le buffer HTTP existant si sa capacité suffit.
-- [ ] Ajouter un transfert fragmenté uniquement si les mesures l'imposent.
-- [ ] Refuser longueur, format, version ou CRC invalides avant activation.
-- [ ] Garantir qu'une installation échouée conserve l'ancien programme valide.
-- [ ] Ne jamais exécuter directement le buffer réseau.
-- [ ] Documenter que toute machine du LAN peut installer un programme sans authentification.
+- [x] Définir les routes de capacité, lecture, installation, suppression et lancement.
+- [x] Définir les réponses et codes d'erreur compacts.
+- [x] Exposer capacité totale, libre, taille maximale et emplacements.
+- [x] Réutiliser le buffer HTTP existant si sa capacité suffit.
+- [x] Ajouter un transfert fragmenté uniquement si les mesures l'imposent. La mesure confirme qu'il n'est pas nécessaire.
+- [x] Refuser longueur, format, version ou CRC invalides avant activation.
+- [x] Garantir qu'une installation échouée conserve l'ancien programme valide.
+- [x] Ne jamais exécuter directement le buffer réseau.
+- [x] Documenter que toute machine du LAN peut installer un programme sans authentification.
 
 ### Tests
 
-- [ ] Tester EEPROM vierge, ancien layout et programme valide après redémarrage.
-- [ ] Tester installation, remplacement et suppression.
-- [ ] Simuler une coupure pendant chaque étape d'écriture.
-- [ ] Tester corps vide, tronqué, trop long et mauvais type MIME.
-- [ ] Tester version inconnue, CRC faux et capacités absentes.
-- [ ] Vérifier que CubePainter et les réglages restent intacts selon la décision prise.
+- [x] Tester EEPROM vierge, ancien layout et programme valide après redémarrage.
+- [x] Tester installation, remplacement et suppression.
+- [x] Simuler une coupure pendant chaque étape d'écriture.
+- [x] Tester corps vide, tronqué, trop long et mauvais type MIME.
+- [x] Tester version inconnue, CRC faux et capacités absentes.
+- [x] Vérifier que CubePainter et les réglages restent intacts selon la décision prise.
 
 ### Critère de sortie
 
-- [ ] Une animation survit à une coupure et peut être remplacée par LAN sans reflasher le firmware.
+- [x] Une animation survit à une coupure simulée et peut être remplacée par LAN sans reflasher le firmware.
 
 ## Phase 5 — Interface L3D Studio
 
 ### Création et simulation
 
-- [ ] Ajouter une section dédiée aux animations procédurales.
-- [ ] Ajouter un éditeur de source simple sans dépendance lourde.
-- [ ] Fournir Rain, sphère, Fireworks et Plasma comme exemples.
-- [ ] Afficher les erreurs de compilation en français.
-- [ ] Afficher taille compilée, limite du Photon et capacités requises.
-- [ ] Exécuter la VM TypeScript dans l'aperçu 3D existant.
-- [ ] Ajouter démarrage, pause, arrêt et réinitialisation de la graine.
-- [ ] Afficher compteur d'instructions, FPS simulé et dernière faute.
+- [x] Ajouter une section dédiée aux animations procédurales.
+- [x] Ajouter un éditeur de source simple sans dépendance lourde.
+- [x] Fournir Rain, sphère, Fireworks et Plasma comme exemples.
+- [x] Afficher les erreurs de compilation en français.
+- [x] Afficher taille compilée, limite du Photon et capacités requises.
+- [x] Exécuter la VM TypeScript dans l'aperçu 3D existant.
+- [x] Ajouter démarrage, pause, arrêt et réinitialisation de la graine.
+- [x] Afficher compteur d'instructions, FPS simulé et dernière faute.
 
 ### Bibliothèque locale
 
-- [ ] Enregistrer les sources utilisateur dans le stockage local du navigateur.
-- [ ] Permettre de dupliquer, renommer et supprimer une source.
-- [ ] Permettre export et import sans service distant.
-- [ ] Ne jamais inclure de token Particle dans un export.
+- [x] Enregistrer les sources utilisateur dans le stockage local du navigateur.
+- [x] Permettre de dupliquer, renommer et supprimer une source.
+- [x] Permettre export et import sans service distant.
+- [x] Ne jamais inclure de token Particle dans un export.
 
 ### Installation
 
-- [ ] Lire et afficher la capacité et le programme présents sur le Photon.
-- [ ] Demander confirmation avant remplacement.
-- [ ] Installer le bytecode puis relire son CRC.
-- [ ] Afficher progression, succès et erreur éventuelle.
-- [ ] Permettre lancement, arrêt et suppression.
-- [ ] Désactiver ces actions lorsque le transport LAN est indisponible.
-- [ ] Ne pas utiliser Particle comme repli silencieux pour l'installation.
+- [x] Lire et afficher la capacité et le programme présents sur le Photon.
+- [x] Demander confirmation avant remplacement.
+- [x] Installer le bytecode puis relire son CRC.
+- [x] Afficher progression, succès et erreur éventuelle.
+- [x] Permettre lancement, arrêt et suppression.
+- [x] Désactiver ces actions lorsque le transport LAN est indisponible.
+- [x] Ne pas utiliser Particle comme repli silencieux pour l'installation.
 
 ### Critère de sortie
 
-- [ ] L'utilisateur peut écrire, simuler, installer et lancer une animation depuis une seule interface.
+- [x] L'utilisateur peut écrire, simuler, installer et lancer une animation depuis une seule interface.
 
 ## Phase 6 — Optimisation guidée par les mesures
 
@@ -315,14 +318,14 @@ langage source des animations.
 
 ### Documentation
 
-- [ ] Documenter le langage avec des exemples simples.
-- [ ] Documenter chaque opcode, borne et faute.
-- [ ] Documenter format, CRC, versions et stockage disponible.
-- [ ] Documenter installation, remplacement, lancement et suppression.
-- [ ] Documenter sandbox, quotas et absence d'authentification LAN.
-- [ ] Documenter le rollback par `L3D_BYTECODE_ENABLED=0`.
-- [ ] Mettre à jour les README, `CHANGELOG.md` et `firmware/docs/BASELINE.md`.
-- [ ] Produire un binaire identifié sans secret ni configuration personnelle.
+- [x] Documenter le langage avec des exemples simples.
+- [x] Documenter chaque opcode, borne et faute.
+- [x] Documenter format, CRC, versions et stockage disponible.
+- [x] Documenter installation, remplacement, lancement et suppression.
+- [x] Documenter sandbox, quotas et absence d'authentification LAN.
+- [x] Documenter le rollback par `L3D_BYTECODE_ENABLED=0`.
+- [x] Mettre à jour les README, `CHANGELOG.md` et `firmware/docs/BASELINE.md`.
+- [x] Produire un binaire identifié sans secret ni configuration personnelle.
 
 ### Critère de sortie
 

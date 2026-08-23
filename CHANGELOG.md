@@ -6,19 +6,53 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
-### Bytecode procédural L3D — phases 0 à 2
+### Bytecode procédural L3D — phases 0 à 5 et documentation de livraison
 
 - Validation d'un emplacement EEPROM transactionnel de 197 octets, avec deux
   banques et un payload maximal de 185 octets sans réutiliser CubePainter.
 - Définition du conteneur version 1, du CRC, des 16 registres, des capacités,
   des opcodes procéduraux, des quotas coopératifs et des erreurs `-300` à
-  `-315`.
+  `-316`.
 - Ajout d'un assembleur `.l3d` en deux passes, d'un validateur, d'un
   désassembleur et d'une VM TypeScript de référence indépendante du DOM.
 - Ajout des programmes procéduraux Rain, sphère, Fireworks et Plasma ; leurs
   payloads assemblés occupent respectivement 43, 49, 45 et 75 octets.
 - Ajout de tests déterministes couvrant les opcodes, branchements, limites,
   conteneurs corrompus, quotas, rendu et exécution du corpus.
+- Ajout dans le firmware d'un validateur sans allocation et d'une VM
+  coopérative utilisant le scratch d'animation partagé, avec quotas, attentes,
+  diagnostics et retour sûr vers `Off` après une faute fatale.
+- Ajout du mode `L3DProgram` (ID 77), qui charge le programme transactionnel
+  installé et utilise une Sphère embarquée uniquement en absence de stockage.
+- Conservation du catalogue Particle historique sous sa limite de 621
+  caractères : le nouveau mode reste interne à Particle et est exposé par son
+  API LAN dédiée, sans renommer ni retirer un mode existant.
+- Validation native du véritable code C++ de la VM : parité de la Sphère, du
+  générateur aléatoire et de `SIN8`, erreurs de validation, coordonnées et
+  arrêt d'une boucle infinie à la 257e instruction.
+- Mesure avec la VM active : 121 904 octets de Flash, 15 228 octets de RAM
+  statique et 9 168 octets de marge Flash. Le rollback par flag conserve
+  15 204 octets de RAM statique et retire le mode ainsi que la VM.
+- Ajout du stockage transactionnel sur les banques EEPROM A et B, avec
+  génération modulo 256, CRC relu, signature écrite en dernier et conservation
+  automatique de la dernière génération complète après une coupure.
+- Ajout des routes LAN de capacité, lecture binaire, installation, suppression,
+  lancement et arrêt ; le buffer HTTP existant reçoit les programmes de 197
+  octets sans allocation ni protocole fragmenté supplémentaire.
+- Ajout dans L3D Studio d'un éditeur assembleur, des quatre exemples, de la VM
+  locale dans l'aperçu 3D et des commandes démarrer, pause, arrêter et graine.
+- Ajout d'une bibliothèque locale avec création, duplication, renommage,
+  suppression, export et import JSON ne contenant aucune donnée Particle.
+- Ajout du parcours d'installation LAN avec confirmation du remplacement,
+  progression, lecture du statut et comparaison du CRC après relecture.
+- Mesure firmware après phase 4 : 123 584 octets de Flash, 15 228 octets de RAM
+  statique et 7 488 octets de marge Flash, soit +1 680 octets de Flash et
+  aucune RAM statique supplémentaire depuis la phase 3.
+- Ajout du guide du langage avec exemples, référence des 25 instructions,
+  bornes, 17 fautes, sandbox, quotas, stockage, sécurité LAN et rollback.
+- Production de l'artefact identifié
+  `l3d-studio-firmware-1.4-photon-2.3.1-bytecode-v1.bin` et de son manifeste
+  SHA-256 sans secret ni configuration personnelle.
 
 ### Serveur LAN v1 et diagnostics
 

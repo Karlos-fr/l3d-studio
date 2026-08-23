@@ -143,6 +143,12 @@ function createLanClientDouble(): LanClient {
     text: vi.fn(),
     cubePainter: vi.fn(),
     streamFrame: vi.fn(),
+    bytecodeStatus: vi.fn(),
+    bytecodeProgram: vi.fn(),
+    installBytecode: vi.fn(),
+    deleteBytecode: vi.fn(),
+    runBytecode: vi.fn(),
+    stopBytecode: vi.fn(),
   };
 }
 

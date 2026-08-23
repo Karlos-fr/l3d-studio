@@ -138,10 +138,12 @@ test("une commande partielle ou deconnectee ne peut pas etre appliquee", () => {
 });
 
 // ----------------------------------------------------------------------------
-// Verifie que le LAN ne rajoute aucune ecriture persistante aux commandes.
+// Verifie que le LAN delegue la persistance au module bytecode dedie.
 // ----------------------------------------------------------------------------
-test("le serveur LAN ne connait ni EEPROM ni frequence de persistance", () => {
+test("le serveur LAN ne manipule jamais EEPROM directement", () => {
   const server = readFirmwareSource("src/network/local_api_server.cpp");
-  assert.doesNotMatch(server, /\bEEPROM\b/u);
+  assert.doesNotMatch(server, /\bEEPROM\s*\.\s*(?:get|put|read|write|clear)\b/u);
+  assert.match(server, /\bbytecodeStorageInstall\b/u);
+  assert.match(server, /\bbytecodeStorageRemove\b/u);
   assert.doesNotMatch(server, /\b(?:new|malloc|calloc|realloc|vector|String)\b/u);
 });

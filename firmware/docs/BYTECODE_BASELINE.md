@@ -209,3 +209,31 @@ La mesure finale est détaillée dans
 Plasma reste le cas le plus grand et occupe 75 octets sur les 185 disponibles.
 Ces mesures confirment la décision de conserver une animation installée dans
 deux banques transactionnelles, sans compression supplémentaire en version 1.
+
+## Mesure après l'interpréteur firmware de phase 3
+
+Le build Photon Device OS 2.3.1 avec `L3D_BYTECODE_ENABLED=1` occupe 121 904
+octets de Flash et 15 228 octets de RAM statique. Le binaire mesure 121 908
+octets et conserve 9 168 octets de marge Flash.
+
+Par rapport à la baseline précédant la phase 3 (118 296 octets de Flash et
+15 204 octets de RAM statique), l'interpréteur, son validateur, le programme
+Sphère embarqué et les diagnostics ajoutent 3 608 octets de Flash et 24 octets
+de RAM statique. L'état actif et la copie du programme utilisent le scratch
+partagé existant de 1 536 octets et ne réservent donc pas un second framebuffer.
+
+Le build de rollback avec `L3D_BYTECODE_ENABLED=0` occupe 118 328 octets de
+Flash et 15 204 octets de RAM statique. Les 32 octets de Flash restant par
+rapport à la baseline proviennent du changement de mode différé, désormais
+également utilisé par le timeout du streaming indépendamment de la VM.
+
+## Mesure après la persistance et l'API LAN de phase 4
+
+Le build Photon Device OS 2.3.1 avec les deux banques transactionnelles et les
+six routes LAN occupe 123 584 octets de Flash et 15 228 octets de RAM statique.
+Le binaire mesure 123 588 octets et conserve 7 488 octets de marge Flash.
+
+La persistance et son API ajoutent donc 1 680 octets de Flash par rapport à la
+phase 3, sans augmentation de RAM statique. Elles réutilisent le buffer HTTP
+existant de 622 octets pour l'installation et le scratch d'animation existant
+pour le chargement. Aucun buffer persistant supplémentaire n'est réservé.

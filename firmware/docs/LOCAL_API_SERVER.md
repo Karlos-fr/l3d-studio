@@ -205,3 +205,30 @@ partielle fermée avant sa fin n'a changé ni le mode ni le dernier résultat.
 Après reboot, le LAN et Particle sont redevenus disponibles, mais aucune
 fenêtre avec Wi-Fi prêt et Particle encore déconnecté n'a été observée ; ce cas
 précis reste à provoquer pendant l'endurance de phase 9.
+
+## Extension bytecode procédural
+
+Lorsque `L3D_BYTECODE_ENABLED=1`, le serveur expose six routes supplémentaires
+pour un unique programme procédural persistant :
+
+```text
+GET  /api/v1/bytecode
+GET  /api/v1/bytecode/program
+POST /api/v1/bytecode/program
+POST /api/v1/bytecode/delete
+POST /api/v1/bytecode/run
+POST /api/v1/bytecode/stop
+```
+
+L'installation binaire réutilise le corps HTTP fixe de 622 octets. Le stockage
+accepte au maximum 197 octets et valide le conteneur avant toute écriture. La
+lecture renvoie `application/octet-stream`; les autres routes renvoient des
+formats texte compacts. Le serveur ne manipule jamais l'EEPROM directement :
+il délègue la transaction, le CRC et le choix de banque au module
+`bytecode_storage`.
+
+Avec cette extension active, le build Device OS 2.3.1 occupe 123 584 octets de
+Flash et 15 228 octets de RAM statique. Avec `L3D_BYTECODE_ENABLED=0`, il
+revient à 118 328 octets de Flash et 15 204 octets de RAM statique. Le contrat,
+les erreurs et les exemples `curl` sont détaillés dans
+[`BYTECODE_STORAGE_API.md`](BYTECODE_STORAGE_API.md).

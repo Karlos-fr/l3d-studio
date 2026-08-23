@@ -17,14 +17,16 @@ L’installation et l’utilisation de l’IHM sont décrites dans
 - Particle Cloud toujours disponible ;
 - API HTTP locale v1 active par défaut sur le port `8080` ;
 - streaming web RGB332 sur `/api/v1/stream/frame` via le mode `Stream` 76 ;
+- VM procédurale L3D, mode interne 77 et stockage transactionnel d'un programme
+  de 197 octets sur deux banques EEPROM ;
 - aucune allocation dynamique dans le code applicatif actif ;
 - animations servies par un ordonnanceur coopératif qui maintient Particle et
   le serveur LAN pendant les attentes historiques.
 
-La compilation finale disponible avec streaming indique 118 296 octets de
-Flash, 15 204 octets de RAM statique, un binaire de 118 300 octets et 12 776
-octets de marge Flash. Le détail de cette évolution
-se trouve dans [docs/WEB_STREAMING.md](docs/WEB_STREAMING.md).
+La compilation Photon 2.3.1 avec la VM, la persistance et ses routes LAN indique
+123 584 octets de Flash, 15 228 octets de RAM statique, un binaire de 123 588
+octets et 7 488 octets de marge Flash. Les mesures détaillées se trouvent dans
+[docs/BYTECODE_BASELINE.md](docs/BYTECODE_BASELINE.md).
 
 ## Compilation et tests
 
@@ -41,7 +43,11 @@ powershell -ExecutionPolicy Bypass -File firmware/tools/compile.ps1
 ```
 
 Le binaire, le journal et les mesures sont produits dans `firmware/build/`.
-Les secrets chargés depuis `.env.local` ne sont pas affichés.
+Le binaire actif se nomme
+`l3d-studio-firmware-1.4-photon-2.3.1-bytecode-v1.bin`. Le manifeste
+`release.json` contient ses versions, l'état de la VM, ses mesures et son
+SHA-256. Les secrets
+chargés depuis `.env.local` ne sont ni affichés, ni ajoutés au manifeste.
 
 Exécuter tous les tests hôte :
 
@@ -52,7 +58,7 @@ node --test firmware/test/host/*.test.mjs
 Flasher le binaire déjà compilé :
 
 ```powershell
-particle flash <nom-ou-id-du-photon> firmware/build/l3d-studio-photon-2.3.1.bin
+particle flash <nom-ou-id-du-photon> firmware/build/l3d-studio-firmware-1.4-photon-2.3.1-bytecode-v1.bin
 ```
 
 Toute validation visuelle doit utiliser une luminosité demandée de 1 %, soit
@@ -74,6 +80,8 @@ GET /diagnostics
 GET /state
 GET /modes
 GET /aux-switches
+GET /bytecode
+GET /bytecode/program
 ```
 
 Routes qui modifient explicitement l’état :
@@ -85,6 +93,10 @@ POST /mode
 POST /text
 POST /cube-painter
 POST /stream/frame
+POST /bytecode/program
+POST /bytecode/delete
+POST /bytecode/run
+POST /bytecode/stop
 ```
 
 Le serveur accepte un seul client à la fois, utilise uniquement des buffers
@@ -109,6 +121,19 @@ Le contrat complet des routes, formats, limites et codes d’erreur est décrit
 dans [docs/LOCAL_API_PROTOCOL.md](docs/LOCAL_API_PROTOCOL.md). L’architecture,
 les mesures et les commandes de validation se trouvent dans
 [docs/LOCAL_API_SERVER.md](docs/LOCAL_API_SERVER.md).
+
+Le format procédural, le stockage transactionnel et les commandes manuelles
+sont documentés dans le guide
+[docs/BYTECODE_LANGUAGE.md](docs/BYTECODE_LANGUAGE.md), la référence binaire
+[docs/BYTECODE_FORMAT.md](docs/BYTECODE_FORMAT.md) et
+[docs/BYTECODE_STORAGE_API.md](docs/BYTECODE_STORAGE_API.md).
+
+Le rollback propre à cette fonctionnalité consiste à définir
+`L3D_BYTECODE_ENABLED=0`, puis à recompiler et reflasher. Cela retire du binaire
+le mode 77, la VM et les routes bytecode sans effacer les banques EEPROM. Ce
+rollback est indépendant de `L3D_LOCAL_API_ENABLED=0`, qui retire tout le
+serveur LAN. Les deux procédures sont détaillées dans
+[docs/BYTECODE_STORAGE_API.md](docs/BYTECODE_STORAGE_API.md#migration-et-rollback).
 
 Le rollback fonctionnel consiste à définir `L3D_LOCAL_API_ENABLED=0` dans
 `src/config/build_config.h`, puis à recompiler et flasher normalement. Le
@@ -138,6 +163,7 @@ sont documentés dans [docs/DIAGNOSTICS.md](docs/DIAGNOSTICS.md).
 firmware/
   src/
     animations/   animations ou familles d’animations
+    bytecode/     format, validation, stockage et VM procédurale
     cloud/        adaptateurs Particle et métadonnées historiques
     config/       drapeaux de build, limites et IDs stables
     core/         cycle de vie, commandes, ordonnanceur et état partagé
@@ -182,6 +208,14 @@ préserver la compatibilité avec la compilation Particle de cette génération.
 
 ### Animations et rendu
 
+- [L3D_BYTECODE_IMPLEMENTATION_PLAN.md](L3D_BYTECODE_IMPLEMENTATION_PLAN.md) :
+  plan et état d'avancement des animations installables ;
+- [docs/BYTECODE_LANGUAGE.md](docs/BYTECODE_LANGUAGE.md) : tutoriel, exemples,
+  opcodes, bornes, fautes et sandbox ;
+- [docs/BYTECODE_FORMAT.md](docs/BYTECODE_FORMAT.md) : contrat binaire, CRC et
+  versions ;
+- [docs/BYTECODE_STORAGE_API.md](docs/BYTECODE_STORAGE_API.md) : banques EEPROM,
+  routes LAN, installation et rollback ;
 - [docs/INVENTORY.md](docs/INVENTORY.md) : inventaire fonctionnel ;
 - [docs/ANIMATION_INDEX.md](docs/ANIMATION_INDEX.md) : IDs, noms et fichiers ;
 - [docs/RENDERING_TYPES.md](docs/RENDERING_TYPES.md) : framebuffer, types et

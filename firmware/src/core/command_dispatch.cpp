@@ -565,7 +565,7 @@ int setTextFromBuffer(const char* text, size_t textLength) {
 // - newModeIndex : index du mode a activer.
 //
 // Retour :
-// - index applique ou COMMAND_ERROR_OUT_OF_RANGE.
+// - index applique, erreur de borne ou absence de programme bytecode persistant.
 //
 // Effet de bord :
 // - quitte l'ancien mode, met a jour l'EEPROM et les diagnostics, puis initialise
@@ -576,6 +576,17 @@ int setNewMode(int newModeIndex) {
     if(newModeIndex < 0 || newModeIndex >= (int)(sizeof(modeStruct) / sizeof(modeStruct[0])))
         return COMMAND_ERROR_OUT_OF_RANGE;
 
+#if L3D_BYTECODE_ENABLED
+    if(modeStruct[newModeIndex].modeId == BYTECODE) {
+        BytecodeStorageStatus bytecodeStatus = {};
+        const int16_t storageResult = bytecodeStorageInspect(&bytecodeStatus);
+        if(storageResult != BYTECODE_SUCCESS)
+            return storageResult;
+        if(!bytecodeStatus.installed)
+            return BYTECODE_ERROR_NO_PROGRAM;
+    }
+#endif
+
     if(animationSchedulerDeferModeChange(newModeIndex))
         return newModeIndex;
 
@@ -583,7 +594,11 @@ int setNewMode(int newModeIndex) {
     if((currentModeID == CUBE_PAINTER || currentModeID == LISTENER) && modeStruct[newModeIndex].modeId == IFTTTWEATHER) 
         return getModeIndexFromID(currentModeID);
     
-    if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY && currentModeID != STREAM)
+    if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY && currentModeID != STREAM
+#if L3D_BYTECODE_ENABLED
+       && currentModeID != BYTECODE
+#endif
+    )
         previousModeID = currentModeID;
 
     int oldModeID = currentModeID;
@@ -593,7 +608,11 @@ int setNewMode(int newModeIndex) {
 		diagnosticsModeChanged(currentModeID);
 			
     // Persiste uniquement les modes utilisateur durables.
-    if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY && currentModeID != STREAM)
+    if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY && currentModeID != STREAM
+#if L3D_BYTECODE_ENABLED
+       && currentModeID != BYTECODE
+#endif
+    )
         EEPROM.write(LASTMODE_START_ADDR, currentModeID);
     
     boundedTextCopy(currentModeName, sizeof(currentModeName), modeStruct[newModeIndex].modeName);

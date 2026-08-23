@@ -30,6 +30,10 @@ const MODES_RESPONSE = "v=1\nnames=Off;\nparams=N;\n";
 // Liste de switches vide mais valide.
 const AUX_RESPONSE = "v=1\nswitches=\n";
 
+// Statut minimal valide du stockage bytecode.
+const BYTECODE_STATUS_RESPONSE =
+  "v=1\nlayout=1\ninstalled=1\nslots=1\ncapacity=197\npayloadMax=185\nused=13\nfree=184\nbank=0\ngeneration=0\nformat=1\nvm=1\ncapabilities=0\ncrc=1234\n";
+
 // ----------------------------------------------------------------------------
 // Execute les tests du client LAN.
 // ----------------------------------------------------------------------------
@@ -118,6 +122,43 @@ function runLanClientTests(): void {
       result: -208,
       requestDispatched: true,
     });
+  });
+
+  // --------------------------------------------------------------------------
+  // Verifie les six operations bytecode exclusivement locales.
+  // --------------------------------------------------------------------------
+  it("lit, installe et pilote un programme bytecode binaire", async () => {
+    const calls: FetchCall[] = [];
+    const program = new Uint8Array([0x4C, 0x33, 0x44, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0]);
+    const client = createLanClient({
+      host: "photon.local",
+      fetchFn: createMockFetch(calls, [
+        createTextResponse(BYTECODE_STATUS_RESPONSE),
+        new Response(program, { headers: { "Content-Type": "application/octet-stream" } }),
+        createTextResponse(BYTECODE_STATUS_RESPONSE),
+        createTextResponse(BYTECODE_STATUS_RESPONSE.replace("installed=1", "installed=0")),
+        createTextResponse("v=1\nresult=0\n"),
+        createTextResponse("v=1\nresult=0\n"),
+      ]),
+    });
+
+    await expect(client.bytecodeStatus()).resolves.toMatchObject({ capacityBytes: 197 });
+    await expect(client.bytecodeProgram()).resolves.toEqual(program);
+    await expect(client.installBytecode(program)).resolves.toMatchObject({ crc: 0x1234 });
+    await client.deleteBytecode();
+    await client.runBytecode();
+    await client.stopBytecode();
+
+    expect(calls.map((call) => call.url)).toEqual([
+      "http://photon.local:8080/api/v1/bytecode",
+      "http://photon.local:8080/api/v1/bytecode/program",
+      "http://photon.local:8080/api/v1/bytecode/program",
+      "http://photon.local:8080/api/v1/bytecode/delete",
+      "http://photon.local:8080/api/v1/bytecode/run",
+      "http://photon.local:8080/api/v1/bytecode/stop",
+    ]);
+    expect(calls[2]?.init?.headers).toEqual({ "Content-Type": "application/octet-stream" });
+    expect(new Uint8Array(calls[2]?.init?.body as ArrayBuffer)).toEqual(program);
   });
 
   // --------------------------------------------------------------------------

@@ -113,12 +113,14 @@ test("Les imports CubeTube utilisent quatre nouveaux IDs stables", () => {
   assert.match(identifiers, /#define TRANQUILITY\s+74\b/u);
 
   const names = extractActiveModeNames();
-  assert.equal(names.length, 68);
+  assert.equal(names.length, 69);
+  assert.ok(names.includes("L3DProgram"), "le mode bytecode doit être enregistré");
   for (const modeName of importedModeNames) {
     assert.ok(names.includes(modeName), `${modeName} doit être publié`);
   }
+  const particleNames = names.filter((name) => name !== "L3DProgram");
   assert.ok(
-    `${names.join(";")};`.length < 621,
+    `${particleNames.join(";")};`.length < 621,
     "la liste Cloud doit tenir dans modeNameList",
   );
 });

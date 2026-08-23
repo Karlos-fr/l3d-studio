@@ -46,6 +46,17 @@ bool animationSchedulerMayReadState(void);
 bool animationSchedulerDeferModeChange(int modeIndex);
 
 // ----------------------------------------------------------------------------
+// Demande un changement interne a appliquer apres le rendu courant.
+//
+// Parametres :
+// - modeIndex : index valide dans modeStruct.
+//
+// Effet de bord :
+// - differe toujours la demande pendant un cycle afin de proteger le scratch.
+// ----------------------------------------------------------------------------
+void animationSchedulerRequestModeChange(int modeIndex);
+
+// ----------------------------------------------------------------------------
 // Traite les services Particle et LAN dans une fenetre de callback protegee.
 //
 // Effet de bord :

@@ -245,6 +245,26 @@ function drawStreamingCanvas(
 }
 
 // ----------------------------------------------------------------------------
+// Dessine un framebuffer externe avec la projection 3D du streaming.
+//
+// Parametres :
+// - canvas : surface distincte fournie par un autre outil de l'application.
+// - framebuffer : cube RGB logique a projeter.
+//
+// Effet de bord :
+// - redimensionne puis redessine uniquement le canvas fourni.
+// ----------------------------------------------------------------------------
+export function drawStreamingFramebufferPreview(
+  canvas: HTMLCanvasElement,
+  framebuffer: StreamingFramebuffer,
+): void {
+  const previousMode = streamingPreviewMode;
+  streamingPreviewMode = "3d";
+  drawStreamingCanvas(canvas, framebuffer);
+  streamingPreviewMode = previousMode;
+}
+
+// ----------------------------------------------------------------------------
 // Projette puis dessine la representation 3D courante.
 //
 // Parametres :

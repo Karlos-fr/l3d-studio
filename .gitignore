@@ -3,3 +3,7 @@ node_modules/
 dist/
 coverage/
 .tools/
+download
+TODO.md
+WEB_STREAMING_IMPLEMENTATION_PLAN.md
+erer.md

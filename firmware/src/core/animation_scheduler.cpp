@@ -81,6 +81,25 @@ bool animationSchedulerDeferModeChange(int modeIndex) {
 }
 
 // ----------------------------------------------------------------------------
+// Demande un changement interne a appliquer apres le rendu courant.
+//
+// Parametres :
+// - modeIndex : index valide dans modeStruct.
+//
+// Effet de bord :
+// - differe la demande pendant un cycle ou l'applique immediatement hors cycle.
+// ----------------------------------------------------------------------------
+void animationSchedulerRequestModeChange(int modeIndex) {
+    if(animationCycleActive) {
+        animationPendingModeIndex = modeIndex;
+        stop = TRUE;
+        stopDemo = TRUE;
+        return;
+    }
+    setNewMode(modeIndex);
+}
+
+// ----------------------------------------------------------------------------
 // Traite Particle puis une portion du serveur LAN dans une fenetre protegee.
 //
 // Effet de bord :

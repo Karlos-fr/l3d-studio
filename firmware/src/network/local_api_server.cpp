@@ -129,6 +129,11 @@ static const char* localApiStatusText(int status) {
 // - statut HTTP a retourner au client.
 // ----------------------------------------------------------------------------
 static int localApiStatusFromError(int errorCode) {
+#if L3D_BYTECODE_ENABLED
+    if(errorCode <= BYTECODE_ERROR_CONTAINER &&
+       errorCode >= BYTECODE_ERROR_PARTICLE_LIMIT)
+        return 422;
+#endif
     switch(errorCode) {
         case LOCAL_API_ERROR_BAD_REQUEST: return 400;
         case LOCAL_API_ERROR_TOO_LARGE: return 413;
@@ -138,6 +143,11 @@ static int localApiStatusFromError(int errorCode) {
         case LOCAL_API_ERROR_TIMEOUT: return 408;
         case LOCAL_API_ERROR_BUSY: return 503;
         case LOCAL_API_ERROR_STATE: return 409;
+#if L3D_BYTECODE_ENABLED
+        case BYTECODE_ERROR_NO_PROGRAM: return 404;
+        case BYTECODE_ERROR_STATE: return 409;
+        case BYTECODE_ERROR_STORAGE: return 500;
+#endif
         default: return 500;
     }
 }
@@ -152,7 +162,7 @@ static int localApiStatusFromError(int errorCode) {
 // - vrai pour une route actuelle ou prevue par le contrat.
 // ----------------------------------------------------------------------------
 static bool localApiIsKnownPath(const char* path) {
-    return strcmp(path, "/api/v1/health") == 0 ||
+    const bool historicalPath = strcmp(path, "/api/v1/health") == 0 ||
         strcmp(path, "/api/v1/diagnostics") == 0 ||
         strcmp(path, "/api/v1/diagnostics/reset") == 0 ||
         strcmp(path, "/api/v1/state") == 0 ||
@@ -163,6 +173,16 @@ static bool localApiIsKnownPath(const char* path) {
         strcmp(path, "/api/v1/text") == 0 ||
         strcmp(path, "/api/v1/cube-painter") == 0 ||
         strcmp(path, "/api/v1/stream/frame") == 0;
+#if L3D_BYTECODE_ENABLED
+    return historicalPath ||
+        strcmp(path, "/api/v1/bytecode") == 0 ||
+        strcmp(path, "/api/v1/bytecode/program") == 0 ||
+        strcmp(path, "/api/v1/bytecode/delete") == 0 ||
+        strcmp(path, "/api/v1/bytecode/run") == 0 ||
+        strcmp(path, "/api/v1/bytecode/stop") == 0;
+#else
+    return historicalPath;
+#endif
 }
 
 // ----------------------------------------------------------------------------
@@ -193,6 +213,7 @@ static void localApiCloseClient(void) {
 // - bodyParts : adresses durables des tranches a envoyer.
 // - bodyPartLengths : longueurs exactes des tranches.
 // - bodyPartCount : nombre de tranches utilisees.
+// - contentType : media type durable a placer dans l'en-tete.
 // - privateNetwork : vrai pour autoriser le preflight reseau prive.
 //
 // Retour :
@@ -206,6 +227,7 @@ static bool localApiPrepareSegmentedResponse(
         const char* const* bodyParts,
         const size_t* bodyPartLengths,
         uint8_t bodyPartCount,
+        const char* contentType,
         bool privateNetwork) {
     if(bodyPartCount > LOCAL_API_RESPONSE_PARTS_MAX)
         return false;
@@ -225,7 +247,7 @@ static bool localApiPrepareSegmentedResponse(
         localApiResponse.header,
         sizeof(localApiResponse.header),
         "HTTP/1.1 %d %s\r\n"
-        "Content-Type: text/plain; charset=utf-8\r\n"
+        "Content-Type: %s\r\n"
         "Content-Length: %u\r\n"
         "Cache-Control: no-store\r\n"
         "Connection: close\r\n"
@@ -238,6 +260,7 @@ static bool localApiPrepareSegmentedResponse(
         "\r\n",
         status,
         localApiStatusText(status),
+        contentType,
         static_cast<unsigned int>(bodyLength),
         privateHeader,
         static_cast<unsigned long>(serviceMicros));
@@ -287,6 +310,37 @@ static bool localApiPrepareResponse(
         bodyParts,
         bodyPartLengths,
         1,
+        "text/plain; charset=utf-8",
+        privateNetwork);
+}
+
+// ----------------------------------------------------------------------------
+// Prepare une reponse binaire contigue sans conversion ni copie.
+//
+// Parametres :
+// - status : statut HTTP a encoder.
+// - body : octets durables jusqu'a la fermeture du client.
+// - bodyLength : nombre exact d'octets a envoyer.
+// - privateNetwork : vrai pour autoriser le preflight reseau prive.
+//
+// Retour :
+// - vrai lorsque l'en-tete et la longueur respectent leurs bornes.
+// ----------------------------------------------------------------------------
+static bool localApiPrepareBinaryResponse(
+        int status,
+        const uint8_t* body,
+        size_t bodyLength,
+        bool privateNetwork) {
+    const char* bodyParts[1] = {
+        reinterpret_cast<const char*>(body)
+    };
+    const size_t bodyPartLengths[1] = {bodyLength};
+    return localApiPrepareSegmentedResponse(
+        status,
+        bodyParts,
+        bodyPartLengths,
+        1,
+        "application/octet-stream",
         privateNetwork);
 }
 
@@ -468,6 +522,7 @@ static void localApiRouteModes(void) {
             bodyParts,
             bodyPartLengths,
             5,
+            "text/plain; charset=utf-8",
             localApiParser.privateNetworkRequested))
         localApiPrepareError(LOCAL_API_ERROR_TOO_LARGE);
 }
@@ -501,6 +556,7 @@ static void localApiRouteAuxSwitches(void) {
             bodyParts,
             bodyPartLengths,
             3,
+            "text/plain; charset=utf-8",
             localApiParser.privateNetworkRequested))
         localApiPrepareError(LOCAL_API_ERROR_TOO_LARGE);
 }
@@ -551,6 +607,224 @@ static bool localApiRouteCommand(
         localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
     return true;
 }
+
+#if L3D_BYTECODE_ENABLED
+
+// ----------------------------------------------------------------------------
+// Formate puis prepare l'etat compact du stockage bytecode.
+//
+// Parametres :
+// - status : metadonnees deja confirmees par relecture EEPROM.
+//
+// Retour :
+// - vrai apres preparation de la reponse ou de l'erreur interne.
+//
+// Effet de bord :
+// - remplace le corps de requete par le statut texte version 1.
+// ----------------------------------------------------------------------------
+static bool localApiPrepareBytecodeStatus(
+        const BytecodeStorageStatus* status) {
+    const uint8_t usedBytes = status->installed ? status->containerLength : 0;
+    const uint8_t freeBytes = static_cast<uint8_t>(
+        BYTECODE_CONTAINER_MAX_SIZE - usedBytes);
+    const int bodyLength = snprintf(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        "v=1\nlayout=%u\ninstalled=%u\nslots=1\ncapacity=%u\n"
+        "payloadMax=%u\nused=%u\nfree=%u\nbank=%d\ngeneration=%u\n"
+        "format=%u\nvm=%u\ncapabilities=%u\ncrc=%04X\n",
+        static_cast<unsigned int>(status->layoutVersion),
+        status->installed ? 1U : 0U,
+        static_cast<unsigned int>(BYTECODE_CONTAINER_MAX_SIZE),
+        static_cast<unsigned int>(BYTECODE_PAYLOAD_MAX_SIZE),
+        static_cast<unsigned int>(usedBytes),
+        static_cast<unsigned int>(freeBytes),
+        static_cast<int>(status->bank),
+        static_cast<unsigned int>(status->generation),
+        static_cast<unsigned int>(status->formatVersion),
+        static_cast<unsigned int>(status->minimumVmVersion),
+        static_cast<unsigned int>(status->capabilities),
+        static_cast<unsigned int>(status->crc));
+    if(bodyLength < 0 ||
+       static_cast<size_t>(bodyLength) >= sizeof(localApiParser.body) ||
+       !localApiPrepareResponse(
+            200,
+            localApiParser.body,
+            static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Lit et prepare les capacites ainsi que le programme installe.
+//
+// Retour :
+// - vrai apres preparation du statut ou d'une erreur EEPROM.
+// ----------------------------------------------------------------------------
+static bool localApiRouteBytecodeStatus(void) {
+    BytecodeStorageStatus status = {};
+    const int16_t result = bytecodeStorageInspect(&status);
+    if(result != BYTECODE_SUCCESS) {
+        localApiPrepareError(result);
+        return true;
+    }
+    return localApiPrepareBytecodeStatus(&status);
+}
+
+// ----------------------------------------------------------------------------
+// Relit le conteneur persistant et le retourne sans conversion.
+//
+// Retour :
+// - vrai apres preparation du corps binaire ou d'une erreur bytecode.
+// ----------------------------------------------------------------------------
+static bool localApiRouteBytecodeRead(void) {
+    size_t containerLength = 0;
+    const int16_t result = bytecodeStorageRead(
+        reinterpret_cast<uint8_t*>(localApiParser.body),
+        sizeof(localApiParser.body),
+        &containerLength,
+        NULL);
+    if(result != BYTECODE_SUCCESS) {
+        localApiPrepareError(result);
+        return true;
+    }
+    if(!localApiPrepareBinaryResponse(
+            200,
+            reinterpret_cast<const uint8_t*>(localApiParser.body),
+            containerLength,
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Valide et installe le corps binaire dans la banque inactive.
+//
+// Retour :
+// - vrai apres relecture et preparation du nouveau statut.
+// ----------------------------------------------------------------------------
+static bool localApiRouteBytecodeInstall(void) {
+    if(!localApiParser.contentTypeBinary) {
+        localApiPrepareError(LOCAL_API_ERROR_MEDIA_TYPE);
+        return true;
+    }
+    if(localApiParser.bodyLength > BYTECODE_CONTAINER_MAX_SIZE) {
+        localApiPrepareError(LOCAL_API_ERROR_TOO_LARGE);
+        return true;
+    }
+    BytecodeStorageStatus status = {};
+    const int16_t result = bytecodeStorageInstall(
+        reinterpret_cast<uint8_t*>(localApiParser.body),
+        localApiParser.bodyLength,
+        &status);
+    if(result != BYTECODE_SUCCESS) {
+        localApiPrepareError(result);
+        return true;
+    }
+    return localApiPrepareBytecodeStatus(&status);
+}
+
+// ----------------------------------------------------------------------------
+// Supprime le programme persistant sans effacer ses payloads.
+//
+// Retour :
+// - vrai apres invalidation et preparation du statut vide.
+// ----------------------------------------------------------------------------
+static bool localApiRouteBytecodeDelete(void) {
+    if(localApiParser.bodyLength != 0) {
+        localApiPrepareError(LOCAL_API_ERROR_BAD_REQUEST);
+        return true;
+    }
+    const int16_t result = bytecodeStorageRemove();
+    if(result != BYTECODE_SUCCESS) {
+        localApiPrepareError(result);
+        return true;
+    }
+    return localApiRouteBytecodeStatus();
+}
+
+// ----------------------------------------------------------------------------
+// Lance le programme persistant apres une derniere inspection.
+//
+// Retour :
+// - vrai apres preparation du resultat compact.
+//
+// Effet de bord :
+// - quitte le mode courant puis charge l'EEPROM dans le scratch de la VM.
+// ----------------------------------------------------------------------------
+static bool localApiRouteBytecodeRun(void) {
+    if(localApiParser.bodyLength != 0) {
+        localApiPrepareError(LOCAL_API_ERROR_BAD_REQUEST);
+        return true;
+    }
+    BytecodeStorageStatus status = {};
+    const int16_t inspectResult = bytecodeStorageInspect(&status);
+    if(inspectResult != BYTECODE_SUCCESS || !status.installed) {
+        localApiPrepareError(inspectResult != BYTECODE_SUCCESS
+            ? inspectResult
+            : BYTECODE_ERROR_NO_PROGRAM);
+        return true;
+    }
+    localApiCommandActive = true;
+    const int result = setNewMode(getModeIndexFromID(BYTECODE));
+    localApiCommandActive = false;
+    if(result < 0) {
+        localApiPrepareError(result);
+        return true;
+    }
+    const int bodyLength = snprintf(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        "v=1\nresult=0\n");
+    if(bodyLength < 0 ||
+       static_cast<size_t>(bodyLength) >= sizeof(localApiParser.body) ||
+       !localApiPrepareResponse(
+            200,
+            localApiParser.body,
+            static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+    return true;
+}
+
+// ----------------------------------------------------------------------------
+// Arrete la VM installable en revenant au mode Off de facon idempotente.
+//
+// Retour :
+// - vrai apres preparation de l'enveloppe de commande.
+// ----------------------------------------------------------------------------
+static bool localApiRouteBytecodeStop(void) {
+    if(localApiParser.bodyLength != 0) {
+        localApiPrepareError(LOCAL_API_ERROR_BAD_REQUEST);
+        return true;
+    }
+    int result = 0;
+    if(currentModeID == BYTECODE) {
+        localApiCommandActive = true;
+        result = setNewMode(getModeIndexFromID(STANDBY));
+        localApiCommandActive = false;
+    }
+    if(result < 0) {
+        localApiPrepareError(result);
+        return true;
+    }
+    const int bodyLength = snprintf(
+        localApiParser.body,
+        sizeof(localApiParser.body),
+        "v=1\nresult=0\n");
+    if(bodyLength < 0 ||
+       static_cast<size_t>(bodyLength) >= sizeof(localApiParser.body) ||
+       !localApiPrepareResponse(
+            200,
+            localApiParser.body,
+            static_cast<size_t>(bodyLength < 0 ? 0 : bodyLength),
+            localApiParser.privateNetworkRequested))
+        localApiPrepareError(LOCAL_API_ERROR_INTERNAL);
+    return true;
+}
+
+#endif
 
 // ----------------------------------------------------------------------------
 // Decode une frame binaire complete depuis le buffer HTTP deja alloue.
@@ -639,7 +913,11 @@ static bool localApiRouteRequest(void) {
     }
 
     if(localApiParser.contentTypeBinary &&
-       strcmp(localApiParser.path, "/api/v1/stream/frame") != 0) {
+       strcmp(localApiParser.path, "/api/v1/stream/frame") != 0
+#if L3D_BYTECODE_ENABLED
+       && strcmp(localApiParser.path, "/api/v1/bytecode/program") != 0
+#endif
+    ) {
         localApiPrepareError(LOCAL_API_ERROR_MEDIA_TYPE);
         return true;
     }
@@ -695,6 +973,49 @@ static bool localApiRouteRequest(void) {
             localApiRouteAuxSwitches();
         return true;
     }
+
+#if L3D_BYTECODE_ENABLED
+    if(strcmp(localApiParser.path, "/api/v1/bytecode") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_GET)
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+        else
+            return localApiRouteBytecodeStatus();
+        return true;
+    }
+
+    if(strcmp(localApiParser.path, "/api/v1/bytecode/program") == 0) {
+        if(localApiParser.method == LOCAL_HTTP_METHOD_GET)
+            return localApiRouteBytecodeRead();
+        if(localApiParser.method == LOCAL_HTTP_METHOD_POST)
+            return localApiRouteBytecodeInstall();
+        localApiPrepareError(LOCAL_API_ERROR_METHOD);
+        return true;
+    }
+
+    if(strcmp(localApiParser.path, "/api/v1/bytecode/delete") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_POST)
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+        else
+            return localApiRouteBytecodeDelete();
+        return true;
+    }
+
+    if(strcmp(localApiParser.path, "/api/v1/bytecode/run") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_POST)
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+        else
+            return localApiRouteBytecodeRun();
+        return true;
+    }
+
+    if(strcmp(localApiParser.path, "/api/v1/bytecode/stop") == 0) {
+        if(localApiParser.method != LOCAL_HTTP_METHOD_POST)
+            localApiPrepareError(LOCAL_API_ERROR_METHOD);
+        else
+            return localApiRouteBytecodeStop();
+        return true;
+    }
+#endif
 
     if(strcmp(localApiParser.path, "/api/v1/stream/frame") == 0) {
         if(localApiParser.method != LOCAL_HTTP_METHOD_POST) {

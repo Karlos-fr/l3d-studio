@@ -16,6 +16,12 @@
 // ----------------------------------------------------------------------------
 void makeModeList(void) {
     for(int i=0; i<sizeof modeStruct / sizeof modeStruct[0]; i++) {
+#if L3D_BYTECODE_ENABLED
+        // Le catalogue Particle historique est deja a sa limite de 621 octets.
+        // La phase 4 publiera ce mode installable par son API LAN dediee.
+        if(modeStruct[i].modeId == BYTECODE)
+            continue;
+#endif
         char cNameBuff[20];
 		char cParamBuff[60];
 		if(boundedTextFormat(cNameBuff, sizeof(cNameBuff), "%s;", modeStruct[i].modeName) &&

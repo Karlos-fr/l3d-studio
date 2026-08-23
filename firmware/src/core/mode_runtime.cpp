@@ -155,6 +155,9 @@ void setRandomMode(void) {
 		   (selectedModeID == SHUFFLE) 	     	||
 		   (selectedModeID == TEXT)              ||
            (selectedModeID == STREAM)            ||
+#if L3D_BYTECODE_ENABLED
+           (selectedModeID == BYTECODE)          ||
+#endif
            (selectedModeID == LISTENER));
 	
 	//sprintf(debug, "currentModeID: %d", currentModeID);
@@ -220,6 +223,11 @@ void runMode() {
 		case STREAM:
 			streamTick();
 			break;
+#if L3D_BYTECODE_ENABLED
+		case BYTECODE:
+			bytecodeTick();
+			break;
+#endif
      	case CHASER:
 		    colorChaser(color1);
 			break;

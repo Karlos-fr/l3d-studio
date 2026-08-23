@@ -49,6 +49,11 @@
 #define L3D_LOCAL_API_ENABLED 1
 #endif
 
+// Active ou retire entierement la VM des animations procedurales installables.
+#ifndef L3D_BYTECODE_ENABLED
+#define L3D_BYTECODE_ENABLED 1
+#endif
+
 // Port TCP par defaut du serveur HTTP local.
 #define LOCAL_API_PORT                     8080
 

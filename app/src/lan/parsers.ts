@@ -8,6 +8,7 @@
 import { parseAuxSwitchList, parseModeDefinitions } from "../sparkpixels/parsers";
 import type {
   LanAuxSwitches,
+  LanBytecodeStatus,
   LanCommandResponse,
   LanDiagnostics,
   LanHealth,
@@ -172,6 +173,39 @@ export function parseLanCommandResponse(text: string): LanCommandResponse {
   return {
     protocolVersion: 1,
     result: requireInteger(fields, "result", INT32_MIN, INT32_MAX),
+  };
+}
+
+// ----------------------------------------------------------------------------
+// Parse les capacites et metadonnees du stockage bytecode.
+//
+// Parametres :
+// - text : corps retourne par `/api/v1/bytecode`.
+//
+// Retour :
+// - statut borne du seul emplacement logique Photon.
+// ----------------------------------------------------------------------------
+export function parseLanBytecodeStatus(text: string): LanBytecodeStatus {
+  const fields = parseFields(text, "\n");
+  requireVersion(fields, "v");
+  const bank = requireInteger(fields, "bank", -1, 1);
+  const crcText = requireText(fields, "crc");
+  if (!/^[0-9A-F]{4}$/u.test(crcText)) throw new Error("CRC bytecode LAN invalide");
+  return {
+    protocolVersion: 1,
+    layoutVersion: requireInteger(fields, "layout", 1, 255),
+    installed: requireBoolean(fields, "installed"),
+    slots: requireInteger(fields, "slots", 1, 1) as 1,
+    capacityBytes: requireInteger(fields, "capacity", 1, 65_535),
+    payloadMaximumBytes: requireInteger(fields, "payloadMax", 1, 65_535),
+    usedBytes: requireInteger(fields, "used", 0, 65_535),
+    freeBytes: requireInteger(fields, "free", 0, 65_535),
+    bank: bank as -1 | 0 | 1,
+    generation: requireInteger(fields, "generation", 0, 255),
+    formatVersion: requireInteger(fields, "format", 0, 255),
+    minimumVmVersion: requireInteger(fields, "vm", 0, 255),
+    capabilities: requireInteger(fields, "capabilities", 0, 255),
+    crc: Number.parseInt(crcText, 16),
   };
 }
 

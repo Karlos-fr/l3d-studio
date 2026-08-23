@@ -5,6 +5,10 @@
 Ce document fige le contrat version 1 du conteneur et de la machine virtuelle
 L3D. Il est commun au compilateur TypeScript et au firmware Photon.
 
+Pour apprendre à écrire une animation, commencer par le guide pratique
+[`BYTECODE_LANGUAGE.md`](BYTECODE_LANGUAGE.md). Le présent document reste la
+référence normative des octets, opcodes, bornes et fautes.
+
 Le format décrit uniquement des animations procédurales. Il ne transporte ni
 image, ni sprite, ni frame pré-calculée. Un conteneur version 1 possède une
 taille maximale de 197 octets, dont 12 octets d'en-tête et au plus 185 octets
@@ -218,16 +222,17 @@ appeler ni Particle, ni le serveur HTTP, ni l'EEPROM.
 | `-303` | `BYTECODE_ERROR_LENGTH` | longueur vide, excessive ou incohérente |
 | `-304` | `BYTECODE_ERROR_CRC` | CRC incorrect |
 | `-305` | `BYTECODE_ERROR_CAPABILITY` | capacité inconnue, absente ou indisponible |
-| `-306` | `BYTECODE_ERROR_INSTRUCTION` | opcode, opérande ou nibble réservé invalide |
+| `-306` | `BYTECODE_ERROR_INSTRUCTION` | opcode inconnu, instruction tronquée ou opérande invalide |
 | `-307` | `BYTECODE_ERROR_JUMP` | branchement hors payload ou hors frontière |
 | `-308` | `BYTECODE_ERROR_ENTRY_POINT` | point d'entrée invalide |
-| `-309` | `BYTECODE_ERROR_REGISTER` | identifiant de registre invalide |
+| `-309` | `BYTECODE_ERROR_REGISTER` | identifiant de registre ou nibble réservé invalide |
 | `-310` | `BYTECODE_ERROR_COORDINATE` | coordonnée ou rayon runtime invalide |
 | `-311` | `BYTECODE_ERROR_VALUE` | plage, attente ou valeur runtime invalide |
 | `-312` | `BYTECODE_ERROR_QUOTA` | absence prolongée de frontière coopérative |
 | `-313` | `BYTECODE_ERROR_PARTICLE_LIMIT` | configuration de particules excessive |
 | `-314` | `BYTECODE_ERROR_NO_PROGRAM` | aucun conteneur valide installé |
 | `-315` | `BYTECODE_ERROR_STATE` | opération incompatible avec l'état courant |
+| `-316` | `BYTECODE_ERROR_STORAGE` | écriture ou relecture EEPROM incohérente |
 
 Une faute de validation laisse le mode courant inchangé. Une faute runtime
 arrête la VM, mémorise code et compteur ordinal fautif dans les diagnostics,
@@ -282,5 +287,6 @@ ADD_I8 R6, 5
 JUMP loop
 ```
 
-Ces exemples illustrent le contrat ; leur compilation binaire reproductible et
-leur simulation appartiennent à la phase 2.
+Ces exemples sont compilés et simulés par L3D Studio. Les sources complètes du
+corpus et les mesures reproductibles sont décrites dans
+[`BYTECODE_ASSEMBLY.md`](BYTECODE_ASSEMBLY.md).

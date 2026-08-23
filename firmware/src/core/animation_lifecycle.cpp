@@ -39,6 +39,10 @@ void animationLifecycleStart(int modeId) {
 void animationExit(int modeId) {
     if(modeId == STREAM)
         streamExit();
+#if L3D_BYTECODE_ENABLED
+    if(modeId == BYTECODE)
+        bytecodeExit();
+#endif
     if(modeId == CHEERLIGHTS) {
         client.stop();
         connected = FALSE;
@@ -69,6 +73,12 @@ void animationEnter(int modeId) {
         streamEnter();
         return;
     }
+#if L3D_BYTECODE_ENABLED
+    if(modeId == BYTECODE) {
+        bytecodeEnter();
+        return;
+    }
+#endif
     resetVariables(modeId);
 }
 

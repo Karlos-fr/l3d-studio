@@ -84,6 +84,23 @@ export interface LanAuxSwitches {
   switches: SparkPixelsAuxSwitch[];
 }
 
+export interface LanBytecodeStatus {
+  protocolVersion: 1;
+  layoutVersion: number;
+  installed: boolean;
+  slots: 1;
+  capacityBytes: number;
+  payloadMaximumBytes: number;
+  usedBytes: number;
+  freeBytes: number;
+  bank: -1 | 0 | 1;
+  generation: number;
+  formatVersion: number;
+  minimumVmVersion: number;
+  capabilities: number;
+  crc: number;
+}
+
 export interface LanClient {
   // Lit la sante legere du serveur.
   health(): Promise<LanHealth>;
@@ -107,4 +124,16 @@ export interface LanClient {
   cubePainter(command: string): Promise<LanCommandResponse>;
   // Envoie une frame RGB332 sans nouvelle tentative automatique.
   streamFrame(frame: Uint8Array, signal?: AbortSignal): Promise<LanCommandResponse>;
+  // Lit les capacites et le programme bytecode eventuellement installe.
+  bytecodeStatus(): Promise<LanBytecodeStatus>;
+  // Relit le conteneur binaire persistant.
+  bytecodeProgram(): Promise<Uint8Array>;
+  // Installe un conteneur binaire puis retourne son statut confirme.
+  installBytecode(program: Uint8Array): Promise<LanBytecodeStatus>;
+  // Supprime le programme persistant.
+  deleteBytecode(): Promise<LanBytecodeStatus>;
+  // Lance le programme persistant.
+  runBytecode(): Promise<LanCommandResponse>;
+  // Arrete le mode bytecode de facon idempotente.
+  stopBytecode(): Promise<LanCommandResponse>;
 }

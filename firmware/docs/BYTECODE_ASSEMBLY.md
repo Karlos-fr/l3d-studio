@@ -1,9 +1,12 @@
 # Assembleur L3D version 1
 
-Ce document décrit le langage source procédural `.l3d` de la phase 2. Une
+Ce document décrit l'assembleur du langage source procédural `.l3d`. Une
 animation est écrite directement dans ce langage. TypeScript fournit seulement
 l'assembleur, le validateur, le désassembleur et la VM de référence ; il n'est
 pas nécessaire d'écrire l'animation en TypeScript.
+
+Le tutoriel, les exemples simples et la référence orientée utilisateur sont
+disponibles dans [`BYTECODE_LANGUAGE.md`](BYTECODE_LANGUAGE.md).
 
 ## Syntaxe volontairement minimale
 
@@ -104,4 +107,4 @@ labels d'origine.
 La VM exécute au plus 64 instructions par tranche et déclenche une faute après
 256 instructions sans `SHOW`, `YIELD` ou `WAIT`. Une trace déterministe expose
 l'offset, l'opcode, les registres et le nombre d'écritures voxel après chaque
-instruction. Cette VM est une référence de test, pas encore un éditeur visuel.
+instruction. La même VM alimente désormais l'aperçu 3D de L3D Studio.
