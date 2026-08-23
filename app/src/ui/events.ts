@@ -717,6 +717,7 @@ async function loadFirmwareState(context: UiEventContext): Promise<void> {
     const snapshot = response.value;
     context.state.lastTransportUsed = response.source;
     context.state.currentModeName = snapshot.modeName;
+    context.state.currentPlaybackKind = snapshot.playbackKind;
     context.state.currentBrightnessPercent = convertFirmwareBrightnessToAppPercent(
       snapshot.brightness,
     );
@@ -724,6 +725,12 @@ async function loadFirmwareState(context: UiEventContext): Promise<void> {
     context.state.modes = snapshot.modes;
     context.state.auxSwitches = snapshot.auxSwitches;
     context.state.wifiRssi = snapshot.wifiRssi;
+    context.state.wifiReady = snapshot.wifiReady;
+    context.state.particleConnected = snapshot.particleConnected;
+    context.state.lastCommandResult = snapshot.lastCommandResult;
+    context.state.firmwareRevision = snapshot.firmwareRevision;
+    context.state.deviceOsVersion = snapshot.deviceOsVersion;
+    context.state.uptimeSeconds = snapshot.uptimeSeconds;
     context.state.debugMessage = snapshot.debugMessage;
     if (snapshot.colors.length > 0) context.state.colorValues = snapshot.colors;
     if (snapshot.switches.length > 0) context.state.switchValues = snapshot.switches;
@@ -754,6 +761,11 @@ async function testLanConnection(context: UiEventContext): Promise<void> {
     context.state.lanHost = host;
     context.state.lanPort = port;
     context.state.lastTransportUsed = "lan";
+    context.state.wifiReady = health.wifiReady;
+    context.state.particleConnected = health.particleConnected;
+    context.state.firmwareRevision = health.firmwareRevision;
+    context.state.deviceOsVersion = health.deviceOsVersion;
+    context.state.uptimeSeconds = health.uptimeSeconds;
     context.state.connectionStatus = "LAN connecté";
     context.state.lanTestStatus = `Photon joignable : firmware ${health.firmwareRevision}, Device OS ${health.deviceOsVersion}.`;
     context.state.statusMessage = "Connexion LAN validee.";
@@ -995,6 +1007,8 @@ async function sendSetMode(context: UiEventContext): Promise<void> {
 
     context.state.lastTransportUsed = response.source;
     context.state.currentModeName = context.state.selectedModeName;
+    context.state.currentPlaybackKind = "native";
+    context.state.lastCommandResult = response.value.result;
     context.state.lastResponse = JSON.stringify({ command, response: response.value }, null, 2);
     context.state.statusMessage = `Commande SetMode envoyee via ${response.source}.`;
     saveAppPreferences(context.storage, context.state);

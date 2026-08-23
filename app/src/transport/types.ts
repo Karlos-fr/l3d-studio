@@ -6,7 +6,7 @@
 // ============================================================================
 
 import type { SparkPixelsAuxSwitch, SparkPixelsModeDefinition } from "../sparkpixels/types";
-import type { LanDiagnostics } from "../lan/types";
+import type { LanDiagnostics, LanPlaybackKind } from "../lan/types";
 
 export type TransportKind = "lan";
 
@@ -40,6 +40,7 @@ export class SparkPixelsCommandRefusedError extends Error {
 
 export interface SparkPixelsCubeSnapshot {
   modeName: string;
+  playbackKind: LanPlaybackKind;
   brightness: number;
   speedIndex: number;
   colors: string[];
@@ -47,6 +48,12 @@ export interface SparkPixelsCubeSnapshot {
   modes: SparkPixelsModeDefinition[];
   auxSwitches: SparkPixelsAuxSwitch[];
   wifiRssi: number | null;
+  wifiReady: boolean;
+  particleConnected: boolean;
+  lastCommandResult: number;
+  firmwareRevision: string;
+  deviceOsVersion: string;
+  uptimeSeconds: number;
   debugMessage: string | null;
 }
 

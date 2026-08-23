@@ -15,7 +15,7 @@ import type { AppPreferences } from "./preferences";
 import type { TransportKind } from "../transport/types";
 import type { StreamingFps } from "../streaming/engine";
 import { DEFAULT_STREAMING_ANIMATION_ID } from "../streaming/registry";
-import type { LanBytecodeStatus } from "../lan/types";
+import type { LanBytecodeStatus, LanPlaybackKind } from "../lan/types";
 import type { BytecodeLibraryEntry } from "../bytecode/library";
 import { BYTECODE_REFERENCE_PROGRAMS } from "../bytecode/reference_programs";
 import type { BytecodeSimulationSnapshot } from "../bytecode/simulation";
@@ -81,6 +81,7 @@ export interface AppState {
   streaming: StreamingUiState;
   bytecode: BytecodeUiState;
   currentModeName: string | null;
+  currentPlaybackKind: LanPlaybackKind | null;
   currentBrightnessPercent: number;
   currentSpeedIndex: number;
   modes: SparkPixelsModeDefinition[];
@@ -94,6 +95,12 @@ export interface AppState {
   colorQueryIndex: number;
   switchQueryIndex: number;
   wifiRssi: number | null;
+  wifiReady: boolean | null;
+  particleConnected: boolean | null;
+  lastCommandResult: number | null;
+  firmwareRevision: string | null;
+  deviceOsVersion: string | null;
+  uptimeSeconds: number | null;
   debugMessage: string | null;
   isBusy: boolean;
   statusMessage: string;
@@ -212,6 +219,7 @@ export function createInitialState(
       operationMessage: "Configure l'adresse LAN pour lire le Photon.",
     },
     currentModeName: null,
+    currentPlaybackKind: null,
     currentBrightnessPercent: preferences?.brightnessPercent ?? INITIAL_BRIGHTNESS_PERCENT,
     currentSpeedIndex: preferences?.speedIndex ?? INITIAL_SPEED_INDEX,
     modes: [],
@@ -225,6 +233,12 @@ export function createInitialState(
     colorQueryIndex: INITIAL_COLOR_QUERY_INDEX,
     switchQueryIndex: INITIAL_SWITCH_QUERY_INDEX,
     wifiRssi: null,
+    wifiReady: null,
+    particleConnected: null,
+    lastCommandResult: null,
+    firmwareRevision: null,
+    deviceOsVersion: null,
+    uptimeSeconds: null,
     debugMessage: null,
     isBusy: false,
     statusMessage: "Configure l'adresse LAN du Photon puis lis le cube.",

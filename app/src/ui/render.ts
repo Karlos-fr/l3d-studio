@@ -519,27 +519,41 @@ function renderStreamingAnimationOption(
 // - fragment HTML du panneau d'etat.
 // ----------------------------------------------------------------------------
 function renderFirmwareStatePanel(state: AppState): string {
+  // Categorie lisible du moteur qui produit actuellement le framebuffer.
+  const playbackLabel = formatPlaybackKind(state.currentPlaybackKind);
+  // Detail utile sous la categorie sans confondre Stream et Peinture.
+  const playbackDetail = formatPlaybackDetail(state);
+  // Statut synthetique derive uniquement des informations LAN disponibles.
+  const cubeStatus = getCubeStatusPresentation(state);
+  // Uptime des diagnostics plus recent, ou valeur de la derniere lecture sante.
+  const uptimeSeconds = state.diagnostics.latestSample?.diagnostics.uptimeSeconds ??
+    state.uptimeSeconds;
   return `
     <section class="panel metrics-panel cube-state-panel">
       <h2>État du cube</h2>
       <dl class="metrics-grid cube-state-grid">
         <div class="cube-state-card cube-state-mode">
-          <dt>Mode courant</dt>
-          <dd class="cube-state-value">${escapeHtml(state.currentModeName ?? EMPTY_VALUE_LABEL)}</dd>
+          <dt class="cube-state-label"><span class="cube-state-icon" aria-hidden="true">${renderCubeMetricIcon("mode")}</span>Mode courant</dt>
+          <dd class="cube-state-value">${escapeHtml(playbackLabel)}<small>${escapeHtml(playbackDetail)}</small></dd>
         </div>
         <div class="cube-state-card cube-state-brightness">
-          <dt>Luminosité</dt>
+          <dt class="cube-state-label"><span class="cube-state-icon" aria-hidden="true">${renderCubeMetricIcon("brightness")}</span>Luminosité</dt>
           <dd class="cube-state-value">${state.currentBrightnessPercent}<small> %</small></dd>
         </div>
         <div class="cube-state-card cube-state-speed">
-          <dt>Vitesse</dt>
+          <dt class="cube-state-label"><span class="cube-state-icon" aria-hidden="true">${renderCubeMetricIcon("speed")}</span>Vitesse</dt>
           <dd class="cube-state-value">${state.currentSpeedIndex}</dd>
         </div>
         <div class="cube-state-card cube-state-rssi">
-          <dt>Wi-Fi RSSI</dt>
+          <dt class="cube-state-label"><span class="cube-state-icon" aria-hidden="true">${renderCubeMetricIcon("wifi")}</span>Wi-Fi RSSI</dt>
           <dd class="cube-state-value">${state.wifiRssi === null ? EMPTY_VALUE_LABEL : `${state.wifiRssi}`} ${state.wifiRssi === null ? "" : "<small>dBm</small>"}</dd>
         </div>
       </dl>
+      <div class="cube-info-strip">
+        <span class="cube-info-status ${cubeStatus.tone}"><i aria-hidden="true"></i><strong>Statut :</strong> ${escapeHtml(cubeStatus.label)}</span>
+        <span><strong>Firmware</strong> ${escapeHtml(state.firmwareRevision ?? EMPTY_VALUE_LABEL)}</span>
+        <span><strong>Uptime</strong> ${escapeHtml(formatUptime(uptimeSeconds))}</span>
+      </div>
       ${
         state.debugMessage === null
           ? ""
@@ -654,6 +668,117 @@ function renderDynamicModeControls(state: AppState): string {
       </div>
     </details>
   `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend le pictogramme vectoriel d'un indicateur de l'etat du cube.
+//
+// Parametres :
+// - metric : indicateur dont la silhouette et la couleur sont attendues.
+//
+// Retour :
+// - SVG monochrome colore par la classe de sa carte.
+// ----------------------------------------------------------------------------
+function renderCubeMetricIcon(
+  metric: "mode" | "brightness" | "speed" | "wifi",
+): string {
+  if (metric === "mode") {
+    return `<svg viewBox="0 0 24 24"><path d="M8 4v16l10-8L8 4Z" /></svg>`;
+  }
+  if (metric === "brightness") {
+    return `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.5" /><path d="M12 2v3M12 19v3M4.9 4.9 7 7M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1" /></svg>`;
+  }
+  if (metric === "speed") {
+    return `<svg viewBox="0 0 24 24"><path d="M3 12h4l2.2-7 4.1 14 2.4-7H21" /></svg>`;
+  }
+  return `<svg viewBox="0 0 24 24"><path d="M3.5 9.5a13 13 0 0 1 17 0M6.5 13a8.5 8.5 0 0 1 11 0M9.5 16.5a4 4 0 0 1 5 0" /><circle cx="12" cy="20" r="1" /></svg>`;
+}
+
+// ----------------------------------------------------------------------------
+// Traduit le moteur LAN en categorie courte destinee a la carte Mode.
+//
+// Parametres :
+// - playbackKind : moteur courant ou absence de lecture.
+//
+// Retour :
+// - libelle francais stable.
+// ----------------------------------------------------------------------------
+function formatPlaybackKind(playbackKind: AppState["currentPlaybackKind"]): string {
+  if (playbackKind === "native") return "Animation embarquée";
+  if (playbackKind === "streaming") return "Streaming";
+  if (playbackKind === "painting") return "Peinture";
+  if (playbackKind === "procedural") return "Procédural";
+  return EMPTY_VALUE_LABEL;
+}
+
+// ----------------------------------------------------------------------------
+// Complete la categorie courante avec une information non ambigue.
+//
+// Parametres :
+// - state : etat contenant le mode et le moteur lus sur le Photon.
+//
+// Retour :
+// - nom natif ou description du flux externe.
+// ----------------------------------------------------------------------------
+function formatPlaybackDetail(state: AppState): string {
+  if (state.currentPlaybackKind === "native") {
+    return state.currentModeName ?? EMPTY_VALUE_LABEL;
+  }
+  if (state.currentPlaybackKind === "streaming") return "Flux web animé";
+  if (state.currentPlaybackKind === "painting") return "Image fixe";
+  if (state.currentPlaybackKind === "procedural") return "Programme bytecode";
+  return "Aucune lecture";
+}
+
+// Presentation textuelle et chromatique du statut synthetique.
+interface CubeStatusPresentation {
+  label: string;
+  tone: "is-ready" | "is-busy" | "is-warning" | "is-error" | "is-unknown";
+}
+
+// ----------------------------------------------------------------------------
+// Derive un statut court depuis les lectures LAN sans inventer de telemetrie.
+//
+// Parametres :
+// - state : etat courant, derniere commande et diagnostic eventuel.
+//
+// Retour :
+// - libelle et classe de couleur du bandeau.
+// ----------------------------------------------------------------------------
+function getCubeStatusPresentation(state: AppState): CubeStatusPresentation {
+  if (state.isBusy) return { label: "Commande en cours", tone: "is-busy" };
+  // Diagnostic recent prioritaire sur la derniere lecture generale.
+  const wifiReady = state.diagnostics.latestSample?.diagnostics.wifiReady ?? state.wifiReady;
+  if (wifiReady === null) return { label: "Non lu", tone: "is-unknown" };
+  if (!wifiReady) return { label: "Wi-Fi indisponible", tone: "is-warning" };
+  if (state.lastCommandResult !== null && state.lastCommandResult < 0) {
+    return { label: `Erreur ${state.lastCommandResult}`, tone: "is-error" };
+  }
+  return { label: "Prêt", tone: "is-ready" };
+}
+
+// ----------------------------------------------------------------------------
+// Formate un uptime borne sous la forme jours puis heures, minutes et secondes.
+//
+// Parametres :
+// - uptimeSeconds : duree brute recue du firmware ou absence de lecture.
+//
+// Retour :
+// - valeur compacte adaptee au bandeau d'information.
+// ----------------------------------------------------------------------------
+function formatUptime(uptimeSeconds: number | null): string {
+  if (uptimeSeconds === null) return EMPTY_VALUE_LABEL;
+  // Nombre entier de jours revolus.
+  const days = Math.floor(uptimeSeconds / 86_400);
+  // Heures restantes apres retrait des jours.
+  const hours = Math.floor((uptimeSeconds % 86_400) / 3_600);
+  // Minutes restantes apres retrait des heures.
+  const minutes = Math.floor((uptimeSeconds % 3_600) / 60);
+  // Secondes restantes dans la minute courante.
+  const seconds = uptimeSeconds % 60;
+  // Horodatage zero-padde coherent avec la maquette.
+  const clock = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return days > 0 ? `${days} j ${clock}` : clock;
 }
 
 // ----------------------------------------------------------------------------

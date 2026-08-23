@@ -24,22 +24,30 @@ import type {
 export function createLanTransport(client: LanClient): SparkPixelsTransport {
   return {
     async readCube() {
-      const [state, modes, auxSwitches] = await Promise.all([
+      const [state, modes, auxSwitches, health] = await Promise.all([
         client.state(),
         client.modes(),
         client.auxSwitches(),
+        client.health(),
       ]);
       return {
         source: "lan",
         value: {
           modeName: state.modeName,
+          playbackKind: state.playbackKind,
           brightness: state.brightness,
           speedIndex: state.speedIndex,
           colors: [...state.colors],
           switches: [...state.switches],
           modes: modes.modes,
           auxSwitches: auxSwitches.switches,
-          wifiRssi: null,
+          wifiRssi: state.wifiReady ? state.wifiRssi : null,
+          wifiReady: state.wifiReady,
+          particleConnected: state.particleConnected,
+          lastCommandResult: state.lastCommandResult,
+          firmwareRevision: health.firmwareRevision,
+          deviceOsVersion: health.deviceOsVersion,
+          uptimeSeconds: health.uptimeSeconds,
           debugMessage: null,
         },
       };

@@ -28,7 +28,9 @@ dans `localStorage` et n'est jamais versionnée.
 - peinture voxel par voxel envoyée automatiquement après chaque modification ;
 - streaming RGB332 d'animations calculées dans le navigateur ;
 - édition, simulation et installation d'animations bytecode procédurales ;
-- diagnostics périodiques et graphiques de RAM, durée de frame, FPS et uptime.
+- diagnostics périodiques et graphiques de RAM, durée de frame, FPS et uptime ;
+- écran Cube synthétique avec type de rendu courant, mode précis, RSSI, statut,
+  version du firmware et uptime issus des routes LAN existantes.
 
 La surveillance des diagnostics utilise un Worker afin de continuer lorsque
 l'onglet est en arrière-plan. Le navigateur doit toutefois rester ouvert et le

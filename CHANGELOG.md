@@ -6,6 +6,21 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Refonte de l'écran Cube
+
+- Séparation des animations embarquées dans un espace dédié placé après Cube.
+- Centrage des quatre indicateurs Mode, Luminosité, Vitesse et RSSI avec des
+  pictogrammes SVG colorés.
+- Ajout d'un bandeau affichant le statut synthétique, la révision du firmware
+  et l'uptime du Photon.
+- Extension additive de `GET /api/v1/state` avec le moteur de rendu courant
+  (`native`, `streaming`, `painting` ou `procedural`) et le RSSI local.
+- Lecture conjointe de `/state` et `/health` par L3D Studio afin de conserver
+  le mode, la version, Device OS, l'uptime et les états de connexion.
+- Compilation Photon 2.3.1 validée à 120 752 octets de Flash, 14 596 octets de
+  RAM statique et 10 320 octets de marge Flash, soit +192 octets de Flash et
+  aucune RAM statique supplémentaire.
+
 ### Pilotage applicatif exclusivement par le LAN
 
 - Suppression des fonctions et variables applicatives publiées sur Particle.

@@ -31,6 +31,14 @@ int streamApplyFrame(
     bool holdFrame);
 
 // ----------------------------------------------------------------------------
+// Indique si la frame Stream courante provient du peintre.
+//
+// Retour :
+// - vrai pour une frame maintenue, faux pour un flux anime ou hors Stream.
+// ----------------------------------------------------------------------------
+bool streamFrameIsHeld(void);
+
+// ----------------------------------------------------------------------------
 // Initialise le delai de securite lors de l'entree dans le mode Stream.
 //
 // Effet de bord :

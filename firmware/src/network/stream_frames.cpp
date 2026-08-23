@@ -82,6 +82,16 @@ int streamApplyFrame(
 }
 
 // ----------------------------------------------------------------------------
+// Indique si la derniere frame Stream doit rester affichee sans timeout.
+//
+// Retour :
+// - valeur courante de la politique de maintien du peintre.
+// ----------------------------------------------------------------------------
+bool streamFrameIsHeld(void) {
+    return streamFrameHeld;
+}
+
+// ----------------------------------------------------------------------------
 // Initialise le mode Stream avec son timeout anime par defaut.
 //
 // Effet de bord :

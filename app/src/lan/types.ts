@@ -58,16 +58,21 @@ export interface LanDiagnostics {
   outOfMemoryCount: number;
 }
 
+// Moteur qui produit actuellement le framebuffer du cube.
+export type LanPlaybackKind = "native" | "streaming" | "painting" | "procedural";
+
 export interface LanState {
   schemaVersion: 1;
   modeId: number;
   modeName: string;
+  playbackKind: LanPlaybackKind;
   brightness: number;
   speedIndex: number;
   colors: [string, string, string, string, string, string];
   switches: [boolean, boolean, boolean, boolean];
   wifiReady: boolean;
   particleConnected: boolean;
+  wifiRssi: number | null;
   lastCommandResult: number;
 }
 

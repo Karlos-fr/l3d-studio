@@ -136,8 +136,9 @@ GET /api/v1/modes
 GET /api/v1/aux-switches
 ```
 
-`state` expose le mode, la luminosité interne, la vitesse, les six couleurs,
-les quatre switches, les connexions et le dernier résultat de commande. Une
+`state` expose le mode, son moteur (`native`, `streaming`, `painting` ou
+`procedural`), la luminosité interne, la vitesse, les six couleurs, les quatre
+switches, le RSSI, les connexions et le dernier résultat de commande. Une
 lecture attend l'application d'un éventuel changement de mode différé afin de
 ne jamais mélanger l'ancien mode et les nouveaux réglages.
 

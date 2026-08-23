@@ -316,6 +316,8 @@ function bootstrapApplication(): void {
       state.streaming.statusMessage = "Dessin affiché sur le cube.";
       state.lastTransportUsed = "lan";
       state.currentModeName = "Stream";
+      state.currentPlaybackKind = "painting";
+      state.lastCommandResult = 0;
       state.isBusy = false;
       rerender();
     } catch (error) {
@@ -363,6 +365,8 @@ function bootstrapApplication(): void {
       }
       state.lastTransportUsed = "lan";
       state.currentModeName = "Stream";
+      state.currentPlaybackKind = "streaming";
+      state.lastCommandResult = 0;
       state.streaming.statusMessage = `${getStreamingAnimationLabel(state.streaming.selectedAnimationId)} en cours.`;
       state.isBusy = false;
       streamingEngine.start(targetFps);
@@ -390,6 +394,10 @@ function bootstrapApplication(): void {
     streamingEngine.stop();
     painterFrameSender.disable();
     state.streaming.active = false;
+    if (returnToOff && wasActive) {
+      state.currentModeName = "Off";
+      state.currentPlaybackKind = "native";
+    }
     state.streaming.statusMessage = wasPainting ? "Peinture arrêtée." : "Streaming arrêté.";
     if (returnToOff && wasActive && streamingLanClient !== null) {
       void streamingLanClient.mode("M:Off,S:0,B:1,").catch(() => {
@@ -752,12 +760,16 @@ function bootstrapApplication(): void {
       await runBytecodeLanOperation("Lancement du programme installé...", async (client) => {
         await client.runBytecode();
         state.currentModeName = "L3DProgram";
+        state.currentPlaybackKind = "procedural";
+        state.lastCommandResult = 0;
         state.bytecode.operationMessage = "Animation procédurale lancée sur le cube.";
       });
     } else if (action === "bytecode-stop") {
       await runBytecodeLanOperation("Arrêt du programme...", async (client) => {
         await client.stopBytecode();
         state.currentModeName = "Off";
+        state.currentPlaybackKind = "native";
+        state.lastCommandResult = 0;
         state.bytecode.operationMessage = "Animation procédurale arrêtée.";
       });
     } else if (action === "bytecode-delete-program" && window.confirm(

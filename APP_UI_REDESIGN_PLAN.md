@@ -60,6 +60,9 @@ occupé, succès, erreur et indisponible avec les données déjà présentes dan
 
 - [x] Séparer l’état du cube et la commande SetMode dans deux écrans voisins.
 - [x] Afficher Mode, Luminosité, Vitesse et RSSI sous forme de KPI compacts.
+- [x] Ajouter les icônes colorées, centrer les KPI et distinguer animation
+  embarquée, streaming, peinture et programme procédural.
+- [x] Ajouter le bandeau Statut, version du firmware et uptime sous les KPI.
 - [x] Conserver le sélecteur d'animation, les sliders et le bouton Envoyer.
 - [x] Afficher les couleurs, switches et texte dans une zone secondaire
   dépliable sur mobile.

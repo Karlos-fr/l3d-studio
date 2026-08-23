@@ -13,6 +13,7 @@ import type {
   LanDiagnostics,
   LanHealth,
   LanModes,
+  LanPlaybackKind,
   LanState,
 } from "./types";
 
@@ -98,22 +99,75 @@ export function parseLanDiagnostics(text: string): LanDiagnostics {
 // - mode, reglages, couleurs, switches et etats reseau valides.
 // ----------------------------------------------------------------------------
 export function parseLanState(text: string): LanState {
+  // Champs ligne par ligne de la reponse d'etat.
   const fields = parseFields(text, "\n");
   requireVersion(fields, "v");
+  // Nom requis une seule fois puis reutilise pour le repli des anciens firmwares.
+  const modeName = requireNonEmptyText(fields, "name");
+  // Six couleurs validees dans leur ordre historique.
   const colors = parseColors(requireNonEmptyText(fields, "colors"));
+  // Quatre switches locaux valides dans leur ordre historique.
   const switches = parseSwitches(requireNonEmptyText(fields, "switches"));
   return {
     schemaVersion: 1,
     modeId: requireInteger(fields, "m", INT32_MIN, INT32_MAX),
-    modeName: requireNonEmptyText(fields, "name"),
+    modeName,
+    playbackKind: requirePlaybackKind(fields, modeName),
     brightness: requireInteger(fields, "b", 1, 255),
     speedIndex: requireInteger(fields, "s", 0, 6),
     colors,
     switches,
     wifiReady: requireBoolean(fields, "i"),
     particleConnected: requireBoolean(fields, "k"),
+    wifiRssi: parseOptionalWifiRssi(fields),
     lastCommandResult: requireInteger(fields, "r", INT32_MIN, INT32_MAX),
   };
+}
+
+// ----------------------------------------------------------------------------
+// Valide le moteur de rendu courant expose par l'etat LAN.
+//
+// Parametres :
+// - fields : table pouvant contenir la cle additive `kind`.
+// - modeName : nom historique utilise avec un ancien firmware.
+//
+// Retour :
+// - moteur de rendu reconnu par l'application.
+// ----------------------------------------------------------------------------
+function requirePlaybackKind(
+  fields: Map<string, string>,
+  modeName: string,
+): LanPlaybackKind {
+  // Valeur additive absente des firmwares anterieurs a cette interface.
+  const value = fields.get("kind");
+  if (value === undefined) {
+    if (modeName === "Stream") return "streaming";
+    if (modeName === "L3DProgram") return "procedural";
+    return "native";
+  }
+  if (
+    value === "native" ||
+    value === "streaming" ||
+    value === "painting" ||
+    value === "procedural"
+  ) {
+    return value;
+  }
+  throw new Error(`Moteur LAN invalide: ${value}`);
+}
+
+// ----------------------------------------------------------------------------
+// Lit le RSSI ajoute au schema sans casser les firmwares deja installes.
+//
+// Parametres :
+// - fields : table pouvant contenir la cle `rssi`.
+//
+// Retour :
+// - puissance Wi-Fi bornee, ou `null` lorsque le champ est absent.
+// ----------------------------------------------------------------------------
+function parseOptionalWifiRssi(fields: Map<string, string>): number | null {
+  if (!fields.has("rssi")) return null;
+  return requireInteger(fields, "rssi", -127, 0);
 }
 
 // ----------------------------------------------------------------------------

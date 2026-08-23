@@ -595,16 +595,62 @@ legend {
 }
 
 .cube-state-grid .cube-state-card {
+  display: grid;
   align-content: center;
+  justify-items: center;
   min-height: 5rem;
   padding: 0.75rem 0.85rem;
   border-color: #283548;
   background: linear-gradient(145deg, #172232, #131c29);
+  text-align: center;
 }
 
-.cube-state-grid dt {
+.cube-state-grid .cube-state-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   color: #8d9aab;
   font-size: 0.68rem;
+}
+
+/* Pictogrammes compacts dont la couleur identifie chaque indicateur. */
+.cube-state-icon {
+  display: inline-grid;
+  width: 1rem;
+  height: 1rem;
+  place-items: center;
+}
+
+.cube-state-icon svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.cube-state-mode .cube-state-icon {
+  color: #38a5ff;
+}
+
+.cube-state-mode .cube-state-icon svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.cube-state-brightness .cube-state-icon {
+  color: #facc15;
+}
+
+.cube-state-speed .cube-state-icon {
+  color: #4ade80;
+}
+
+.cube-state-rssi .cube-state-icon {
+  color: #34d399;
 }
 
 .cube-state-grid .cube-state-value {
@@ -618,13 +664,97 @@ legend {
   font-weight: 600;
 }
 
+.cube-state-mode .cube-state-value small {
+  display: block;
+  margin-top: 0.2rem;
+  color: #cbd5e1;
+}
+
 .cube-state-grid .cube-state-mode .cube-state-value {
+  font-size: 1rem;
   color: #a78bfa;
 }
 
 .cube-state-grid .cube-state-speed .cube-state-value,
 .cube-state-grid .cube-state-rssi .cube-state-value {
   color: var(--color-success);
+}
+
+/* Bandeau de synthese place sous les quatre indicateurs. */
+.cube-info-strip {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.65rem;
+  min-height: 2.3rem;
+  border: 1px solid #283548;
+  border-radius: 8px;
+  padding: 0.45rem 0.7rem;
+  color: #9aa8b9;
+  background: rgba(12, 24, 39, 0.78);
+  font-size: 0.72rem;
+}
+
+.cube-info-strip > span + span::before {
+  margin-right: 0.65rem;
+  color: #526075;
+  content: "·";
+}
+
+.cube-info-strip strong {
+  color: #cbd5e1;
+  font-weight: 650;
+}
+
+.cube-info-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.cube-info-status i {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #64748b;
+  box-shadow: 0 0 0.5rem rgba(100, 116, 139, 0.32);
+}
+
+.cube-info-status.is-ready,
+.cube-info-status.is-ready strong {
+  color: #86efac;
+}
+
+.cube-info-status.is-ready i {
+  background: #4ade80;
+  box-shadow: 0 0 0.55rem rgba(74, 222, 128, 0.42);
+}
+
+.cube-info-status.is-busy,
+.cube-info-status.is-busy strong {
+  color: #c4b5fd;
+}
+
+.cube-info-status.is-busy i {
+  background: #8b5cf6;
+}
+
+.cube-info-status.is-warning,
+.cube-info-status.is-warning strong {
+  color: #fde68a;
+}
+
+.cube-info-status.is-warning i {
+  background: #facc15;
+}
+
+.cube-info-status.is-error,
+.cube-info-status.is-error strong {
+  color: #fca5a5;
+}
+
+.cube-info-status.is-error i {
+  background: #f87171;
 }
 
 .secondary-action {

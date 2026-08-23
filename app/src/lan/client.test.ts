@@ -22,7 +22,7 @@ const DIAGNOSTICS_RESPONSE =
 
 // Reponse d'etat minimale valide.
 const STATE_RESPONSE =
-  "v=1\nm=0\nname=Off\nb=2\ns=4\ncolors=0000FF;FF0000;00FF00;0000FF;FFFF00;00FFFF\nswitches=0;0;0;0\ni=1\nk=1\nr=0\n";
+  "v=1\nm=0\nname=Off\nkind=native\nb=2\ns=4\ncolors=0000FF;FF0000;00FF00;0000FF;FFFF00;00FFFF\nswitches=0;0;0;0\ni=1\nk=1\nrssi=-58\nr=0\n";
 
 // Catalogue minimal valide.
 const MODES_RESPONSE = "v=1\nnames=Off;\nparams=N;\n";

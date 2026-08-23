@@ -208,18 +208,27 @@ l'en-tête entier facultatif `X-L3D-Service-Us`.
 v=1
 m=2
 name=ColorAll
+kind=native
 b=2
 s=4
 colors=0000FF;FF0000;00FF00;0000FF;FFFF00;00FFFF
 switches=0;0;0;0
 i=1
 k=1
+rssi=-58
 r=14
 ```
 
 `b` est la valeur interne historique de luminosité comprise entre 1 et 255,
 pas le pourcentage reçu dans une commande. Les couleurs sont six valeurs RGB
 hexadécimales sans `#`. Les quatre switches locaux sont `0` ou `1`.
+`kind` identifie le producteur du framebuffer : `native`, `streaming`,
+`painting` ou `procedural`. Cette distinction permet notamment de différencier
+une animation web d'une image fixe, bien que les deux utilisent le mode
+historique `Stream`. `rssi` contient la puissance Wi-Fi en dBm, ou zéro lorsque
+le Wi-Fi n'est pas prêt. Ces deux champs sont additifs dans le schéma 1 : L3D
+Studio conserve un repli limité pour lire un firmware antérieur, sans pouvoir
+alors distinguer la peinture du streaming ni afficher le RSSI.
 `r` est le dernier code retourné par une commande externe, qu'elle ait réussi
 ou échoué. Le schéma d'état possède sa propre version et peut donc évoluer
 indépendamment du format des diagnostics.

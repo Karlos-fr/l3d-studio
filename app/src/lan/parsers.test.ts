@@ -25,7 +25,7 @@ const DIAGNOSTICS_RESPONSE =
 
 // Exemple complet d'état version 1.
 const STATE_RESPONSE =
-  "v=1\nm=2\nname=ColorAll\nb=2\ns=4\ncolors=0000FF;FF0000;00FF00;0000FF;FFFF00;00FFFF\nswitches=0;1;0;1\ni=1\nk=1\nr=-103\n";
+  "v=1\nm=2\nname=ColorAll\nkind=native\nb=2\ns=4\ncolors=0000FF;FF0000;00FF00;0000FF;FFFF00;00FFFF\nswitches=0;1;0;1\ni=1\nk=1\nrssi=-58\nr=-103\n";
 
 // Catalogue minimal de deux modes parallèles.
 const MODES_RESPONSE = "v=1\nnames=Off;Text;\nparams=N;C:2,T:;\n";
@@ -86,13 +86,39 @@ function runLanParserTests(): void {
       schemaVersion: 1,
       modeId: 2,
       modeName: "ColorAll",
+      playbackKind: "native",
       brightness: 2,
       speedIndex: 4,
       colors: ["0000FF", "FF0000", "00FF00", "0000FF", "FFFF00", "00FFFF"],
       switches: [false, true, false, true],
       wifiReady: true,
       particleConnected: true,
+      wifiRssi: -58,
       lastCommandResult: -103,
+    });
+  });
+
+  // --------------------------------------------------------------------------
+  // Refuse une source de rendu inconnue au lieu de mal etiqueter le cube.
+  // --------------------------------------------------------------------------
+  it("refuse un moteur de rendu inconnu", () => {
+    expect(() => parseLanState(STATE_RESPONSE.replace("kind=native", "kind=lua"))).toThrow(
+      "Moteur LAN invalide",
+    );
+  });
+
+  // --------------------------------------------------------------------------
+  // Accepte l'ancien etat v1 avant ajout des deux champs additifs.
+  // --------------------------------------------------------------------------
+  it("conserve un repli pour un firmware sans moteur ni RSSI", () => {
+    // Réponse historique dont les champs additifs ont été retirés.
+    const legacyResponse = STATE_RESPONSE.replace("kind=native\n", "").replace(
+      "rssi=-58\n",
+      "",
+    );
+    expect(parseLanState(legacyResponse)).toMatchObject({
+      playbackKind: "native",
+      wifiRssi: null,
     });
   });
 

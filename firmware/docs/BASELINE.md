@@ -363,3 +363,21 @@ La connexion système Particle reste active pour Device OS et le flash OTA.
 Les tests hôte et le build TypeScript passent ; la compilation firmware réussit
 sans secret incorporé. La validation matérielle de cette variante reste à
 effectuer à `B:1` avant tout déploiement de référence.
+
+## État enrichi pour l'écran Cube — 23 août 2026
+
+L'ajout du moteur de rendu courant et du RSSI dans la réponse `/state` conserve
+la RAM statique du jalon LAN précédent :
+
+| Variante Photon 2.3.1 | Flash | RAM statique | Binaire | Marge Flash |
+| --- | ---: | ---: | ---: | ---: |
+| Pilotage LAN uniquement | 120 560 | 14 596 | 120 564 | 10 512 |
+| État avec moteur et RSSI | 120 752 | 14 596 | 120 756 | 10 320 |
+| Écart | **+192** | **0** | **+192** | **-192** |
+
+La classification réutilise le mode actif et le drapeau de maintien déjà
+présent pour la peinture. Elle n'ajoute ni buffer, ni allocation, ni état
+résident. La suite hôte et le build TypeScript passent. Le binaire a ensuite
+été flashé sur `chicken_turkey` : `/state` a confirmé `kind=native`,
+`rssi=-59`, les connexions Wi-Fi et Particle actives, et une luminosité interne
+de 2 correspondant à la contrainte de test à 1 %.

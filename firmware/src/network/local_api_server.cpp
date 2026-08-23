@@ -445,6 +445,20 @@ static bool localApiRouteDiagnostics(bool resetRequested) {
 }
 
 // ----------------------------------------------------------------------------
+// Classe le moteur qui produit actuellement le framebuffer du cube.
+//
+// Retour :
+// - identifiant textuel stable compris par L3D Studio.
+// ----------------------------------------------------------------------------
+static const char* localApiCurrentPlaybackKind(void) {
+    if(currentModeID == STREAM)
+        return streamFrameIsHeld() ? "painting" : "streaming";
+    if(currentModeID == BYTECODE)
+        return "procedural";
+    return "native";
+}
+
+// ----------------------------------------------------------------------------
 // Prepare un instantane coherent de l'etat courant du cube.
 //
 // Retour :
@@ -459,10 +473,11 @@ static bool localApiRouteState(void) {
     int bodyLength = snprintf(
         localApiParser.body,
         sizeof(localApiParser.body),
-        "v=%d\nm=%d\nname=%s\nb=%d\ns=%d\ncolors=%06lX;%06lX;%06lX;%06lX;%06lX;%06lX\nswitches=%d;%d;%d;%d\ni=%d\nk=%d\nr=%d\n",
+        "v=%d\nm=%d\nname=%s\nkind=%s\nb=%d\ns=%d\ncolors=%06lX;%06lX;%06lX;%06lX;%06lX;%06lX\nswitches=%d;%d;%d;%d\ni=%d\nk=%d\nrssi=%d\nr=%d\n",
         LOCAL_API_STATE_VERSION,
         currentModeID,
         currentModeName,
+        localApiCurrentPlaybackKind(),
         brightness,
         speedIndex,
         static_cast<unsigned long>(color1 & 0xFFFFFFUL),
@@ -477,6 +492,7 @@ static bool localApiRouteState(void) {
         switch4 ? 1 : 0,
         WiFi.ready() ? 1 : 0,
         Particle.connected() ? 1 : 0,
+        WiFi.ready() ? WiFi.RSSI() : 0,
         lastCommandResult);
     if(bodyLength < 0 ||
        static_cast<size_t>(bodyLength) >= sizeof(localApiParser.body) ||

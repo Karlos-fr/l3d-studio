@@ -41,6 +41,30 @@ function runWorkspaceRenderTests(): void {
   });
 
   // --------------------------------------------------------------------------
+  // Verifie les quatre icones, la source de rendu et le bandeau de sante.
+  // --------------------------------------------------------------------------
+  it("rend la synthese detaillee de l'etat du cube", () => {
+    // Etat lu representatif d'un flux de peinture actif.
+    const state = createInitialState(null);
+    state.currentModeName = "Stream";
+    state.currentPlaybackKind = "painting";
+    state.wifiRssi = -58;
+    state.wifiReady = true;
+    state.lastCommandResult = 0;
+    state.firmwareRevision = "1.4";
+    state.uptimeSeconds = 183_845;
+    // Racine qui capture les quatre cartes et leur bandeau.
+    const root: RenderRoot = { innerHTML: "" };
+    renderApp(root as HTMLElement, state);
+    expect(root.innerHTML.match(/cube-state-icon/g)).toHaveLength(4);
+    expect(root.innerHTML).toContain("Peinture");
+    expect(root.innerHTML).toContain("Image fixe");
+    expect(root.innerHTML).toContain("Statut :</strong> Prêt");
+    expect(root.innerHTML).toContain("Firmware</strong> 1.4");
+    expect(root.innerHTML).toContain("Uptime</strong> 2 j 03:04:05");
+  });
+
+  // --------------------------------------------------------------------------
   // Verifie les controles d'animation proposes au premier chargement.
   // --------------------------------------------------------------------------
   it("affiche l'atelier Animations par defaut", () => {

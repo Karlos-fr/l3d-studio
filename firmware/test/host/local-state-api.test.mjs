@@ -33,15 +33,36 @@ function readFirmwareSource(relativePath) {
 // ----------------------------------------------------------------------------
 // Verifie toutes les valeurs necessaires a la reconstruction de l'etat.
 // ----------------------------------------------------------------------------
-test("la route state expose mode, reglages, reseau et dernier resultat", () => {
+test("la route state expose mode, moteur, reglages, reseau et dernier resultat", () => {
   const server = readFirmwareSource("src/network/local_api_server.cpp");
   assert.match(server, /strcmp\(localApiParser\.path, "\/api\/v1\/state"\) == 0/u);
   assert.match(
     server,
-    /"v=%d\\nm=%d\\nname=%s\\nb=%d\\ns=%d\\ncolors=%06lX;%06lX;%06lX;%06lX;%06lX;%06lX\\nswitches=%d;%d;%d;%d\\ni=%d\\nk=%d\\nr=%d\\n"/u,
+    /"v=%d\\nm=%d\\nname=%s\\nkind=%s\\nb=%d\\ns=%d\\ncolors=%06lX;%06lX;%06lX;%06lX;%06lX;%06lX\\nswitches=%d;%d;%d;%d\\ni=%d\\nk=%d\\nrssi=%d\\nr=%d\\n"/u,
   );
   assert.match(server, /LOCAL_API_STATE_VERSION/u);
+  assert.match(server, /localApiCurrentPlaybackKind\(\)/u);
+  assert.match(server, /WiFi\.RSSI\(\)/u);
   assert.match(server, /lastCommandResult/u);
+});
+
+// ----------------------------------------------------------------------------
+// Verifie la distinction native, streaming, peinture et procedural.
+// ----------------------------------------------------------------------------
+test("le moteur courant distingue les quatre sources de rendu", () => {
+  // Serveur qui choisit le libelle de moteur expose.
+  const server = readFirmwareSource("src/network/local_api_server.cpp");
+  // Recepteur qui conserve la politique de la derniere frame.
+  const receiver = readFirmwareSource("src/network/stream_frames.cpp");
+  // Contrat public utilise par le serveur dans le unity build.
+  const receiverHeader = readFirmwareSource("src/network/stream_frames.h");
+  assert.match(server, /currentModeID == STREAM/u);
+  assert.match(server, /streamFrameIsHeld\(\) \? "painting" : "streaming"/u);
+  assert.match(server, /currentModeID == BYTECODE/u);
+  assert.match(server, /return "procedural";/u);
+  assert.match(server, /return "native";/u);
+  assert.match(receiver, /bool streamFrameIsHeld\(void\)/u);
+  assert.match(receiverHeader, /bool streamFrameIsHeld\(void\);/u);
 });
 
 // ----------------------------------------------------------------------------
