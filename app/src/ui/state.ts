@@ -24,8 +24,14 @@ import type { PainterTool } from "../painting/model";
 // Deux ateliers partagent le transport et l'apercu du panneau Streaming.
 export type StreamingWorkspace = "animations" | "painting";
 
-// Cinq espaces fonctionnels remplacent la page verticale historique.
-export type AppWorkspace = "cube" | "streaming" | "procedural" | "firmware" | "diagnostics";
+// Six espaces fonctionnels separent notamment l'etat et les animations natives.
+export type AppWorkspace =
+  | "cube"
+  | "animations"
+  | "streaming"
+  | "procedural"
+  | "firmware"
+  | "diagnostics";
 
 // Trois vues mobiles organisent l'atelier procedural sans dupliquer son etat.
 export type BytecodeWorkspaceView = "editor" | "simulation" | "photon";
@@ -148,6 +154,7 @@ export function createInitialState(
     applicationName: APPLICATION_NAME,
     activeWorkspace:
       preferences?.activeWorkspace === "cube" ||
+      preferences?.activeWorkspace === "animations" ||
       preferences?.activeWorkspace === "streaming" ||
       preferences?.activeWorkspace === "procedural" ||
       preferences?.activeWorkspace === "firmware" ||

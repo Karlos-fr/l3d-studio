@@ -1395,7 +1395,7 @@ textarea:focus-visible {
     bottom: 0;
     left: 0;
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0;
     padding: 0.35rem max(0.3rem, env(safe-area-inset-right)) max(0.35rem, env(safe-area-inset-bottom)) max(0.3rem, env(safe-area-inset-left));
     border-top: 1px solid var(--color-border);

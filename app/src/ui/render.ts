@@ -32,9 +32,10 @@ interface WorkspaceDefinition {
   description: string;
 }
 
-// Catalogue ordonne des cinq espaces fonctionnels de l'application.
+// Catalogue ordonne des six espaces fonctionnels de l'application.
 const WORKSPACE_DEFINITIONS: readonly WorkspaceDefinition[] = [
-  { id: "cube", label: "Cube", mobileLabel: "Cube", description: "État et animations natives" },
+  { id: "cube", label: "Cube", mobileLabel: "Cube", description: "État général du cube" },
+  { id: "animations", label: "Animations", mobileLabel: "Anim.", description: "Animations natives embarquées dans le Photon" },
   { id: "streaming", label: "Streaming", mobileLabel: "Stream", description: "Animations web et peinture" },
   { id: "procedural", label: "Procédural", mobileLabel: "Code", description: "Création et installation bytecode" },
   { id: "firmware", label: "Firmware", mobileLabel: "Firmware", description: "Réglages et commandes avancées" },
@@ -181,6 +182,7 @@ function renderTransportPanel(state: AppState): string {
 // - fragment HTML de l'espace de travail.
 // ----------------------------------------------------------------------------
 function renderWorkspace(state: AppState): string {
+  if (state.activeWorkspace === "animations") return renderAnimationsWorkspace(state);
   if (state.activeWorkspace === "streaming") return renderStreamingPanel(state);
   if (state.activeWorkspace === "procedural") return renderBytecodePanel(state);
   if (state.activeWorkspace === "firmware") return renderFirmwareWorkspace(state);
@@ -189,20 +191,36 @@ function renderWorkspace(state: AppState): string {
 }
 
 // ----------------------------------------------------------------------------
-// Regroupe les informations et commandes quotidiennes du cube.
+// Regroupe les informations générales du cube.
 //
 // Parametres :
-// - state : etat courant du firmware et du formulaire SetMode.
+// - state : etat courant lu depuis le firmware.
 //
 // Retour :
-// - espace Cube sans apercu fictif des animations natives.
+// - espace Cube limite aux indicateurs généraux.
 // ----------------------------------------------------------------------------
 function renderCubeWorkspace(state: AppState): string {
   return `
     <div class="workspace-stack cube-workspace">
       ${renderFirmwareStatePanel(state)}
+    </div>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Regroupe les animations natives et tous leurs parametres dynamiques.
+//
+// Parametres :
+// - state : catalogue des modes et valeurs du formulaire SetMode.
+//
+// Retour :
+// - espace dedie aux animations calculees et embarquees dans le Photon.
+// ----------------------------------------------------------------------------
+function renderAnimationsWorkspace(state: AppState): string {
+  return `
+    <div class="workspace-stack animations-workspace">
       ${renderModePanel(state)}
-      <p class="workspace-note">Les animations natives sont calculées par le Photon : aucun aperçu en direct n'est simulé dans l'application.</p>
+      <p class="workspace-note">Ces animations sont embarquées et calculées directement par le Photon. Elles restent distinctes des animations web envoyées depuis l'onglet Streaming.</p>
     </div>
   `;
 }
@@ -293,6 +311,9 @@ function getWorkspaceDefinition(workspaceId: AppWorkspace): WorkspaceDefinition 
 function renderWorkspaceIcon(workspaceId: AppWorkspace): string {
   if (workspaceId === "cube") {
     return `<svg viewBox="0 0 24 24" focusable="false"><path d="M12 3 4.5 7.2v9.6L12 21l7.5-4.2V7.2L12 3Z M4.5 7.2 12 12l7.5-4.8 M12 12v9" /></svg>`;
+  }
+  if (workspaceId === "animations") {
+    return `<svg viewBox="0 0 24 24" focusable="false"><path d="m9 7 8 5-8 5V7Z" /><path d="M4 4v16M20 4v16" /></svg>`;
   }
   if (workspaceId === "streaming") {
     return `<svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="1.7" /><path d="M8.7 8.7a4.7 4.7 0 0 0 0 6.6M15.3 8.7a4.7 4.7 0 0 1 0 6.6M5.9 5.9a8.6 8.6 0 0 0 0 12.2M18.1 5.9a8.6 8.6 0 0 1 0 12.2" /></svg>`;

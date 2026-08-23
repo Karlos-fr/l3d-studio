@@ -1,5 +1,5 @@
 // ============================================================================
-// UiRenderTest - Tests du rendu des ateliers streaming et peinture
+// UiRenderTest - Tests du rendu des espaces et ateliers principaux
 // ----------------------------------------------------------------------------
 // Ce fichier inspecte le HTML produit sans navigateur reel. Il ne branche pas
 // les evenements ni les appels LAN.
@@ -15,9 +15,31 @@ interface RenderRoot {
 }
 
 // ----------------------------------------------------------------------------
-// Execute les tests des deux onglets du panneau Streaming.
+// Execute les tests des espaces principaux et du panneau Streaming.
 // ----------------------------------------------------------------------------
-function runStreamingPanelRenderTests(): void {
+function runWorkspaceRenderTests(): void {
+  // --------------------------------------------------------------------------
+  // Verifie que Cube et Animations possedent des responsabilites distinctes.
+  // --------------------------------------------------------------------------
+  it("isole les animations embarquees dans leur propre espace", () => {
+    // Etat initial ouvert sur l'espace Cube.
+    const state = createInitialState(null);
+    // Racine reutilisee pour comparer les deux espaces rendus.
+    const root: RenderRoot = { innerHTML: "" };
+    renderApp(root as HTMLElement, state);
+    expect(root.innerHTML).toContain("État du cube");
+    expect(root.innerHTML).not.toContain("Animation courante");
+    expect(root.innerHTML.indexOf("show-workspace-animations")).toBeGreaterThan(
+      root.innerHTML.indexOf("show-workspace-cube"),
+    );
+
+    state.activeWorkspace = "animations";
+    renderApp(root as HTMLElement, state);
+    expect(root.innerHTML).toContain("Animation courante");
+    expect(root.innerHTML).not.toContain("État du cube");
+    expect(root.innerHTML).toContain("animations sont embarquées");
+  });
+
   // --------------------------------------------------------------------------
   // Verifie les controles d'animation proposes au premier chargement.
   // --------------------------------------------------------------------------
@@ -50,4 +72,4 @@ function runStreamingPanelRenderTests(): void {
   });
 }
 
-describe("rendu du panneau Streaming", runStreamingPanelRenderTests);
+describe("rendu des espaces de travail", runWorkspaceRenderTests);

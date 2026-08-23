@@ -662,7 +662,7 @@ function selectAppWorkspace(context: UiEventContext, requestedWorkspace: string)
 }
 
 // ----------------------------------------------------------------------------
-// Verifie qu'une valeur correspond a l'un des cinq espaces autorises.
+// Verifie qu'une valeur correspond a l'un des six espaces autorises.
 //
 // Parametres :
 // - value : valeur issue du nom d'action DOM.
@@ -671,8 +671,8 @@ function selectAppWorkspace(context: UiEventContext, requestedWorkspace: string)
 // - vrai pour un identifiant de navigation pris en charge.
 // ----------------------------------------------------------------------------
 function isAppWorkspace(value: string): value is AppWorkspace {
-  return value === "cube" || value === "streaming" || value === "procedural" ||
-    value === "firmware" || value === "diagnostics";
+  return value === "cube" || value === "animations" || value === "streaming" ||
+    value === "procedural" || value === "firmware" || value === "diagnostics";
 }
 
 // ----------------------------------------------------------------------------

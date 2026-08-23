@@ -11,7 +11,8 @@ application Vite.
 
 - Reprendre la navigation par pages de la seconde maquette.
 - Conserver les informations, commandes et états réalistes de la première.
-- Garder cinq espaces : Cube, Streaming, Procédural, Firmware et Diagnostics.
+- Garder six espaces : Cube, Animations, Streaming, Procédural, Firmware et
+  Diagnostics.
 - Rendre la connexion LAN accessible partout sans occuper en permanence le
   contenu principal.
 - Ne pas afficher de donnée que le firmware ne fournit pas.
@@ -19,7 +20,7 @@ application Vite.
 
 ## Phase 0 — Cadrer les écrans
 
-- [x] Associer chaque composant actuel à l'un des cinq espaces de travail.
+- [x] Associer chaque composant actuel à l'un des six espaces de travail.
 - [x] Définir les éléments globaux : connexion, statut, navigation et dernière
   erreur.
 - [x] Définir les états vides, chargement, succès, erreur et indisponibilité de
@@ -30,7 +31,8 @@ application Vite.
 
 | Espace | Contenu existant conservé |
 | --- | --- |
-| Cube | état du cube, SetMode, couleurs, switches et texte du mode |
+| Cube | état général du cube |
+| Animations | SetMode, animations embarquées, couleurs, switches et texte du mode |
 | Streaming | animations web, peinture, aperçu 3D/couches et statistiques |
 | Procédural | éditeur, bibliothèque locale, simulation et programme Photon |
 | Firmware | switches globaux, texte persistant, FnRouter et dernière réponse |
@@ -44,8 +46,8 @@ occupé, succès, erreur et indisponible avec les données déjà présentes dan
 
 ## Phase 1 — Créer la nouvelle coque responsive
 
-- [x] Ajouter une navigation latérale sur PC : Cube, Streaming, Procédural,
-  Firmware et Diagnostics.
+- [x] Ajouter une navigation latérale sur PC : Cube, Animations, Streaming,
+  Procédural, Firmware et Diagnostics.
 - [x] Ajouter sur mobile un en-tête compact et une navigation basse donnant
   accès aux mêmes espaces.
 - [x] Conserver l'espace sélectionné dans l'état UI et dans le stockage local.
@@ -54,9 +56,9 @@ occupé, succès, erreur et indisponible avec les données déjà présentes dan
   l'entrée Connexion.
 - [x] Vérifier la navigation au clavier, le focus visible et les libellés ARIA.
 
-## Phase 2 — Construire l'espace Cube
+## Phase 2 — Construire les espaces Cube et Animations
 
-- [x] Regrouper l'état du cube et la commande SetMode sur un seul écran.
+- [x] Séparer l’état du cube et la commande SetMode dans deux écrans voisins.
 - [x] Afficher Mode, Luminosité, Vitesse et RSSI sous forme de KPI compacts.
 - [x] Conserver le sélecteur d'animation, les sliders et le bouton Envoyer.
 - [x] Afficher les couleurs, switches et texte dans une zone secondaire
