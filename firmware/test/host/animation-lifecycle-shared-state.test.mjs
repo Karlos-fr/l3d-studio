@@ -73,15 +73,3 @@ test("Rain, scratch, Matrix, Squarrel et Collide partagent une union", () => {
   );
   assert.match(legacyState, /alignof\(SharedAnimationState\) >= alignof\(float\)/u);
 });
-
-// ----------------------------------------------------------------------------
-// Verifie que CubePainter recharge son image seulement a l'entree du mode.
-// ----------------------------------------------------------------------------
-test("CubePainter recharge son buffer depuis EEPROM a chaque entree", () => {
-  // Runtime contenant l'entree CubePainter.
-  const runtime = readFirmwareSource("src/core/mode_runtime.cpp");
-  // Initialisation EEPROM qui ne doit plus charger le framebuffer en RAM.
-  const storage = readFirmwareSource("src/storage/eeprom.cpp");
-  assert.match(runtime, /case CUBE_PAINTER:[\s\S]*EEPROM\.get\(PAINTER_START_ADDR, drawingBuffer\);/u);
-  assert.doesNotMatch(storage, /EEPROM\.get\(PAINTER_START_ADDR, drawingBuffer\)/u);
-});

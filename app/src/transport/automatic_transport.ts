@@ -49,13 +49,6 @@ export function createAutomaticTransport(
       dispatchCommand(lanClient, lanTransport, particleTransport, (transport) => transport.sendMode(command)),
     sendText: (text) =>
       dispatchCommand(lanClient, lanTransport, particleTransport, (transport) => transport.sendText(text)),
-    sendCubePainter: (command) =>
-      dispatchCommand(
-        lanClient,
-        lanTransport,
-        particleTransport,
-        (transport) => transport.sendCubePainter(command),
-      ),
   };
 }
 

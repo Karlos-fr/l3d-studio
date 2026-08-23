@@ -83,39 +83,6 @@ function validateSetMode(command) {
 }
 
 // ----------------------------------------------------------------------------
-// Reproduit le contrat de validation CubePainter pour les tests hote.
-//
-// Parametres :
-// - command : commande de voxel ou de plage a verifier.
-//
-// Retour :
-// - code de succes ou d'erreur correspondant au contrat C++.
-// ----------------------------------------------------------------------------
-function validateCubePainter(command) {
-  command = command.trim().toUpperCase();
-  if (command.length === 0) return EMPTY;
-  if (command.length > MAX_COMMAND_LENGTH) return TOO_LONG;
-  if (!command.endsWith(",")) return MALFORMED;
-
-  let selectedVoxel = -1;
-  for (const segment of command.slice(0, -1).split(",")) {
-    if (/^I\d+$/.test(segment)) {
-      selectedVoxel = Number(segment.slice(1));
-      if (selectedVoxel > 511) return OUT_OF_RANGE;
-    } else if (segment.startsWith("#")) {
-      if (selectedVoxel < 0 || !/^#[0-9A-F]{6}$/.test(segment)) return MALFORMED;
-    } else {
-      const clear = /^C(\d+):(\d+)$/.exec(segment);
-      if (!clear) return MALFORMED;
-      const start = Number(clear[1]);
-      const finish = Number(clear[2]);
-      if (start > finish || finish > 511) return OUT_OF_RANGE;
-    }
-  }
-  return OK;
-}
-
-// ----------------------------------------------------------------------------
 // Reproduit les controles de structure de la fonction Cloud generique.
 //
 // Parametres :
@@ -180,22 +147,6 @@ test("SetMode traite les limites et entrées malformées", () => {
   assert.equal(validateSetMode("C1:GG0000,"), MALFORMED);
   assert.equal(validateSetMode("S:9,"), OUT_OF_RANGE);
   assert.equal(validateSetMode("B:101,"), OUT_OF_RANGE);
-});
-
-// ----------------------------------------------------------------------------
-// Verifie les deux bornes voxel et les formes invalides de CubePainter.
-// ----------------------------------------------------------------------------
-test("CubePainter accepte uniquement les voxels 0 à 511", () => {
-  assert.equal(validateCubePainter(fixtures.commands.cubePainterVoxel), OK);
-  assert.equal(validateCubePainter(fixtures.commands.cubePainterClear), OK);
-  assert.equal(validateCubePainter("I0,#000000,"), OK);
-  assert.equal(validateCubePainter("I511,#FFFFFF,"), OK);
-  assert.equal(validateCubePainter("I512,#FFFFFF,"), OUT_OF_RANGE);
-  assert.equal(validateCubePainter("#FFFFFF,"), MALFORMED);
-  assert.equal(validateCubePainter("I42,#FFFF,"), MALFORMED);
-  assert.equal(validateCubePainter("C20:10,"), OUT_OF_RANGE);
-  assert.equal(validateCubePainter("C0:512,"), OUT_OF_RANGE);
-  assert.equal(validateCubePainter("I42,#FF0000"), MALFORMED);
 });
 
 // ----------------------------------------------------------------------------
@@ -267,7 +218,7 @@ test("les gros états temporaires utilisent le scratch statique partagé", () =>
   // Implémentation PacMan utilisant ses trois sprites compacts partagés.
   const puck = fs.readFileSync(path.join(firmwareRoot, "src/animations/puck_dude.cpp"), "utf8");
   assert.doesNotMatch(transitions, /uint32_t\s+startColor\s*\[/);
-  assert.match(transitions, /drawingBuffer\[offset\]/);
+  assert.match(transitions, /sharedRgbScratch\[offset\]/);
   assert.match(digi, /sharedAnimationScratch\.pixelOrder/);
   assert.match(classics, /sharedAnimationScratch\.particles/);
   assert.match(puck, /sharedAnimationScratch\.puckDude/);

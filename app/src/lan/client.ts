@@ -168,12 +168,12 @@ export function createLanClient(config: LanClientConfig): LanClient {
     mode: (command: string) => postCommand(fetchFn, baseUrl, "/mode", command, timeoutMilliseconds),
     // Transmet le texte persistant.
     text: (text: string) => postCommand(fetchFn, baseUrl, "/text", text, timeoutMilliseconds),
-    // Transmet une commande CubePainter.
-    cubePainter: (command: string) =>
-      postCommand(fetchFn, baseUrl, "/cube-painter", command, timeoutMilliseconds),
     // Transmet une frame RGB332 binaire complete.
     streamFrame: (frame: Uint8Array, signal?: AbortSignal) =>
-      postStreamFrame(fetchFn, baseUrl, frame, timeoutMilliseconds, signal),
+      postRgb332Frame(fetchFn, baseUrl, "/stream/frame", frame, timeoutMilliseconds, signal),
+    // Transmet une frame RGB332 conservee sans timeout par le firmware.
+    painterFrame: (frame: Uint8Array, signal?: AbortSignal) =>
+      postRgb332Frame(fetchFn, baseUrl, "/painter/frame", frame, timeoutMilliseconds, signal),
     // Lit les capacites du stockage bytecode local.
     bytecodeStatus: () =>
       requestLan(fetchFn, baseUrl, "/bytecode", "GET", "", timeoutMilliseconds, parseLanBytecodeStatus),
@@ -308,6 +308,7 @@ async function postBytecodeProgram(
 // Parametres :
 // - fetchFn : implementation fetch utilisee.
 // - baseUrl : racine locale versionnee.
+// - path : route RGB332 du streaming ou de la peinture.
 // - frame : corps RGB332 de 512 octets.
 // - timeoutMilliseconds : duree maximale de l'appel.
 // - signal : annulation optionnelle demandee par le moteur de streaming.
@@ -315,9 +316,10 @@ async function postBytecodeProgram(
 // Retour :
 // - enveloppe commune du firmware apres application complete.
 // ----------------------------------------------------------------------------
-async function postStreamFrame(
+async function postRgb332Frame(
   fetchFn: typeof fetch,
   baseUrl: string,
+  path: "/stream/frame" | "/painter/frame",
   frame: Uint8Array,
   timeoutMilliseconds: number,
   signal?: AbortSignal,
@@ -329,7 +331,7 @@ async function postStreamFrame(
 
   try {
     const frameBuffer = frame.slice().buffer as ArrayBuffer;
-    const response = await fetchFn(`${baseUrl}/stream/frame`, {
+    const response = await fetchFn(`${baseUrl}${path}`, {
       method: "POST",
       headers: { "Content-Type": "application/octet-stream" },
       body: frameBuffer,

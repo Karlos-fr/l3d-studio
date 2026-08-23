@@ -152,16 +152,16 @@ Particle historiques, sans différence. Après 90 lectures, la mémoire libre es
 restée à 33 992 octets et le minimum à 31 896 octets. Le cube a été remis sur
 `M:Off,B:1,`.
 
-## Évolution de phase 5
+## Historique de la phase 5
 
-Les quatre fonctions historiques sont maintenant accessibles sur le LAN sans
-dupliquer leur logique métier :
+Le jalon de phase 5 exposait quatre fonctions historiques sur le LAN. La route
+CubePainter décrite dans les anciennes mesures a depuis été retirée ; les trois
+commandes texte encore actives sont :
 
 ```text
 POST /api/v1/command
 POST /api/v1/mode
 POST /api/v1/text
-POST /api/v1/cube-painter
 ```
 
 Chaque corps contient directement la commande historique. Une réussite renvoie
@@ -186,9 +186,6 @@ curl.exe -H "Content-Type: text/plain" `
 
 curl.exe -X POST -H "Content-Type: text/plain" `
   -H "Content-Length: 0" "$base/text"
-
-curl.exe -H "Content-Type: text/plain" `
-  --data-binary "I512,#FF0000," "$base/cube-painter"
 ```
 
 Le verrou de commande empêche un rappel coopératif imbriqué du serveur pendant
@@ -197,14 +194,41 @@ commandes de mode servent volontairement le réseau pendant leurs attentes. Une
 requête interrompue avant son `Content-Length` complet est abandonnée sans
 appeler le parseur métier.
 
-Le 18 août 2026, la matrice `command`, `mode`, `text` et `cube-painter` a donné
-les mêmes codes via Particle et le LAN. Le refus du voxel 512 a rendu `-103`
-et HTTP 422 sans écriture. Huit changements rapides puis trente changements
+Le 18 août 2026, l'ancienne matrice incluant CubePainter avait donné les mêmes
+codes via Particle et le LAN. Ce résultat reste une mesure historique et ne
+décrit plus une route active. Huit changements rapides puis trente changements
 supplémentaires entre `ColorAll` et `Off` ont réussi à `B:1`. Une commande
 partielle fermée avant sa fin n'a changé ni le mode ni le dernier résultat.
 Après reboot, le LAN et Particle sont redevenus disponibles, mais aucune
 fenêtre avec Wi-Fi prêt et Particle encore déconnecté n'a été observée ; ce cas
 précis reste à provoquer pendant l'endurance de phase 9.
+
+## Remplacement de CubePainter par la peinture RGB332
+
+Le 23 août 2026, l'ancien mode, sa fonction Particle, son parseur texte et ses
+écritures EEPROM ont été retirés. Son ID 33 reste explicitement réservé afin
+qu'aucun futur mode ne le réutilise. Une EEPROM contenant encore cet ancien ID
+revient automatiquement au mode `Off` au démarrage.
+
+L3D Studio utilise désormais :
+
+```text
+POST /api/v1/painter/frame
+```
+
+Cette route reçoit le même corps RGB332 de 512 octets que
+`/api/v1/stream/frame` et réutilise intégralement son décodage. Sa seule
+différence est l'absence de timeout : la dernière image reste affichée jusqu'au
+changement de mode ou au redémarrage. Aucun framebuffer supplémentaire et
+aucune écriture EEPROM ne sont ajoutés. Le scratch RGB partagé de 1 536 octets
+reste conservé, car les transitions et la VM l'utilisent encore.
+
+La compilation Photon 2.3.1 occupe 122 688 octets de Flash et 15 228 octets de
+RAM statique, soit 1 024 octets de Flash économisés sans variation de RAM par
+rapport au binaire précédent de 123 712 octets. Après déploiement à `B:1`, une
+frame contenant trois voxels de contrôle est restée en mode `Stream` après cinq
+secondes ; l'ancienne route a répondu `404`, puis le cube a été remis sur
+`Off`.
 
 ## Extension bytecode procédural
 

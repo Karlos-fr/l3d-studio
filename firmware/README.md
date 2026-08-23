@@ -13,10 +13,11 @@ L’installation et l’utilisation de l’IHM sont décrites dans
 - Particle Photon Gen 2 ;
 - Device OS 2.3.1 ;
 - 512 LED RGB avec pilote NeoPixel local ;
-- IDs, noms de modes et commandes Spark Pixels historiques conservés ;
+- IDs historiques conservés, avec l'ID 33 réservé après retrait de CubePainter ;
 - Particle Cloud toujours disponible ;
 - API HTTP locale v1 active par défaut sur le port `8080` ;
 - streaming web RGB332 sur `/api/v1/stream/frame` via le mode `Stream` 76 ;
+- peinture web RGB332 maintenue sur `/api/v1/painter/frame`, sans EEPROM ;
 - VM procédurale L3D, mode interne 77 et stockage transactionnel d'un programme
   de 197 octets sur deux banques EEPROM ;
 - aucune allocation dynamique dans le code applicatif actif ;
@@ -24,8 +25,8 @@ L’installation et l’utilisation de l’IHM sont décrites dans
   le serveur LAN pendant les attentes historiques.
 
 La compilation Photon 2.3.1 avec la VM, la persistance et ses routes LAN indique
-123 584 octets de Flash, 15 228 octets de RAM statique, un binaire de 123 588
-octets et 7 488 octets de marge Flash. Les mesures détaillées se trouvent dans
+122 688 octets de Flash, 15 228 octets de RAM statique, un binaire de 122 692
+octets et 8 384 octets de marge Flash. Les mesures détaillées se trouvent dans
 [docs/BYTECODE_BASELINE.md](docs/BYTECODE_BASELINE.md).
 
 ## Compilation et tests
@@ -91,8 +92,8 @@ POST /diagnostics/reset
 POST /command
 POST /mode
 POST /text
-POST /cube-painter
 POST /stream/frame
+POST /painter/frame
 POST /bytecode/program
 POST /bytecode/delete
 POST /bytecode/run

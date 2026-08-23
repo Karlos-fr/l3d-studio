@@ -245,6 +245,7 @@ function renderDeviceSelect(state: AppState): string {
 // ----------------------------------------------------------------------------
 function renderStreamingPanel(state: AppState): string {
   const lanConfigured = state.lanHost.trim().length > 0 && Number.isInteger(state.lanPort);
+  const animationWorkspaceSelected = state.streaming.workspace === "animations";
   let animationOptions = "";
   for (const animation of listStreamingAnimations()) {
     animationOptions += renderStreamingAnimationOption(
@@ -260,9 +261,44 @@ function renderStreamingPanel(state: AppState): string {
         <span class="status-pill" data-streaming-status>${escapeHtml(state.streaming.statusMessage)}</span>
       </div>
       <p>
-        L'animation est calculée par cette page puis envoyée directement au Photon sur le LAN.
-        Garde l'application locale ouverte pendant la lecture.
+        ${animationWorkspaceSelected
+          ? "L'animation est calculée par cette page puis envoyée directement au Photon sur le LAN. Garde l'application locale ouverte pendant la lecture."
+          : "Dessine dans les couches du cube puis affiche l'image par le serveur LAN. Le brouillon reste conservé dans ce navigateur."}
       </p>
+      <div class="streaming-workspace-tabs" role="tablist" aria-label="Atelier web">
+        <button class="streaming-workspace-tab ${animationWorkspaceSelected ? "is-active" : ""}" data-action="show-streaming-animations" type="button" role="tab" aria-selected="${animationWorkspaceSelected}">Animations</button>
+        <button class="streaming-workspace-tab ${animationWorkspaceSelected ? "" : "is-active"}" data-action="show-streaming-painting" type="button" role="tab" aria-selected="${!animationWorkspaceSelected}">Peinture</button>
+      </div>
+      ${animationWorkspaceSelected
+        ? renderAnimationStreamingControls(state, animationOptions, lanConfigured)
+        : renderPaintingControls(state, lanConfigured)}
+      <div class="streaming-preview-tabs" role="tablist" aria-label="Représentation du cube">
+        <button class="streaming-preview-tab is-active" data-streaming-preview-mode="3d" type="button" role="tab" aria-selected="true">Vue 3D</button>
+        <button class="streaming-preview-tab" data-streaming-preview-mode="layers" type="button" role="tab" aria-selected="false" tabindex="-1">Couches z</button>
+      </div>
+      <canvas class="streaming-preview ${animationWorkspaceSelected ? "" : "is-painting"}" data-streaming-preview role="tabpanel" aria-label="Aperçu 3D rotatif du cube"></canvas>
+      <p class="field-help">Destination : ${escapeHtml(state.lanHost || "adresse LAN non configurée")}:${state.lanPort}</p>
+    </section>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend les reglages et statistiques du streaming anime.
+//
+// Parametres :
+// - state : etat de cadence, luminosite et activite.
+// - animationOptions : options deja echappees du registre.
+// - lanConfigured : vrai lorsque le bouton peut ouvrir une session.
+//
+// Retour :
+// - controles HTML propres aux animations web.
+// ----------------------------------------------------------------------------
+function renderAnimationStreamingControls(
+  state: AppState,
+  animationOptions: string,
+  lanConfigured: boolean,
+): string {
+  return `
       <div class="form-grid streaming-controls">
         <label>
           Animation
@@ -296,13 +332,36 @@ function renderStreamingPanel(state: AppState): string {
         <span title="Frames calculées mais non envoyées car un POST était déjà actif">Ignorées : <strong data-streaming-dropped>${state.streaming.droppedFrames}</strong></span>
       </div>
       <p class="field-help">Une frame ignorée n'a pas été perdue sur le réseau : elle n'est volontairement pas envoyée si la précédente est encore en cours.</p>
-      <div class="streaming-preview-tabs" role="tablist" aria-label="Représentation du cube">
-        <button class="streaming-preview-tab is-active" data-streaming-preview-mode="3d" type="button" role="tab" aria-selected="true">Vue 3D</button>
-        <button class="streaming-preview-tab" data-streaming-preview-mode="layers" type="button" role="tab" aria-selected="false" tabindex="-1">Couches z</button>
+  `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend les quatre outils essentiels du peintre de voxels.
+//
+// Parametres :
+// - state : couleur, outil et activite de la session partagee.
+// - lanConfigured : vrai lorsque le bouton peut joindre le Photon.
+//
+// Retour :
+// - controles HTML propres a la peinture.
+// ----------------------------------------------------------------------------
+function renderPaintingControls(state: AppState, lanConfigured: boolean): string {
+  return `
+      <div class="painting-controls">
+        <label>
+          Couleur
+          <input data-field="painter-color" type="color" value="${escapeHtml(state.streaming.painterColor)}">
+        </label>
+        <div class="painting-tools" role="group" aria-label="Outil de peinture">
+          <button class="secondary-action ${state.streaming.painterTool === "draw" ? "is-selected" : ""}" data-action="painter-tool-draw" type="button" aria-pressed="${state.streaming.painterTool === "draw"}">Crayon</button>
+          <button class="secondary-action ${state.streaming.painterTool === "erase" ? "is-selected" : ""}" data-action="painter-tool-erase" type="button" aria-pressed="${state.streaming.painterTool === "erase"}">Gomme</button>
+          <button class="secondary-action danger-action" data-action="clear-painter" type="button">Tout effacer</button>
+        </div>
+        <button class="${state.streaming.active ? "secondary-action" : "primary-action"}" data-action="${state.streaming.active ? "stop-streaming" : "start-streaming"}" data-streaming-toggle type="button" ${state.isBusy || (!state.streaming.active && !lanConfigured) ? "disabled" : ""}>
+          ${state.streaming.active ? "Arrêter" : "Afficher sur le cube"}
+        </button>
       </div>
-      <canvas class="streaming-preview" data-streaming-preview role="tabpanel" aria-label="Aperçu 3D rotatif du cube"></canvas>
-      <p class="field-help">Destination : ${escapeHtml(state.lanHost || "adresse LAN non configurée")}:${state.lanPort}</p>
-    </section>
+      <p class="field-help">Peins par clic-glisser dans l'onglet Couches z. L'image affichée reste sur le cube sans envoi périodique.</p>
   `;
 }
 

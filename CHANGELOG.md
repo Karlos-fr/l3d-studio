@@ -6,6 +6,28 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Peinture web RGB332 et retrait de CubePainter
+
+- Ajout dans L3D Studio d'un atelier **Peinture** avec couleur, crayon, gomme,
+  effacement complet, clic-glisser, aperçu par couches et brouillon persistant
+  dans `localStorage`.
+- Ajout de `POST /api/v1/painter/frame`, qui réutilise le décodeur RGB332 de
+  512 octets du streaming mais maintient la dernière image sans timeout.
+- Envoi réactif sur chaque changement : première frame immédiate, regroupement
+  des gestes rapides à 12,5 FPS maximum, une seule requête active et uniquement
+  la frame la plus récente en attente.
+- Retrait de l'ancien mode CubePainter, de sa fonction Particle, de sa route
+  texte LAN, de son parseur, de son fichier d'animation et de ses écritures
+  EEPROM. L'ID historique 33 reste réservé et une valeur persistée devenue
+  inconnue revient sur `Off` au démarrage.
+- Conservation du scratch partagé de 1 536 octets utilisé par les transitions,
+  Snake, les FFT et la VM ; aucune nouvelle allocation ni framebuffer résident.
+- Compilation Photon 2.3.1 : 122 688 octets de Flash, 15 228 octets de RAM
+  statique, binaire de 122 692 octets et 8 384 octets de marge Flash, soit
+  1 024 octets de Flash économisés sans variation de RAM.
+- Validation OTA à `B:1` : frame acceptée et maintenue après cinq secondes,
+  ancienne route en `404`, puis retour du cube sur `Off`.
+
 ### Bytecode procédural L3D — phases 0 à 5 et documentation de livraison
 
 - Validation d'un emplacement EEPROM transactionnel de 197 octets, avec deux

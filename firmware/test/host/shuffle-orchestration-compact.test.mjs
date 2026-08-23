@@ -60,7 +60,7 @@ test("Shuffle conserve un octet par entrée après les imports CubeTube", () => 
   const legacyState = readFirmwareSource("src/core/legacy_state.h");
   // Initialisation de l'ordre au démarrage.
   const mainSource = readFirmwareSource("src/main.cpp");
-  assert.match(legacyState, /const uint8_t ACTIVE_MODE_COUNT = 69;/u);
+  assert.match(legacyState, /const uint8_t ACTIVE_MODE_COUNT = 68;/u);
   assert.match(legacyState, /modeStruct\[0\] == ACTIVE_MODE_COUNT/u);
   assert.match(legacyState, /uint8_t shuffleIdx;/u);
   assert.match(legacyState, /uint8_t modeShuffleOrder\[/u);

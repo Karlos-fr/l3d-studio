@@ -44,6 +44,70 @@ interface StreamingPreviewVoxel {
   blue: number;
 }
 
+// Geometrie partagee entre le dessin des couches et leur hit-test.
+interface StreamingLayerLayout {
+  layerWidth: number;
+  layerHeight: number;
+  cellSize: number;
+}
+
+// Coordonnees logiques retournees pour une cellule de la vue par couches.
+export interface StreamingLayerVoxel {
+  x: number;
+  y: number;
+  z: number;
+}
+
+// ----------------------------------------------------------------------------
+// Selectionne une representation avant le prochain rendu du panneau.
+//
+// Parametres :
+// - mode : vue 3D ou couches z.
+//
+// Effet de bord :
+// - conserve le choix pendant les reconstructions du DOM.
+// ----------------------------------------------------------------------------
+export function selectStreamingPreviewMode(mode: StreamingPreviewMode): void {
+  streamingPreviewMode = mode;
+}
+
+// ----------------------------------------------------------------------------
+// Retrouve le voxel situe sous un point de la vue par couches.
+//
+// Parametres :
+// - canvas : surface actuellement affichee.
+// - clientX, clientY : coordonnees du pointeur dans la fenetre.
+//
+// Retour :
+// - voxel logique ou null hors d'une grille et dans la vue 3D.
+// ----------------------------------------------------------------------------
+export function getStreamingLayerVoxelAtPoint(
+  canvas: HTMLCanvasElement,
+  clientX: number,
+  clientY: number,
+): StreamingLayerVoxel | null {
+  if (streamingPreviewMode !== "layers") return null;
+  const bounds = canvas.getBoundingClientRect();
+  if (bounds.width <= 0 || bounds.height <= 0) return null;
+  const cssWidth = Math.max(canvas.clientWidth, 280);
+  const pointX = (clientX - bounds.left) * (cssWidth / bounds.width);
+  const pointY = (clientY - bounds.top) * (STREAMING_PREVIEW_HEIGHT / bounds.height);
+  const layout = calculateStreamingLayerLayout(cssWidth);
+  for (let z = 0; z < STREAM_CUBE_SIDE; z += 1) {
+    const layerColumn = z % 4;
+    const layerRow = Math.floor(z / 4);
+    const gridWidth = layout.cellSize * STREAM_CUBE_SIDE;
+    const originX = layerColumn * layout.layerWidth + (layout.layerWidth - gridWidth) / 2;
+    const originY = layerRow * layout.layerHeight + 30;
+    const column = Math.floor((pointX - originX) / layout.cellSize);
+    const row = Math.floor((pointY - originY) / layout.cellSize);
+    if (column >= 0 && column < STREAM_CUBE_SIDE && row >= 0 && row < STREAM_CUBE_SIDE) {
+      return { x: column, y: 7 - row, z };
+    }
+  }
+  return null;
+}
+
 // ----------------------------------------------------------------------------
 // Actualise les compteurs et le Canvas du panneau deja monte.
 //
@@ -81,7 +145,11 @@ export function updateStreamingView(
   if (toggleButton !== null) {
     const lanConfigured = state.lanHost.trim().length > 0 && Number.isInteger(state.lanPort);
     toggleButton.dataset.action = state.streaming.active ? "stop-streaming" : "start-streaming";
-    toggleButton.textContent = state.streaming.active ? "Arrêter" : "Démarrer";
+    toggleButton.textContent = state.streaming.active
+      ? "Arrêter"
+      : state.streaming.workspace === "painting"
+        ? "Afficher sur le cube"
+        : "Démarrer";
     toggleButton.disabled = state.isBusy || (!state.streaming.active && !lanConfigured);
     toggleButton.classList.toggle("primary-action", !state.streaming.active);
     toggleButton.classList.toggle("secondary-action", state.streaming.active);
@@ -354,15 +422,13 @@ function drawStreamingLayers(
   context.fillStyle = "#08111f";
   context.fillRect(0, 0, cssWidth, cssHeight);
 
-  const layerWidth = cssWidth / 4;
-  const layerHeight = cssHeight / 2;
-  const cellSize = Math.min((layerWidth - 20) / STREAM_CUBE_SIDE, 11);
+  const layout = calculateStreamingLayerLayout(cssWidth);
   for (let z = 0; z < STREAM_CUBE_SIDE; z += 1) {
     const layerColumn = z % 4;
     const layerRow = Math.floor(z / 4);
-    const gridWidth = cellSize * STREAM_CUBE_SIDE;
-    const originX = layerColumn * layerWidth + (layerWidth - gridWidth) / 2;
-    const originY = layerRow * layerHeight + 30;
+    const gridWidth = layout.cellSize * STREAM_CUBE_SIDE;
+    const originX = layerColumn * layout.layerWidth + (layout.layerWidth - gridWidth) / 2;
+    const originY = layerRow * layout.layerHeight + 30;
     context.fillStyle = "#9fb3c8";
     context.font = "11px system-ui";
     context.fillText(`z=${z}`, originX, originY - 7);
@@ -373,14 +439,32 @@ function drawStreamingLayers(
           ? "rgba(148, 163, 184, 0.12)"
           : `rgb(${red} ${green} ${blue})`;
         context.fillRect(
-          originX + x * cellSize,
-          originY + y * cellSize,
-          Math.max(cellSize - 1, 1),
-          Math.max(cellSize - 1, 1),
+          originX + x * layout.cellSize,
+          originY + y * layout.cellSize,
+          Math.max(layout.cellSize - 1, 1),
+          Math.max(layout.cellSize - 1, 1),
         );
       }
     }
   }
+}
+
+// ----------------------------------------------------------------------------
+// Calcule la grille commune aux huit couches du cube.
+//
+// Parametres :
+// - cssWidth : largeur logique disponible en pixels CSS.
+//
+// Retour :
+// - largeur de couche, hauteur de couche et taille de cellule.
+// ----------------------------------------------------------------------------
+function calculateStreamingLayerLayout(cssWidth: number): StreamingLayerLayout {
+  const layerWidth = cssWidth / 4;
+  return {
+    layerWidth,
+    layerHeight: STREAMING_PREVIEW_HEIGHT / 2,
+    cellSize: Math.min((layerWidth - 20) / STREAM_CUBE_SIDE, 11),
+  };
 }
 
 // ----------------------------------------------------------------------------

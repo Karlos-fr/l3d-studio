@@ -18,7 +18,7 @@ adaptateurs cloud/command_parser.cpp
 commandes const char* + longueur
           |
           v
-core/command_dispatch.cpp et animations/cube_painter.cpp
+core/command_dispatch.cpp
 ```
 
 Le futur serveur LAN pourra fournir directement le pointeur de son corps HTTP
@@ -32,27 +32,24 @@ les règles de validation.
 | `setModeFromBuffer()` | `SetMode(String)` | Mode, vitesse, luminosité, couleurs, switches et texte de mode |
 | `routeCommandFromBuffer()` | `FnRouter(String)` | Heure, lectures, switches auxiliaires, diagnostics et reboot différé |
 | `setTextFromBuffer()` | `SetText(String)` | Texte persistant et EEPROM |
-| `cubePainterFromBuffer()` | `CubePainter(String)` | Validation puis écriture framebuffer et EEPROM |
 
-Les quatre callbacks Particle transmettent uniquement `command.c_str()` et
+Les trois callbacks Particle transmettent uniquement `command.c_str()` et
 `command.length()`. Les fonctions métier n'utilisent ni `String`, ni
 `Particle`, ni HTTP.
 
 ## Compatibilité conservée
 
-- Les espaces extérieurs sont retirés comme avec `String.trim()` pour SetMode,
-  FnRouter et CubePainter.
+- Les espaces extérieurs sont retirés comme avec `String.trim()` pour SetMode
+  et FnRouter.
 - Les noms de modes et les types SetMode restent sensibles à la casse comme
   auparavant.
 - FnRouter reste insensible à la casse ASCII, ce qui reproduit son ancien
   `toUpperCase()`.
-- CubePainter accepte encore les types et couleurs hexadécimales en minuscules
-  grâce à une normalisation caractère par caractère sans copie.
 - SetText ne retire aucun espace et conserve sa limite de 63 octets utiles.
 - Les valeurs de succès et les codes `COMMAND_ERROR` historiques sont
   inchangés.
-- Une commande SetMode ou CubePainter invalide est entièrement rejetée avant
-  la première modification d'état, de framebuffer ou d'EEPROM.
+- Une commande SetMode invalide est entièrement rejetée avant la première
+  modification d'état ou d'EEPROM.
 
 ## Fonctions de validation partagées
 
@@ -68,13 +65,12 @@ Ces helpers ne copient pas la commande et n'exigent pas de terminaison nulle.
 
 ## Validation automatique
 
-La suite hôte contient 132 tests, dont cinq contrôles spécifiques dans
+La suite hôte contient 181 tests, dont quatre contrôles spécifiques dans
 `command-transport-separation.test.mjs` :
 
-- les quatre callbacks Particle sont de simples adaptateurs ;
+- les trois callbacks Particle sont de simples adaptateurs ;
 - le cœur des commandes ne dépend d'aucun transport ;
 - SetMode valide avant son premier effet de bord ;
-- CubePainter termine sa première passe avant framebuffer et EEPROM ;
 - SetText contrôle sa longueur avant l'accès EEPROM.
 
 Les tests historiques couvrent également les commandes valides capturées, les
@@ -100,9 +96,11 @@ phase reste la séparation architecturale ; aucun gain RAM ne lui est attribué.
 
 ## Limites restantes
 
-- Device OS impose encore `String` dans les quatre signatures enregistrées par
+- Device OS impose encore `String` dans les trois signatures enregistrées par
   `Particle.function`.
 - Les tests hôte contrôlent les contrats et la structure du C++, mais la
   compilation Particle reste le test autoritatif du binaire embarqué.
-- Le serveur TCP et le parseur HTTP ne sont pas ajoutés dans cette phase.
-- La réactivité pendant les animations longues reste le sujet de la phase 2.
+- Le serveur TCP appelle directement ces trois fonctions depuis ses routes
+  `/command`, `/mode` et `/text`.
+- La peinture utilise désormais une frame RGB332 binaire dédiée, sans passer
+  par ce transport de commandes texte.

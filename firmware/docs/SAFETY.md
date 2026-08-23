@@ -6,8 +6,8 @@ La cible reste le Photon sous Device OS 2.3.1.
 
 ## Scratch statique partage
 
-Le buffer historique CubePainter de 1 536 octets est conserve, mais expose sous
-la forme de l'union `SharedAnimationScratch`. Ses vues sont mutuellement
+Le scratch RGB historique de 1 536 octets est conservé sous la forme de
+l'union `SharedAnimationScratch`. Ses vues sont mutuellement
 exclusives :
 
 | Utilisation | Ancienne pile maximale | Vue partagee |
@@ -18,8 +18,8 @@ exclusives :
 | PuckDude | environ 3 120 octets | 4 × 65 `PackedPoint`, 780 octets |
 
 La taille statique totale ne change pas. `transitionAll()` conserve les couleurs
-de depart RGB et le calcul historique exact. Lors de l'entree dans CubePainter,
-le dessin autoritatif est recharge depuis l'EEPROM apres la transition.
+de depart RGB et le calcul historique exact. La peinture LAN n'utilise pas ce
+scratch comme stockage durable et n'écrit plus le dessin dans l'EEPROM.
 
 L'audit des tableaux locaux actifs ne trouve plus aucun buffer individuel de
 plus de 256 octets. Les autres grands etats permanents ne sont pas deplaces sur
@@ -54,9 +54,8 @@ les index de modes et retours historiques :
 les textes qui ne tiennent pas dans ses 64 octets. `FnRouter` controle les IDs,
 la timezone et les switches auxiliaires.
 
-CubePainter accepte uniquement les voxels `0..511`, les couleurs de six chiffres
-hexadecimaux et les plages croissantes incluses dans le cube. Sa commande est
-entierement validee avant la premiere ecriture dans le buffer ou l'EEPROM.
+La peinture LAN exige une frame RGB332 complète de 512 octets. Le serveur
+valide longueur et type avant de modifier les LED.
 
 ## Tests
 
@@ -94,7 +93,7 @@ remplacent pas la validation visuelle ni les tests de stabilite longs.
 
 Le binaire de phase 3 a ete flashe sur `chicken_turkey`. Les trois listes Cloud
 sont restees strictement identiques aux fixtures. Les commandes invalides ont
-retourne les codes attendus, CubePainter n'a accepte aucun index hors plage et
+retourne les codes attendus, les accès de peinture sont restés bornés et
 la luminosite est restee a `2/255`, soit la commande `B:1`.
 
 La comparaison visuelle de toutes les LED pendant les transitions reste a

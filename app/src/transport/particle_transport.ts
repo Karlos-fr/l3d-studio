@@ -90,7 +90,6 @@ export function createParticleTransport(
     sendCommand: (command) => callParticleFunction(client, deviceId, "Function", command),
     sendMode: (command) => callParticleFunction(client, deviceId, "SetMode", command),
     sendText: (text) => callParticleFunction(client, deviceId, "SetText", text),
-    sendCubePainter: (command) => callParticleFunction(client, deviceId, "CubePainter", command),
   };
 }
 

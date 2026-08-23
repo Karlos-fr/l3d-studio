@@ -113,7 +113,6 @@ function createTransport(source: TransportKind): SparkPixelsTransport {
     sendCommand: vi.fn(async () => ({ source, value: { result: 1 } })),
     sendMode: vi.fn(async () => ({ source, value: { result: 1 } })),
     sendText: vi.fn(async () => ({ source, value: { result: 1 } })),
-    sendCubePainter: vi.fn(async () => ({ source, value: { result: 1 } })),
   };
 }
 
@@ -141,8 +140,8 @@ function createLanClientDouble(): LanClient {
     command: vi.fn(),
     mode: vi.fn(),
     text: vi.fn(),
-    cubePainter: vi.fn(),
     streamFrame: vi.fn(),
+    painterFrame: vi.fn(),
     bytecodeStatus: vi.fn(),
     bytecodeProgram: vi.fn(),
     installBytecode: vi.fn(),

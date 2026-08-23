@@ -1,4 +1,4 @@
-# Streaming web RGB332
+# Streaming et peinture web RGB332
 
 ## Reference historique
 
@@ -67,6 +67,13 @@ Apres les phases 1 et 2, la compilation Photon Device OS 2.3.1 mesure :
   envoi est abandonnee, jamais mise en file.
 - Apres trois secondes sans frame valide, le firmware efface le cube et revient
   au mode `Off`.
+- L'editeur de peinture utilise `/painter/frame` avec le meme format, mais
+  maintient la derniere image jusqu'au changement de mode ou au redemarrage.
+- Le brouillon RGB888 reste dans le `localStorage` du navigateur ; seule sa
+  conversion RGB332 de 512 octets traverse le reseau, sans ecriture EEPROM.
+- La premiere modification active part immediatement. Les suivantes sont
+  regroupees a 12,5 FPS maximum, avec un seul POST actif et une seule derniere
+  frame en attente.
 
 Le contrat HTTP detaille et ses erreurs se trouvent dans
 [LOCAL_API_PROTOCOL.md](LOCAL_API_PROTOCOL.md).

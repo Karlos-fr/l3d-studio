@@ -39,7 +39,6 @@ static const modeParams modeStruct[] =
 		{  CRUMBLE,                     "CrumblingPlane",       0,          0,      FALSE   },  //credit: ? mod by socaljj
         {  CUBES,                       "Cubes",                4,          4,      FALSE   },  //credit: Alex Hornstein, Werner Moecke (C++ port, extra settings)
         {  CUBE_CLASSICS,               "CubeClassics",         1,          1,      FALSE   },  //credit: http://www.instructables.com/id/Led-Cube-8x8x8/, Kevin Carlborg (L3D Cube port)
-        {  CUBE_PAINTER,                "CubePainter",          0,          0,      FALSE   },  //credit: Werner Moecke (based on idea by Alex Hornstein)
 		{  DIAGONAL_PLANES,             "DiagonalPlanes",       0,          0,      FALSE   },  //credit: Werner Moecke (based on idea by Alex Hornstein)
         {  DIGI,                        "Digi",                 1,          3,      FALSE   },  //credit: Kevin Carlborg
         {  TWOCOLORCHASE,               "DualChase",            2,          0,      FALSE   },  //credit: Werner Moecke
@@ -172,18 +171,18 @@ volatile bool stopDemo;		//Set to TRUE when the Interrupt Timer demoTimer gets t
 
 // Nombre attendu de modes actifs selon la presence de la VM installable.
 #if L3D_BYTECODE_ENABLED
-const uint8_t ACTIVE_MODE_COUNT = 69;
-#else
 const uint8_t ACTIVE_MODE_COUNT = 68;
+#else
+const uint8_t ACTIVE_MODE_COUNT = 67;
 #endif
 
 static_assert(sizeof modeStruct / sizeof modeStruct[0] == ACTIVE_MODE_COUNT,
     "Le registre actif doit conserver son nombre de modes contractuel");
 
-// Position du prochain mode dans l'ordre melange, comprise entre zero et 67.
+// Position du prochain mode dans l'ordre melange, bornee par le registre actif.
 uint8_t shuffleIdx;
 
-// Index compacts des 68 entrees actives du registre de modes.
+// Index compacts de toutes les entrees actives du registre de modes.
 uint8_t modeShuffleOrder[sizeof modeStruct / sizeof modeStruct[0]];
 
 static_assert(sizeof modeShuffleOrder < 256,
@@ -245,7 +244,6 @@ Color snowFlakeColor;
 /************************
  *      constants       *
  ************************/
-#define PAINTER_START_ADDR		0		// start address for the drawing buffer in CUBE_PAINTER
 #define MAX_EEPROM_SIZE			2047	// the maximum available space in EEPROM storage (Photon)
 #define TEXT_START_ADDR			PIXEL_CNT * BPP + 1									// offset for the text store in TEXT mode
 #define SWITCHES_START_ADDR		TEXT_START_ADDR + TEXT_LENGTH + 1					// offset for the lastSwitchState store
@@ -1000,9 +998,9 @@ bool hasValidCheerLightsResponse(void);
 bool connectCheerLightsClient(void);
 
 
-/* ======================= CUBE PAINTER mode Definitions ===================== */
+/* ====================== Shared animation scratch ========================== */
 // Espace partage de 1 536 octets utilise par des animations mutuellement
-// exclusives. Le membre `bytes` conserve l'API historique de CubePainter.
+// exclusives. Le membre `bytes` sert notamment aux transitions RGB.
 union SharedAnimationScratch {
     unsigned char bytes[PIXEL_CNT * BPP];
     uint16_t pixelOrder[PIXEL_CNT];
@@ -1020,7 +1018,7 @@ static_assert(sizeof(uint16_t) * (int)(PIXEL_CNT * 0.1) <=
     sizeof(((SharedAnimationScratch*)0)->pixelOrder),
     "Les positions Frozen doivent tenir dans l'ordre de pixels partagé");
 static_assert(sizeof(((SharedAnimationScratch*)0)->bytes) == 1536,
-    "Le buffer CubePainter doit occuper exactement 1 536 octets");
+    "Le scratch RGB doit occuper exactement 1 536 octets");
 static_assert(sizeof(((SharedAnimationScratch*)0)->pixelOrder) == 1024,
     "L'ordre complet des pixels doit occuper exactement 1 024 octets");
 static_assert(sizeof(((SharedAnimationScratch*)0)->particles) == 1200,
@@ -1040,10 +1038,6 @@ static_assert(sizeof(((SharedAnimationScratch*)0)->bytecode) <=
     sizeof(((SharedAnimationScratch*)0)->bytes),
     "La VM bytecode doit reutiliser le scratch existant");
 #endif
-int CubePainter(String command);
-int cubePainterFromBuffer(const char* commandText, size_t commandLength);
-
-
 /* ====================== CLOCK mode Definitions =================== */
 char clockMessage[11];
 uint8_t hrow, hplane;
@@ -1272,7 +1266,7 @@ static_assert(sizeof(SharedAnimationState) == sizeof(RainSalvosState),
 
 // Alias historiques limitant la modification des animations déjà auditées.
 #define sharedAnimationScratch sharedAnimationState.scratch
-#define drawingBuffer sharedAnimationScratch.bytes
+#define sharedRgbScratch sharedAnimationScratch.bytes
 #if L3D_BYTECODE_ENABLED
 #define bytecodeStorage sharedAnimationScratch.bytecode
 #endif

@@ -49,6 +49,9 @@ import { createTransportForState } from "./transport";
 import { updateDiagnosticsView } from "./diagnostics_render";
 import { syncLanTestButton } from "./lan_controls";
 import { normalizeStreamingFps, type StreamingFps } from "../streaming/engine";
+import type { PainterTool } from "../painting/model";
+import { getStreamingLayerVoxelAtPoint } from "./streaming_render";
+import type { StreamingWorkspace } from "./state";
 
 export interface UiEventContext {
   rootElement: HTMLElement;
@@ -62,6 +65,10 @@ export interface UiEventContext {
   updateStreamingCadence: () => void;
   updateStreamingSettings: () => void;
   stopStreaming: (returnToOff?: boolean) => void;
+  selectStreamingWorkspace: (workspace: StreamingWorkspace) => void;
+  selectPainterTool: (tool: PainterTool) => void;
+  paintStreamingVoxel: (x: number, y: number, z: number) => void;
+  clearPainter: () => void;
   handleBytecodeAction: (action: string) => Promise<void>;
   handleBytecodeField: (
     fieldElement: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
@@ -120,6 +127,21 @@ const START_STREAMING_ACTION = "start-streaming";
 // Nom de l'action qui arrete immediatement l'envoi des frames.
 const STOP_STREAMING_ACTION = "stop-streaming";
 
+// Nom de l'action qui affiche l'atelier des animations web.
+const SHOW_STREAMING_ANIMATIONS_ACTION = "show-streaming-animations";
+
+// Nom de l'action qui affiche l'atelier de peinture.
+const SHOW_STREAMING_PAINTING_ACTION = "show-streaming-painting";
+
+// Nom de l'action qui selectionne le crayon.
+const PAINTER_DRAW_ACTION = "painter-tool-draw";
+
+// Nom de l'action qui selectionne la gomme.
+const PAINTER_ERASE_ACTION = "painter-tool-erase";
+
+// Nom de l'action qui efface le dessin local complet.
+const CLEAR_PAINTER_ACTION = "clear-painter";
+
 // Selecteur des champs de formulaire controles par l'etat applicatif.
 const STATE_FIELD_SELECTOR = "[data-field]";
 
@@ -136,7 +158,85 @@ export function attachAppEvents(context: UiEventContext): void {
   attachLoginForm(context);
   attachActionButtons(context);
   attachStateFields(context);
+  attachPainterCanvasEvents(context);
   attachDiagnosticsChartEvents(context.rootElement);
+}
+
+// ----------------------------------------------------------------------------
+// Branche le clic-glisser du peintre sur la vue par couches.
+//
+// Parametres :
+// - context : etat et commande de peinture du panneau courant.
+//
+// Effet de bord :
+// - capture le pointeur et modifie chaque voxel traverse une seule fois.
+// ----------------------------------------------------------------------------
+function attachPainterCanvasEvents(context: UiEventContext): void {
+  if (context.state.streaming.workspace !== "painting") return;
+  const canvas = context.rootElement.querySelector<HTMLCanvasElement>("[data-streaming-preview]");
+  if (canvas === null) return;
+  const painterCanvas = canvas;
+  let activePointerId: number | null = null;
+  let lastVoxelKey = "";
+
+  // --------------------------------------------------------------------------
+  // Peint le voxel sous le pointeur sans repeter la meme cellule.
+  //
+  // Parametres :
+  // - event : mouvement ou appui exprime dans les coordonnees de la fenetre.
+  // --------------------------------------------------------------------------
+  function paintPointerVoxel(event: PointerEvent): void {
+    const voxel = getStreamingLayerVoxelAtPoint(painterCanvas, event.clientX, event.clientY);
+    if (voxel === null) return;
+    const voxelKey = `${voxel.x}:${voxel.y}:${voxel.z}`;
+    if (voxelKey === lastVoxelKey) return;
+    lastVoxelKey = voxelKey;
+    context.paintStreamingVoxel(voxel.x, voxel.y, voxel.z);
+  }
+
+  // --------------------------------------------------------------------------
+  // Commence un trait uniquement sur une cellule des couches.
+  //
+  // Parametres :
+  // - event : appui du pointeur a capturer.
+  // --------------------------------------------------------------------------
+  function startPainterStroke(event: PointerEvent): void {
+    if (getStreamingLayerVoxelAtPoint(painterCanvas, event.clientX, event.clientY) === null) return;
+    event.preventDefault();
+    activePointerId = event.pointerId;
+    lastVoxelKey = "";
+    painterCanvas.setPointerCapture(event.pointerId);
+    paintPointerVoxel(event);
+  }
+
+  // --------------------------------------------------------------------------
+  // Continue le trait du seul pointeur capture.
+  //
+  // Parametres :
+  // - event : mouvement candidat du pointeur.
+  // --------------------------------------------------------------------------
+  function continuePainterStroke(event: PointerEvent): void {
+    if (activePointerId !== event.pointerId) return;
+    event.preventDefault();
+    paintPointerVoxel(event);
+  }
+
+  // --------------------------------------------------------------------------
+  // Termine ou annule le trait courant.
+  //
+  // Parametres :
+  // - event : relachement du pointeur capture.
+  // --------------------------------------------------------------------------
+  function finishPainterStroke(event: PointerEvent): void {
+    if (activePointerId !== event.pointerId) return;
+    activePointerId = null;
+    lastVoxelKey = "";
+  }
+
+  painterCanvas.addEventListener("pointerdown", startPainterStroke);
+  painterCanvas.addEventListener("pointermove", continuePainterStroke);
+  painterCanvas.addEventListener("pointerup", finishPainterStroke);
+  painterCanvas.addEventListener("pointercancel", finishPainterStroke);
 }
 
 // ----------------------------------------------------------------------------
@@ -406,6 +506,31 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
     return;
   }
 
+  if (action === SHOW_STREAMING_ANIMATIONS_ACTION) {
+    context.selectStreamingWorkspace("animations");
+    return;
+  }
+
+  if (action === SHOW_STREAMING_PAINTING_ACTION) {
+    context.selectStreamingWorkspace("painting");
+    return;
+  }
+
+  if (action === PAINTER_DRAW_ACTION) {
+    context.selectPainterTool("draw");
+    return;
+  }
+
+  if (action === PAINTER_ERASE_ACTION) {
+    context.selectPainterTool("erase");
+    return;
+  }
+
+  if (action === CLEAR_PAINTER_ACTION && confirm("Effacer tous les voxels du dessin ?")) {
+    context.clearPainter();
+    return;
+  }
+
   if (action === REFRESH_DIAGNOSTICS_ACTION) {
     await refreshDiagnostics(context);
     return;
@@ -587,6 +712,8 @@ function handleFieldChange(
       context.state.streaming.brightnessPercent = Math.max(1, Math.min(100, requestedBrightness));
       context.updateStreamingSettings();
     }
+  } else if (fieldName === "painter-color" && fieldElement instanceof HTMLInputElement) {
+    context.state.streaming.painterColor = fieldElement.value;
   } else if (fieldName === "mode-name") {
     context.state.selectedModeName = fieldElement.value;
   } else if (fieldName === "brightness") {
@@ -624,7 +751,8 @@ function handleFieldChange(
     fieldName === "persistent-text" ||
     fieldName === "diagnostics-window" ||
     fieldName === "lan-host" ||
-    fieldName === "lan-port"
+    fieldName === "lan-port" ||
+    fieldName === "painter-color"
   ) {
     return;
   }

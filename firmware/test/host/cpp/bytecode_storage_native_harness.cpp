@@ -20,18 +20,6 @@
 // Nombre d'adresses EEPROM utilisables sur le Photon historique.
 #define MAX_EEPROM_SIZE 2047
 
-// Debut historique du framebuffer CubePainter.
-#define PAINTER_START_ADDR 0
-
-// Nombre de voxels du cube.
-#define PIXEL_CNT 512
-
-// Nombre de composantes stockees par voxel CubePainter.
-#define BPP 3
-
-// Premiere adresse du texte historique.
-#define TEXT_START_ADDR 1537
-
 // Premiere adresse des switches auxiliaires historiques.
 #define AUXSW_START_ADDR 1647
 
@@ -191,7 +179,7 @@ static void hostTestLifecycle(void) {
 
     for(uint16_t address = 0; address < BYTECODE_STORAGE_BANK_A_ADDRESS; address++)
         hostRequire(EEPROM.values[address] == static_cast<uint8_t>(address),
-            "Un reglage historique ou CubePainter a ete modifie");
+            "Une adresse historique reservee a ete modifiee");
 
     hostRequire(bytecodeStorageRemove() == BYTECODE_SUCCESS,
         "Suppression refusee");

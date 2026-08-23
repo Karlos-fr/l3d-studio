@@ -60,7 +60,6 @@ test("les banques occupent uniquement les adresses libres 1652 a 2045", () => {
   assert.match(STORAGE_HEADER, /BANK_B_ADDRESS = 1849/u);
   assert.match(STORAGE_HEADER, /BANK_SIZE = BYTECODE_CONTAINER_MAX_SIZE/u);
   assert.match(STORAGE_SOURCE, /AUXSW_START_ADDR[\s\S]*BYTECODE_STORAGE_BANK_A_ADDRESS/u);
-  assert.match(STORAGE_SOURCE, /PAINTER_START_ADDR[\s\S]*TEXT_START_ADDR/u);
 });
 
 test("l'ecriture invalide puis active la signature en dernier", () => {

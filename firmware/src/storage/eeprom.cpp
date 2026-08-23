@@ -1,8 +1,8 @@
 // ============================================================================
 // EepromStorage - Initialisation de la persistance historique
 // ----------------------------------------------------------------------------
-// Ce fichier charge les reglages persistants. Le buffer CubePainter reste dans
-// la zone d'animation et n'est recharge que lors de l'entree dans ce mode.
+// Ce fichier charge uniquement les reglages persistants encore actifs. Il ne
+// lit ni n'ecrit l'ancienne zone de dessin du schema historique.
 // ============================================================================
 
 #ifdef L3D_UNITY_BUILD
@@ -29,31 +29,16 @@ inline void clearEEPROM(void) {
 //
 // Effet de bord :
 // - initialise texte, vitesse, luminosite, mode, couleurs et switches ;
-// - inspecte et initialise la zone CubePainter sans conserver son image en RAM.
+// - remplace tout identifiant de mode retire par le mode Off.
 // ----------------------------------------------------------------------------
 inline void initEEPROM(void) {
 	//Initialize local flags
-    bool colorsStored, switchesStored, clearBuffer;
+    bool colorsStored, switchesStored;
     colorsStored = switchesStored = FALSE;
-    clearBuffer = TRUE;
 	
 	// Initialize textInputString variable
 	setTextFromBuffer("", 0);
     
-    // Inspecte directement l'EEPROM sans monopoliser la zone d'animation.
-    for(int i=0; i<(PIXEL_CNT*BPP); i++) {
-        if(EEPROM.read(PAINTER_START_ADDR + i) != 0xFF) {
-            clearBuffer = FALSE;
-            break;
-        }
-    }
-    // If there is no color data stored in EEPROM area then blank the entire buffer
-    // (EEPROM.get() returns an array filled with 255, so we need to fill it with 0's)
-    if(clearBuffer) {
-        for(int i=0; i<(PIXEL_CNT*BPP); i++)
-            EEPROM.write(PAINTER_START_ADDR + i, 0);
-    }
-
 	// Initialize speed variable
 	speedIndex = EEPROM.read(SPEED_START_ADDR);
 	if(speedIndex == 0xFF) {
@@ -74,8 +59,8 @@ inline void initEEPROM(void) {
     
     // Initialize currentModeID variable
 	currentModeID = EEPROM.read(LASTMODE_START_ADDR);
-	if(currentModeID == 0xFF) {
-	    currentModeID = getModeIndexFromID(NORMAL);
+	if(currentModeID == 0xFF || getModeIndexFromID(currentModeID) < 0) {
+	    currentModeID = STANDBY;
 	    // Initialize EEPROM storage area
 	    EEPROM.write(LASTMODE_START_ADDR, currentModeID);
     }

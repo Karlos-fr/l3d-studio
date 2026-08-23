@@ -19,7 +19,7 @@ Particle Photon avec Device OS 2.3.1.
 | Vue de la zone | Taille | Initialisation d'entree |
 | --- | ---: | --- |
 | Rain/GoldRain/AcidRain | 8 220 octets | compteurs de salves et scalaires remis a zero |
-| scratch CubePainter/transition/Snake/FFT/etc. | 1 536 octets | portion utile initialisee par le mode |
+| scratch transition/Snake/FFT/bytecode/etc. | 1 536 octets | portion utile initialisee par le mode |
 | Listener UDP optionnel | 1 543 octets | socket et compteurs reinitialises |
 | Collide2 | 648 octets | 72 points entierement retires |
 | Whirlwind | 312 octets | tableaux, historique et centre entierement initialises |
@@ -34,9 +34,9 @@ son plus gros membre Rain. Son alignement est au moins celui d'un `float`.
 - CheerLights ferme son client TCP dans `animationExit()`.
 - Listener ferme UDP, annule la taille de paquet et son compteur lorsqu'il est
   compile.
-- CubePainter recharge ses 1 536 octets depuis l'EEPROM apres la transition a
-  chaque entree ; le demarrage inspecte directement l'EEPROM sans charger ce
-  buffer.
+- Les transitions utilisent temporairement la vue RGB de 1 536 octets ; la
+  peinture LAN décode directement sa frame sans conserver de copie dans ce
+  scratch et sans écrire l'EEPROM.
 - Le buffer Listener est une vue conditionnelle de la meme union et ne reserve
   aucune RAM lorsque `L3D_LISTENER_ENABLED=0`.
 - Les changements Shuffle et IFTTT ne modifient plus `currentModeID` en dehors
@@ -57,8 +57,7 @@ sont reinitialises.
 
 ## Validation
 
-- tests hote de cycle de vie, tailles, ordre `exit/enter` et rechargement
-  CubePainter ;
+- tests hote de cycle de vie, tailles, ordre `exit/enter` et scratch RGB ;
 - compilation Particle Photon Device OS 2.3.1 reussie ;
 - flash OTA et huit changements de modes rapides valides sur `chicken_turkey`
   avec `B:1`, sans reset ni OOM ;

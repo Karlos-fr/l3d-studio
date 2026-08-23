@@ -69,6 +69,4 @@ export interface SparkPixelsTransport {
   sendMode(command: string): Promise<TransportResult<SparkPixelsCommandResult>>;
   // Persiste le texte partage.
   sendText(text: string): Promise<TransportResult<SparkPixelsCommandResult>>;
-  // Envoie une commande CubePainter.
-  sendCubePainter(command: string): Promise<TransportResult<SparkPixelsCommandResult>>;
 }

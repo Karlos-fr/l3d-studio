@@ -10,7 +10,6 @@
 #include "cube_bounce.h"
 #include "cube_classics.h"
 #include "cube_greeting.h"
-#include "cube_painter.h"
 #include "cubetube_fft_common.h"
 #include "cubes.h"
 #include "d_spiral.h"

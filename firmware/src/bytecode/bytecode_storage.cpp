@@ -18,8 +18,6 @@ static_assert(BYTECODE_STORAGE_BANK_B_ADDRESS + BYTECODE_STORAGE_BANK_SIZE <=
 static_assert(AUXSW_START_ADDR + SHFL * (sizeof(uint8_t) + 1) +
     sizeof(uint8_t) <= BYTECODE_STORAGE_BANK_A_ADDRESS,
     "Le bytecode ne doit chevaucher aucun reglage historique");
-static_assert(PAINTER_START_ADDR + PIXEL_CNT * BPP <= TEXT_START_ADDR,
-    "CubePainter doit rester avant les reglages historiques");
 
 // ----------------------------------------------------------------------------
 // Retourne l'adresse physique d'une banque connue.

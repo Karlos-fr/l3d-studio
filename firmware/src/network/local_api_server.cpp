@@ -171,8 +171,8 @@ static bool localApiIsKnownPath(const char* path) {
         strcmp(path, "/api/v1/command") == 0 ||
         strcmp(path, "/api/v1/mode") == 0 ||
         strcmp(path, "/api/v1/text") == 0 ||
-        strcmp(path, "/api/v1/cube-painter") == 0 ||
-        strcmp(path, "/api/v1/stream/frame") == 0;
+        strcmp(path, "/api/v1/stream/frame") == 0 ||
+        strcmp(path, "/api/v1/painter/frame") == 0;
 #if L3D_BYTECODE_ENABLED
     return historicalPath ||
         strcmp(path, "/api/v1/bytecode") == 0 ||
@@ -829,13 +829,16 @@ static bool localApiRouteBytecodeStop(void) {
 // ----------------------------------------------------------------------------
 // Decode une frame binaire complete depuis le buffer HTTP deja alloue.
 //
+// Parametres :
+// - holdFrame : vrai pour conserver l'image sans timeout en mode peinture.
+//
 // Retour :
 // - vrai apres preparation de la reponse commune.
 //
 // Effet de bord :
 // - applique la frame uniquement si son contrat et le mode Stream sont valides.
 // ----------------------------------------------------------------------------
-static bool localApiRouteStreamFrame(void) {
+static bool localApiRouteRgb332Frame(bool holdFrame) {
     if(!localApiParser.contentTypeBinary) {
         localApiPrepareError(LOCAL_API_ERROR_MEDIA_TYPE);
         return true;
@@ -850,7 +853,8 @@ static bool localApiRouteStreamFrame(void) {
     localApiCommandActive = true;
     const int streamResult = streamApplyFrame(
         reinterpret_cast<const uint8_t*>(localApiParser.body),
-        localApiParser.bodyLength);
+        localApiParser.bodyLength,
+        holdFrame);
     localApiCommandActive = false;
     if(streamResult < 0) {
         localApiPrepareError(streamResult);
@@ -884,8 +888,7 @@ static bool localApiRouteStreamFrame(void) {
 static bool localApiIsCommandPath(const char* path) {
     return strcmp(path, "/api/v1/command") == 0 ||
         strcmp(path, "/api/v1/mode") == 0 ||
-        strcmp(path, "/api/v1/text") == 0 ||
-        strcmp(path, "/api/v1/cube-painter") == 0;
+        strcmp(path, "/api/v1/text") == 0;
 }
 
 // ----------------------------------------------------------------------------
@@ -914,6 +917,7 @@ static bool localApiRouteRequest(void) {
 
     if(localApiParser.contentTypeBinary &&
        strcmp(localApiParser.path, "/api/v1/stream/frame") != 0
+       && strcmp(localApiParser.path, "/api/v1/painter/frame") != 0
 #if L3D_BYTECODE_ENABLED
        && strcmp(localApiParser.path, "/api/v1/bytecode/program") != 0
 #endif
@@ -1017,12 +1021,15 @@ static bool localApiRouteRequest(void) {
     }
 #endif
 
-    if(strcmp(localApiParser.path, "/api/v1/stream/frame") == 0) {
+    if(strcmp(localApiParser.path, "/api/v1/stream/frame") == 0 ||
+       strcmp(localApiParser.path, "/api/v1/painter/frame") == 0) {
         if(localApiParser.method != LOCAL_HTTP_METHOD_POST) {
             localApiPrepareError(LOCAL_API_ERROR_METHOD);
             return true;
         }
-        return localApiRouteStreamFrame();
+        const bool holdFrame =
+            strcmp(localApiParser.path, "/api/v1/painter/frame") == 0;
+        return localApiRouteRgb332Frame(holdFrame);
     }
 
     if(localApiIsCommandPath(localApiParser.path)) {
@@ -1034,9 +1041,7 @@ static bool localApiRouteRequest(void) {
             return localApiRouteCommand(routeCommandFromBuffer);
         if(strcmp(localApiParser.path, "/api/v1/mode") == 0)
             return localApiRouteCommand(setModeFromBuffer);
-        if(strcmp(localApiParser.path, "/api/v1/text") == 0)
-            return localApiRouteCommand(setTextFromBuffer);
-        return localApiRouteCommand(cubePainterFromBuffer);
+        return localApiRouteCommand(setTextFromBuffer);
     }
 
     localApiPrepareError(LOCAL_API_ERROR_NOT_FOUND);

@@ -65,11 +65,10 @@ function extractFunction(source, signature, nextSignature) {
 }
 
 // ----------------------------------------------------------------------------
-// Verifie que chaque callback Particle delegue sans logique intermediaire.
+// Verifie que chaque callback Particle restant delegue sans logique intermediaire.
 // ----------------------------------------------------------------------------
-test("les quatre callbacks Particle sont de simples adaptateurs", () => {
+test("les trois callbacks Particle sont de simples adaptateurs", () => {
   const cloud = readFirmwareSource("src/cloud/command_parser.cpp");
-  const painter = readFirmwareSource("src/animations/cube_painter.cpp");
   assert.match(
     cloud,
     /int SetMode\(String command\) \{\s*return recordCommandResult\(\s*setModeFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
@@ -81,10 +80,6 @@ test("les quatre callbacks Particle sont de simples adaptateurs", () => {
   assert.match(
     cloud,
     /int SetText\(String command\) \{\s*return recordCommandResult\(\s*setTextFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
-  );
-  assert.match(
-    painter,
-    /int CubePainter\(String command\) \{\s*return recordCommandResult\(\s*cubePainterFromBuffer\(command\.c_str\(\), command\.length\(\)\)\);\s*\}/u,
   );
 });
 
@@ -117,25 +112,6 @@ test("SetMode refuse une commande invalide avant de modifier l'etat", () => {
   assert.ok(validation >= 0);
   assert.ok(validation < rejection);
   assert.ok(rejection < firstEffect);
-});
-
-// ----------------------------------------------------------------------------
-// Verifie que CubePainter conserve ses deux passes avant toute ecriture.
-// ----------------------------------------------------------------------------
-test("CubePainter valide le corps complet avant framebuffer et EEPROM", () => {
-  const painter = readFirmwareSource("src/animations/cube_painter.cpp");
-  const body = extractFunction(
-    painter,
-    "int cubePainterFromBuffer(const char* commandText, size_t commandLength)",
-    "int CubePainter(String command)",
-  );
-  const validationEnd = body.indexOf("run = TRUE;");
-  const framebufferWrite = body.indexOf("drawingBuffer[voxelOffset] =");
-  const eepromWrite = body.indexOf("EEPROM.write(voxelOffset");
-  assert.ok(validationEnd >= 0);
-  assert.ok(validationEnd < framebufferWrite);
-  assert.ok(validationEnd < eepromWrite);
-  assert.equal((body.match(/while \(endIndex != -1\)/gu) ?? []).length, 2);
 });
 
 // ----------------------------------------------------------------------------

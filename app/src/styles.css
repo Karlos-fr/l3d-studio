@@ -542,6 +542,8 @@ select:focus-visible {
   }
 }
 
+/* Onglets principaux qui separent animation et peinture sans nouveau panneau. */
+.streaming-workspace-tabs,
 .streaming-preview-tabs {
   display: inline-flex;
   gap: 0.25rem;
@@ -551,6 +553,7 @@ select:focus-visible {
   background: rgba(15, 23, 42, 0.7);
 }
 
+.streaming-workspace-tab,
 .streaming-preview-tab {
   padding: 0.4rem 0.75rem;
   border: 0;
@@ -560,6 +563,7 @@ select:focus-visible {
   cursor: pointer;
 }
 
+.streaming-workspace-tab.is-active,
 .streaming-preview-tab.is-active {
   background: rgba(59, 130, 246, 0.24);
   color: #e2e8f0;
@@ -584,4 +588,40 @@ select:focus-visible {
 .streaming-preview.is-layers-view {
   cursor: default;
   touch-action: auto;
+}
+
+/* La vue par couches capture le pointeur pendant un trait de peinture. */
+.streaming-preview.is-painting.is-layers-view {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* Barre compacte des controles propres au peintre. */
+.painting-controls {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+/* Le selecteur de couleur reste lisible sans occuper toute la ligne. */
+.painting-controls label {
+  display: grid;
+  gap: 0.375rem;
+  min-width: 8rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+/* Groupe les outils mutuellement exclusifs et l'effacement complet. */
+.painting-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Rend l'outil actif visible sans ajouter de composant UI. */
+.painting-tools .is-selected {
+  border-color: var(--color-accent);
+  color: #99f6e4;
 }

@@ -208,6 +208,15 @@ une frame devenue ancienne est abandonnée au lieu d'être mise en file. **Arrê
 cadence et demande le retour a `Off`. Le firmware possede aussi un timeout de
 trois secondes si la page ou le reseau disparait.
 
+L'onglet **Peinture** réutilise le même framebuffer et la vue des huit couches.
+Il propose une couleur, un crayon, une gomme et l'effacement complet. Après un
+premier clic sur **Afficher sur le cube**, chaque changement envoie
+automatiquement la frame la plus récente : le premier part immédiatement, les
+gestes rapides sont regroupés à 12,5 FPS maximum et aucun POST ne se chevauche.
+Le Photon maintient la dernière image sans timeout ; le navigateur conserve le
+brouillon dans `localStorage` et peut le renvoyer après un redémarrage. Le
+dessin n'est volontairement plus écrit dans l'EEPROM du Photon.
+
 Cette fonction exige l'adresse LAN du Photon et une application servie
 localement en HTTP, car le Photon ne propose pas HTTPS. Le format et les mesures
 sont documentes dans
@@ -218,6 +227,7 @@ sont documentes dans
 ```text
 app/src/
   diagnostics/  collecte, historique circulaire et graphiques SVG
+  painting/     outils, persistance locale et file de frames de peinture
   streaming/    framebuffer, primitives, animation pilote et cadence RGB332
   lan/          client HTTP, parseurs et types du serveur local
   particle/     client Cloud, session et types Particle

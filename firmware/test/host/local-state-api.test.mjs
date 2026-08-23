@@ -49,10 +49,8 @@ test("la route state expose mode, reglages, reseau et dernier resultat", () => {
 // ----------------------------------------------------------------------------
 test("les adaptateurs Particle memorisent le dernier code retourne", () => {
   const cloud = readFirmwareSource("src/cloud/command_parser.cpp");
-  const painter = readFirmwareSource("src/animations/cube_painter.cpp");
   const dispatch = readFirmwareSource("src/core/command_dispatch.cpp");
   assert.equal((cloud.match(/return recordCommandResult\(/gu) ?? []).length, 3);
-  assert.equal((painter.match(/return recordCommandResult\(/gu) ?? []).length, 1);
   assert.match(dispatch, /lastCommandResult = result;\s*return result;/u);
 });
 

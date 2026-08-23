@@ -16,14 +16,19 @@
 // Parametres :
 // - frame : 512 octets ranges selon z, puis y, puis x.
 // - frameLength : longueur exacte du corps recu.
+// - holdFrame : vrai pour conserver l'image sans timeout en mode peinture.
 //
 // Retour :
 // - zero en cas de succes ou code LOCAL_API_ERROR en cas de refus.
 //
 // Effet de bord :
-// - remplace le framebuffer logique et declenche un unique showPixels().
+// - remplace le framebuffer logique, choisit la politique de timeout et
+//   declenche un unique showPixels().
 // ----------------------------------------------------------------------------
-int streamApplyFrame(const uint8_t* frame, size_t frameLength);
+int streamApplyFrame(
+    const uint8_t* frame,
+    size_t frameLength,
+    bool holdFrame);
 
 // ----------------------------------------------------------------------------
 // Initialise le delai de securite lors de l'entree dans le mode Stream.

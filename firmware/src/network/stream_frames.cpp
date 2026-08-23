@@ -10,6 +10,9 @@
 // Horodatage de la derniere frame acceptee dans le mode Stream.
 static uint32_t streamLastFrameMillis = 0;
 
+// Indique que la derniere frame provient du peintre et reste affichee.
+static bool streamFrameHeld = false;
+
 // ----------------------------------------------------------------------------
 // Etend une composante sur trois bits vers huit bits.
 //
@@ -36,7 +39,24 @@ static uint8_t streamExpandTwoBits(uint8_t value) {
     return static_cast<uint8_t>(value * 85U);
 }
 
-int streamApplyFrame(const uint8_t* frame, size_t frameLength) {
+// ----------------------------------------------------------------------------
+// Decode et affiche une frame RGB332 avec la politique de timeout demandee.
+//
+// Parametres :
+// - frame : 512 octets ranges selon z, puis y, puis x.
+// - frameLength : longueur exacte du corps recu.
+// - holdFrame : vrai pour conserver l'image sans timeout en mode peinture.
+//
+// Retour :
+// - zero en cas de succes ou code LOCAL_API_ERROR en cas de refus.
+//
+// Effet de bord :
+// - remplace le framebuffer logique et declenche un unique showPixels().
+// ----------------------------------------------------------------------------
+int streamApplyFrame(
+        const uint8_t* frame,
+        size_t frameLength,
+        bool holdFrame) {
     if(currentModeID != STREAM)
         return LOCAL_API_ERROR_STATE;
     if(frame == NULL || frameLength != STREAM_FRAME_BYTES)
@@ -56,24 +76,47 @@ int streamApplyFrame(const uint8_t* frame, size_t frameLength) {
         }
     }
     streamLastFrameMillis = millis();
+    streamFrameHeld = holdFrame;
     showPixels();
     return 0;
 }
 
+// ----------------------------------------------------------------------------
+// Initialise le mode Stream avec son timeout anime par defaut.
+//
+// Effet de bord :
+// - efface le cube, reactive le rendu et annule tout maintien de peinture.
+// ----------------------------------------------------------------------------
 void streamEnter(void) {
     // Un depart depuis Off herite sinon de son drapeau d'execution arrete.
     run = TRUE;
     streamLastFrameMillis = millis();
+    streamFrameHeld = false;
     background(black);
     showPixels();
 }
 
+// ----------------------------------------------------------------------------
+// Termine le mode Stream et efface son dernier rendu.
+//
+// Effet de bord :
+// - annule le maintien de peinture et rend immediatement un cube noir.
+// ----------------------------------------------------------------------------
 void streamExit(void) {
+    streamFrameHeld = false;
     background(black);
     showPixels();
 }
 
+// ----------------------------------------------------------------------------
+// Applique le timeout uniquement aux frames du streaming anime.
+//
+// Effet de bord :
+// - demande le mode Off apres une interruption du flux non maintenu.
+// ----------------------------------------------------------------------------
 void streamTick(void) {
+    if(streamFrameHeld)
+        return;
     if(static_cast<uint32_t>(millis() - streamLastFrameMillis) <
        STREAM_FRAME_TIMEOUT_MS)
         return;

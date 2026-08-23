@@ -57,14 +57,20 @@ test("le mode Stream conserve l'ID 76 et Listener reste archive", () => {
   assert.match(buildConfig, /#define L3D_LISTENER_ENABLED 0/u);
 });
 
-test("le serveur exige exactement 512 octets binaires avant le rendu", () => {
+test("les routes streaming et peinture partagent le rendu de 512 octets binaires", () => {
   const server = readFirmwareSource("src/network/local_api_server.cpp");
   const receiver = readFirmwareSource("src/network/stream_frames.cpp");
   assert.match(server, /"\/api\/v1\/stream\/frame"/u);
+  assert.match(server, /"\/api\/v1\/painter\/frame"/u);
   assert.match(server, /!localApiParser\.contentTypeBinary/u);
-  assert.match(server, /contentTypeBinary[\s\S]*?"\/api\/v1\/stream\/frame"\) != 0/u);
+  assert.match(
+    server,
+    /contentTypeBinary[\s\S]*?"\/api\/v1\/stream\/frame"\) != 0[\s\S]*?"\/api\/v1\/painter\/frame"\) != 0/u,
+  );
   assert.match(server, /localApiParser\.bodyLength != STREAM_FRAME_BYTES/u);
-  assert.match(server, /streamApplyFrame\([\s\S]*?localApiParser\.body/u);
+  assert.match(server, /localApiRouteRgb332Frame\(bool holdFrame\)/u);
+  assert.match(server, /streamApplyFrame\([\s\S]*?localApiParser\.body[\s\S]*?holdFrame/u);
+  assert.match(server, /localApiRouteRgb332Frame\(holdFrame\)/u);
   assert.match(
     server,
     /localApiCommandActive = true;[\s\S]*?streamApplyFrame\([\s\S]*?localApiCommandActive = false;/u,
@@ -73,6 +79,7 @@ test("le serveur exige exactement 512 octets binaires avant le rendu", () => {
   assert.match(receiver, /for\(uint8_t z[\s\S]*?for\(uint8_t y[\s\S]*?for\(uint8_t x/u);
   assert.equal((receiver.match(/showPixels\(\);/gu) ?? []).length, 3);
   assert.doesNotMatch(receiver, /static\s+(?:uint8_t|char)\s+\w+\s*\[\s*512/u);
+  assert.doesNotMatch(receiver, /\b(?:malloc|calloc|realloc|new)\b/u);
 });
 
 test("le decodeur RGB332 couvre noir, blanc et couleurs primaires", () => {
@@ -83,13 +90,20 @@ test("le decodeur RGB332 couvre noir, blanc et couleurs primaires", () => {
   assert.deepEqual(decodeRgb332(0x03), [0, 0, 255]);
 });
 
-test("le mode Stream possede un timeout, une sortie noire et aucune persistance", () => {
+test("le streaming expire mais une frame de peinture reste affichee", () => {
   const receiver = readFirmwareSource("src/network/stream_frames.cpp");
+  const server = readFirmwareSource("src/network/local_api_server.cpp");
   const lifecycle = readFirmwareSource("src/core/animation_lifecycle.cpp");
   const dispatch = readFirmwareSource("src/core/command_dispatch.cpp");
   const runtime = readFirmwareSource("src/core/mode_runtime.cpp");
   assert.match(receiver, /STREAM_FRAME_TIMEOUT_MS/u);
+  assert.match(receiver, /static bool streamFrameHeld = false;/u);
+  assert.match(receiver, /streamFrameHeld = holdFrame;/u);
+  assert.match(receiver, /void streamTick\(void\) \{\s*if\(streamFrameHeld\)\s*return;/u);
+  assert.match(server, /"\/api\/v1\/painter\/frame"\) == 0;[\s\S]*?localApiRouteRgb332Frame\(holdFrame\)/u);
   assert.match(receiver, /void streamEnter\(void\) \{[\s\S]*?run = TRUE;/u);
+  assert.match(receiver, /void streamEnter\(void\) \{[\s\S]*?streamFrameHeld = false;/u);
+  assert.match(receiver, /void streamExit\(void\) \{\s*streamFrameHeld = false;/u);
   assert.match(receiver, /getModeIndexFromID\(STANDBY\)/u);
   assert.match(lifecycle, /modeId == STREAM[\s\S]*?streamExit\(\)/u);
   assert.match(dispatch, /currentModeID != STREAM[\s\S]*?EEPROM\.write\(LASTMODE_START_ADDR/u);

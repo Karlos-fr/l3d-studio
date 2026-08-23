@@ -149,7 +149,6 @@ void setRandomMode(void) {
            (selectedModeID == STANDBY)           ||
            (selectedModeID == CHEERLIGHTS)       ||
 		   (selectedModeID == COLORALL)          ||
-           (selectedModeID == CUBE_PAINTER)      ||
            (selectedModeID == IFTTTWEATHER)      ||
 		   (selectedModeID == POLICELIGHTS)     	||
 		   (selectedModeID == SHUFFLE) 	     	||
@@ -300,11 +299,6 @@ void runMode() {
 			switch1 = random(2);
 		    runCubeClassics(color1, 1);
 	        break;
-		case CUBE_PAINTER:
-		    // Nothing to do; function is called through the Cloud API
-		    showPixels();
-		    delay(100);
-		    break;
 		case CUBES:
 		    cubes(color1, color2, color3, color4);
 		    break;
@@ -645,26 +639,6 @@ void resetVariables(int modeIndex) {
                 randomPackedColor(&whirlwindColors[i]);
             }
 			break;
-        case CUBE_PAINTER:
-		{
-            unsigned char red, green, blue;
-			transitionAll(black,LINEAR);
-
-            // `transitionAll()` partage ce buffer comme scratch ; l'image de
-            // reference de CubePainter reste celle persistee dans l'EEPROM.
-            EEPROM.get(PAINTER_START_ADDR, drawingBuffer);
-            
-            // (If there's color data previously stored, there's nothing to do)
-            // In either case, redraw the cube with the color data from the buffer array
-            for(int i=0; i<(PIXEL_CNT*BPP); i+=BPP) {
-                red = drawingBuffer[i];
-                green = drawingBuffer[i+1];
-                blue = drawingBuffer[i+2];
-                if((red + green + blue) > 0)
-                    strip.setPixelColor(i/3, red, green, blue);
-            }
-			break;
-		}
      	case COLORALL:
 			break;
 		case CRUMBLE:

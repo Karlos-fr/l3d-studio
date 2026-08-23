@@ -15,21 +15,20 @@
 // - method : courbe LINEAR ou POLAR utilisee par l'interpolation historique.
 //
 // Effet de bord :
-// - utilise temporairement `drawingBuffer`, affiche huit etapes et traite les
+// - utilise temporairement `sharedRgbScratch`, affiche huit etapes et traite les
 //   evenements Particle entre les affichages.
 // ----------------------------------------------------------------------------
 void transitionAll(Color endColor, uint16_t method) {
     // Nombre historique d'étapes affichées par une transition globale.
     const uint8_t numSteps = 8;
-    // Le buffer RGB persistant de CubePainter sert ici de scratch. Cette duree
-    // de vie exclusive retire 2 048 octets de la pile sans second framebuffer.
-    // CubePainter recharge ensuite son contenu depuis l'EEPROM a son entree.
+    // Le scratch RGB partage retire 2 048 octets de la pile sans second
+    // framebuffer. Sa duree de vie reste exclusive des animations actives.
     for(int index = 0; index < strip.numPixels(); index++) {
         Color startColor = getColorFromInteger(strip.getPixelColor(index));
         int offset = index * BPP;
-        drawingBuffer[offset] = startColor.red;
-        drawingBuffer[offset + 1] = startColor.green;
-        drawingBuffer[offset + 2] = startColor.blue;
+        sharedRgbScratch[offset] = startColor.red;
+        sharedRgbScratch[offset + 1] = startColor.green;
+        sharedRgbScratch[offset + 2] = startColor.blue;
     }
 
     for(uint8_t step = 1; step <= numSteps; step++) {
@@ -44,9 +43,9 @@ void transitionAll(Color endColor, uint16_t method) {
         for(uint16_t index = 0; index < strip.numPixels(); index++) {
             int offset = index * BPP;
             Color startColor = Color(
-                drawingBuffer[offset],
-                drawingBuffer[offset + 1],
-                drawingBuffer[offset + 2]);
+                sharedRgbScratch[offset],
+                sharedRgbScratch[offset + 1],
+                sharedRgbScratch[offset + 2]);
             transitionHelper(
                 startColor,
                 endColor,

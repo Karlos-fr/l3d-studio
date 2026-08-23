@@ -326,3 +326,23 @@ de mémoire runtime après plusieurs heures de streaming n'a été relevée : le
 tests d'endurance, la coupure Wi-Fi prolongée et la validation visuelle complète
 restent explicitement ouverts en phase 9. Aucun succès d'endurance n'est déduit
 de cette archive documentaire.
+
+## Remplacement de CubePainter — 23 août 2026
+
+Le binaire précédent incluant la route de peinture LAN et l'ancien CubePainter
+occupait 123 712 octets de Flash et 15 228 octets de RAM statique. Après retrait
+du mode, du callback Particle, du parseur texte et des écritures EEPROM :
+
+| Variante Photon 2.3.1 | Flash | RAM statique | Binaire | Marge Flash |
+| --- | ---: | ---: | ---: | ---: |
+| Peinture LAN avec CubePainter historique | 123 712 | 15 228 | 123 716 | 7 360 |
+| Peinture LAN seule | 122 688 | 15 228 | 122 692 | 8 384 |
+| Écart | **-1 024** | **0** | **-1 024** | **+1 024** |
+
+La suite hôte compte 181 tests réussis. Le binaire a été flashé sur
+`chicken_turkey` et testé avec `M:Stream,S:0,B:1,`. Une frame RGB332 de 512
+octets contenant des voxels rouge, vert et bleu aux index 0, 7 et 511 a renvoyé
+HTTP 200. Après cinq secondes sans nouvelle requête, `/state` indiquait encore
+`Stream`, ce qui valide le maintien au-delà du timeout animé de trois secondes.
+L'ancienne route `/cube-painter` a renvoyé 404 et le cube a ensuite été remis
+sur `M:Off,S:0,B:1,`.

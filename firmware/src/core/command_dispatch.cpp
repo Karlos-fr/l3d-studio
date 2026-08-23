@@ -590,8 +590,8 @@ int setNewMode(int newModeIndex) {
     if(animationSchedulerDeferModeChange(newModeIndex))
         return newModeIndex;
 
-    // CubePainter et Listener ne doivent pas etre interrompus par une alerte IFTTT.
-    if((currentModeID == CUBE_PAINTER || currentModeID == LISTENER) && modeStruct[newModeIndex].modeId == IFTTTWEATHER) 
+    // Listener ne doit pas etre interrompu par une alerte IFTTT.
+    if(currentModeID == LISTENER && modeStruct[newModeIndex].modeId == IFTTTWEATHER)
         return getModeIndexFromID(currentModeID);
     
     if(currentModeID != IFTTTWEATHER && currentModeID != STANDBY && currentModeID != STREAM

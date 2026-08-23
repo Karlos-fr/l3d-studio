@@ -9,7 +9,7 @@ Les premières cibles de tests après le découpage mécanique seront :
 - validation des commandes `FnRouter` ;
 - mapping logique `x,y,z` vers index LED ;
 - compatibilité des listes de modes ;
-- validation des bornes CubePainter ;
+- validation du remplacement de CubePainter par les frames RGB332 ;
 - migration du layout EEPROM.
 
 Aucun framework de test C++ n'est ajouté pendant la baseline afin de ne pas
@@ -23,6 +23,6 @@ node --test firmware/test/host/*.test.mjs
 ```
 
 Ces tests couvrent les fixtures historiques, les commandes vides, maximales,
-tronquées et malformées, les bornes CubePainter, les invariants statiques des
+tronquées et malformées, les bornes RGB332, les invariants statiques des
 buffers partagés, le mapping des 512 voxels et les comparaisons numériques de
 phase 4. La compilation cloud reste le test autoritatif du C++ Particle.

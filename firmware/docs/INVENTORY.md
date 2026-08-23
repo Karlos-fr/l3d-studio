@@ -3,6 +3,10 @@
 Cet inventaire décrit la baseline importée dans `firmware/src/main.cpp`. Il
 ne constitue pas encore une nouvelle architecture.
 
+> Mise à jour du 23 août 2026 : CubePainter a été retiré du firmware actif et
+> remplacé par `/api/v1/painter/frame`. Les mentions détaillées plus bas sont
+> conservées uniquement comme inventaire de la baseline historique.
+
 ## Modes actifs
 
 Les capacités proviennent directement de `modeStruct`. `Texte` indique si le
@@ -28,7 +32,7 @@ mode accepte le segment `W:` dans `SetMode`.
 | 57 | `CRUMBLE` | CrumblingPlane | 0 | 0 | non |
 | 29 | `CUBES` | Cubes | 4 | 4 | non |
 | 34 | `CUBE_CLASSICS` | CubeClassics | 1 | 1 | non |
-| 33 | `CUBE_PAINTER` | CubePainter | 0 | 0 | non |
+| 33 | `RESERVED_CUBE_PAINTER_ID` | réservé, non publié | 0 | 0 | non |
 | 69 | `DIAGONAL_PLANES` | DiagonalPlanes | 0 | 0 | non |
 | 36 | `DIGI` | Digi | 1 | 3 | non |
 | 17 | `TWOCOLORCHASE` | DualChase | 2 | 0 | non |

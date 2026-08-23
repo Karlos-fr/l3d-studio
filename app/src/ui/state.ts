@@ -21,10 +21,15 @@ import type { LanBytecodeStatus } from "../lan/types";
 import type { BytecodeLibraryEntry } from "../bytecode/library";
 import { BYTECODE_REFERENCE_PROGRAMS } from "../bytecode/reference_programs";
 import type { BytecodeSimulationSnapshot } from "../bytecode/simulation";
+import type { PainterTool } from "../painting/model";
+
+// Deux ateliers partagent le transport et l'apercu du panneau Streaming.
+export type StreamingWorkspace = "animations" | "painting";
 
 // Etat visible de la session de streaming web.
 export interface StreamingUiState {
   active: boolean;
+  workspace: StreamingWorkspace;
   selectedAnimationId: string;
   targetFps: StreamingFps;
   movementStepsPerSecond: number;
@@ -33,6 +38,8 @@ export interface StreamingUiState {
   droppedFrames: number;
   measuredFps: number;
   statusMessage: string;
+  painterTool: PainterTool;
+  painterColor: string;
 }
 
 // Etat visible de l'editeur et de la VM procedurale.
@@ -158,6 +165,7 @@ export function createInitialState(
     },
     streaming: {
       active: false,
+      workspace: "animations",
       selectedAnimationId: DEFAULT_STREAMING_ANIMATION_ID,
       targetFps: 10,
       movementStepsPerSecond: 10,
@@ -166,6 +174,8 @@ export function createInitialState(
       droppedFrames: 0,
       measuredFps: 0,
       statusMessage: "Streaming arrêté.",
+      painterTool: "draw",
+      painterColor: "#2dd4bf",
     },
     bytecode: {
       selectedSourceKey: `example:${initialProgram.id}`,

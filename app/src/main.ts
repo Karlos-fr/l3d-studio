@@ -22,7 +22,10 @@ import { createStreamingEngine, type StreamingFps } from "./streaming/engine";
 import { createStreamingAnimation, getStreamingAnimationLabel } from "./streaming/registry";
 import type { StreamingAnimation } from "./streaming/animation";
 import type { LanClient } from "./lan/types";
-import { updateStreamingView } from "./ui/streaming_render";
+import {
+  selectStreamingPreviewMode,
+  updateStreamingView,
+} from "./ui/streaming_render";
 import { assembleBytecodeSource } from "./bytecode/assembler";
 import { readBytecodeUint16 } from "./bytecode/crc16";
 import { BYTECODE_CRC_OFFSET } from "./bytecode/format";
@@ -43,6 +46,15 @@ import {
   type BytecodeSimulationSnapshot,
 } from "./bytecode/simulation";
 import type { StreamingFramebuffer } from "./streaming/framebuffer";
+import { serializeRgb332 } from "./streaming/serializer";
+import {
+  loadPainterFramebuffer,
+  paintVoxel,
+  savePainterFramebuffer,
+  type PainterTool,
+} from "./painting/model";
+import { PainterFrameSender } from "./painting/sender";
+import type { StreamingWorkspace } from "./ui/state";
 import { validateBytecodeContainer } from "./bytecode/validator";
 import {
   updateBytecodePreview,
@@ -85,6 +97,9 @@ function bootstrapApplication(): void {
   const state = createInitialState(session, preferences);
   state.bytecode.library = loadBytecodeLibrary(window.localStorage);
 
+  // Framebuffer du peintre restaure independamment de l'animation courante.
+  const painterFramebuffer = loadPainterFramebuffer(window.localStorage);
+
   // ----------------------------------------------------------------------------
   // Synchronise une tranche de simulation avec l'etat et l'apercu existants.
   //
@@ -110,6 +125,12 @@ function bootstrapApplication(): void {
 
   // Client LAN propre a la session de streaming courante.
   let streamingLanClient: LanClient | null = null;
+
+  // File bornee qui regroupe les coups de pinceau sans POST concurrents.
+  const painterFrameSender = new PainterFrameSender(
+    sendPainterFrame,
+    handlePainterSendError,
+  );
 
   // Derniere luminosite a appliquer apres la frame HTTP actuellement en cours.
   let pendingStreamingBrightness: number | null = null;
@@ -146,6 +167,56 @@ function bootstrapApplication(): void {
     },
     onError: handleStreamingError,
   });
+
+  // ----------------------------------------------------------------------------
+  // Retourne le framebuffer correspondant a l'atelier visible.
+  //
+  // Retour :
+  // - dessin local ou frame courante de l'animation web.
+  // ----------------------------------------------------------------------------
+  function getStreamingPreviewFramebuffer(): StreamingFramebuffer {
+    return state.streaming.workspace === "painting"
+      ? painterFramebuffer
+      : streamingEngine.getFramebuffer();
+  }
+
+  // ----------------------------------------------------------------------------
+  // Envoie une frame differee par la route de peinture du client courant.
+  //
+  // Parametres :
+  // - frame : payload RGB332 complet produit par la file bornee.
+  //
+  // Effet de bord :
+  // - execute un POST LAN sans nouvelle tentative automatique.
+  // ----------------------------------------------------------------------------
+  async function sendPainterFrame(frame: Uint8Array): Promise<void> {
+    if (streamingLanClient === null) {
+      throw new Error("Aucune destination LAN n'est configurée pour la peinture.");
+    }
+    await streamingLanClient.painterFrame(frame);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Arrete la session lorsqu'un envoi differe du peintre echoue.
+  //
+  // Parametres :
+  // - error : erreur reseau ou de protocole recue par la file.
+  //
+  // Effet de bord :
+  // - desactive les futurs envois et actualise uniquement le panneau visible.
+  // ----------------------------------------------------------------------------
+  function handlePainterSendError(error: unknown): void {
+    painterFrameSender.disable();
+    state.streaming.active = false;
+    streamingLanClient = null;
+    state.streaming.statusMessage = error instanceof LanClientError
+      ? "Peinture interrompue : vérifie l'adresse LAN et le firmware du Photon."
+      : error instanceof Error
+        ? `Peinture interrompue : ${error.message}`
+        : "Peinture interrompue par une erreur inconnue.";
+    state.statusMessage = state.streaming.statusMessage;
+    updateStreamingView(mountedRootElement, state, painterFramebuffer);
+  }
 
   // ----------------------------------------------------------------------------
   // Convertit un echec de streaming en instruction directement exploitable.
@@ -225,6 +296,44 @@ function bootstrapApplication(): void {
   }
 
   // ----------------------------------------------------------------------------
+  // Selectionne Stream puis envoie le dessin courant en mode maintenu.
+  //
+  // Effet de bord :
+  // - ouvre le client LAN, confirme le mode 76 et active la file du peintre.
+  // ----------------------------------------------------------------------------
+  async function startPainting(): Promise<void> {
+    try {
+      state.isBusy = true;
+      const host = normalizeLanHost(state.lanHost);
+      const port = normalizeLanPort(state.lanPort);
+      streamingLanClient = createLanClient({ host, port });
+      state.streaming.statusMessage = "Activation du mode peinture...";
+      rerender();
+      await streamingLanClient.mode(
+        `M:Stream,S:0,B:${state.streaming.brightnessPercent},`,
+      );
+      const streamState = await streamingLanClient.state();
+      if (streamState.modeId !== STREAM_MODE_ID) {
+        throw new Error("Le Photon n'a pas confirmé l'activation du mode Stream.");
+      }
+      await streamingLanClient.painterFrame(serializeRgb332(painterFramebuffer));
+      painterFrameSender.enable();
+      state.streaming.active = true;
+      state.streaming.statusMessage = "Dessin affiché sur le cube.";
+      state.lastTransportUsed = "lan";
+      state.currentModeName = "Stream";
+      state.isBusy = false;
+      rerender();
+    } catch (error) {
+      state.isBusy = false;
+      painterFrameSender.disable();
+      streamingLanClient = null;
+      handlePainterSendError(error);
+      rerender();
+    }
+  }
+
+  // ----------------------------------------------------------------------------
   // Selectionne le mode Stream puis lance la cadence du navigateur.
   //
   // Parametres :
@@ -234,6 +343,10 @@ function bootstrapApplication(): void {
   // - appelle le Photon sur le LAN et demarre le moteur apres confirmation.
   // ----------------------------------------------------------------------------
   async function startStreaming(targetFps: StreamingFps): Promise<void> {
+    if (state.streaming.workspace === "painting") {
+      await startPainting();
+      return;
+    }
     try {
       state.isBusy = true;
       const host = normalizeLanHost(state.lanHost);
@@ -279,8 +392,11 @@ function bootstrapApplication(): void {
   // ----------------------------------------------------------------------------
   function stopStreaming(returnToOff = true): void {
     const wasActive = state.streaming.active;
+    const wasPainting = state.streaming.workspace === "painting";
     streamingEngine.stop();
-    state.streaming.statusMessage = "Streaming arrêté.";
+    painterFrameSender.disable();
+    state.streaming.active = false;
+    state.streaming.statusMessage = wasPainting ? "Peinture arrêtée." : "Streaming arrêté.";
     if (returnToOff && wasActive && streamingLanClient !== null) {
       void streamingLanClient.mode("M:Off,S:0,B:1,").catch(() => {
         // Le timeout firmware ramene egalement le cube a Off si cette commande echoue.
@@ -292,7 +408,92 @@ function bootstrapApplication(): void {
       window.clearTimeout(streamingBrightnessTimer);
       streamingBrightnessTimer = null;
     }
-    updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
+    updateStreamingView(mountedRootElement, state, getStreamingPreviewFramebuffer());
+  }
+
+  // ----------------------------------------------------------------------------
+  // Selectionne l'atelier d'animation ou de peinture.
+  //
+  // Parametres :
+  // - workspace : atelier demande par son onglet.
+  //
+  // Effet de bord :
+  // - arrete une session active, choisit une vue adaptee et reconstruit le panneau.
+  // ----------------------------------------------------------------------------
+  function selectStreamingWorkspace(workspace: StreamingWorkspace): void {
+    if (workspace === state.streaming.workspace) return;
+    if (state.streaming.active) stopStreaming();
+    state.streaming.workspace = workspace;
+    state.streaming.statusMessage = workspace === "painting"
+      ? "Brouillon prêt. Affiche-le sur le cube quand tu le souhaites."
+      : "Streaming arrêté.";
+    selectStreamingPreviewMode(workspace === "painting" ? "layers" : "3d");
+    rerender();
+  }
+
+  // ----------------------------------------------------------------------------
+  // Selectionne le crayon ou la gomme sans modifier le dessin.
+  //
+  // Parametres :
+  // - tool : outil demande par l'utilisateur.
+  // ----------------------------------------------------------------------------
+  function selectPainterTool(tool: PainterTool): void {
+    state.streaming.painterTool = tool;
+    rerender();
+  }
+
+  // ----------------------------------------------------------------------------
+  // Persiste le brouillon courant en signalant un stockage indisponible.
+  //
+  // Retour :
+  // - vrai lorsque localStorage a accepte le dessin.
+  // ----------------------------------------------------------------------------
+  function persistPainterFramebuffer(): boolean {
+    try {
+      savePainterFramebuffer(window.localStorage, painterFramebuffer);
+      return true;
+    } catch {
+      state.streaming.statusMessage = "Dessin modifié, mais son stockage local a échoué.";
+      return false;
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Applique l'outil courant a un voxel de la vue par couches.
+  //
+  // Parametres :
+  // - x, y, z : coordonnees logiques choisies par le pointeur.
+  //
+  // Effet de bord :
+  // - modifie et sauvegarde le brouillon puis programme son envoi si actif.
+  // ----------------------------------------------------------------------------
+  function paintStreamingVoxel(x: number, y: number, z: number): void {
+    if (state.isBusy) return;
+    const changed = paintVoxel(
+      painterFramebuffer,
+      x,
+      y,
+      z,
+      state.streaming.painterColor,
+      state.streaming.painterTool,
+    );
+    if (!changed) return;
+    persistPainterFramebuffer();
+    painterFrameSender.schedule(painterFramebuffer);
+    updateStreamingView(mountedRootElement, state, painterFramebuffer);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Efface, sauvegarde et eventuellement envoie le dessin complet.
+  //
+  // Effet de bord :
+  // - met les 512 voxels a noir sans modifier l'outil courant.
+  // ----------------------------------------------------------------------------
+  function clearPainter(): void {
+    painterFramebuffer.clear();
+    persistPainterFramebuffer();
+    painterFrameSender.schedule(painterFramebuffer);
+    updateStreamingView(mountedRootElement, state, painterFramebuffer);
   }
 
   // ----------------------------------------------------------------------------
@@ -674,10 +875,14 @@ function bootstrapApplication(): void {
       updateStreamingCadence,
       updateStreamingSettings,
       stopStreaming,
+      selectStreamingWorkspace,
+      selectPainterTool,
+      paintStreamingVoxel,
+      clearPainter,
       handleBytecodeAction,
       handleBytecodeField,
     });
-    updateStreamingView(mountedRootElement, state, streamingEngine.getFramebuffer());
+    updateStreamingView(mountedRootElement, state, getStreamingPreviewFramebuffer());
     updateBytecodePreview(mountedRootElement, bytecodeSimulation.framebuffer);
   }
 
@@ -714,6 +919,10 @@ function bootstrapApplication(): void {
     updateStreamingCadence,
     updateStreamingSettings,
     stopStreaming,
+    selectStreamingWorkspace,
+    selectPainterTool,
+    paintStreamingVoxel,
+    clearPainter,
     handleBytecodeAction,
     handleBytecodeField,
   });

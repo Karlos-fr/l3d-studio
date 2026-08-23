@@ -102,7 +102,7 @@ test("le parseur Cloud travaille directement sur le buffer Particle", () => {
 // ----------------------------------------------------------------------------
 // Verifie que String reste limite aux signatures imposees par Particle Cloud.
 // ----------------------------------------------------------------------------
-test("String reste uniquement aux quatre frontieres Cloud", () => {
+test("String reste uniquement aux trois frontieres Cloud", () => {
   // Toutes les sources afin de compter les definitions de callbacks Particle.
   let definitions = "";
   for (const sourcePath of listSources(sourceRoot)) {
@@ -110,11 +110,11 @@ test("String reste uniquement aux quatre frontieres Cloud", () => {
       definitions += `${fs.readFileSync(sourcePath, "utf8")}\n`;
     }
   }
-  // Signatures autorisees : les quatre callbacks imposes par Particle.
+  // Signatures autorisees : les trois callbacks imposes par Particle.
   const stringSignatures = [...definitions.matchAll(
-    /(?:SetMode\(String|FnRouter\(String|SetText\(String|CubePainter\(String)/gu,
+    /(?:SetMode\(String|FnRouter\(String|SetText\(String)/gu,
   )];
-  assert.equal(stringSignatures.length, 4);
+  assert.equal(stringSignatures.length, 3);
   assert.doesNotMatch(
     stripComments(definitions),
     /\bString\s+[A-Za-z_][A-Za-z0-9_]*\s*[=;]/u,

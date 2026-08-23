@@ -51,7 +51,7 @@ function runLanClientTests(): void {
   });
 
   // --------------------------------------------------------------------------
-  // Verifie les lectures et les quatre routes de commande.
+  // Verifie les lectures, les trois commandes texte et les deux routes RGB332.
   // --------------------------------------------------------------------------
   it("appelle chaque route avec sa methode et son corps exacts", async () => {
     const calls: FetchCall[] = [];
@@ -65,7 +65,7 @@ function runLanClientTests(): void {
       createTextResponse("v=1\nresult=1\n"),
       createTextResponse("v=1\nresult=2\n"),
       createTextResponse("v=1\nresult=3\n"),
-      createTextResponse("v=1\nresult=4\n"),
+      createTextResponse("v=1\nresult=0\n"),
       createTextResponse("v=1\nresult=0\n"),
     ];
     const client = createLanClient({
@@ -82,10 +82,10 @@ function runLanClientTests(): void {
     await client.command("GETCOLOR:1");
     await client.mode("M:Off,B:1,");
     await client.text("Bonjour");
-    await client.cubePainter("I0,#000000,");
     const streamFrame = new Uint8Array(512);
     streamFrame[7] = 0xe0;
     await client.streamFrame(streamFrame);
+    await client.painterFrame(streamFrame);
 
     expect(calls.map((call) => call.url)).toEqual([
       "http://photon.local:8080/api/v1/health",
@@ -97,12 +97,14 @@ function runLanClientTests(): void {
       "http://photon.local:8080/api/v1/command",
       "http://photon.local:8080/api/v1/mode",
       "http://photon.local:8080/api/v1/text",
-      "http://photon.local:8080/api/v1/cube-painter",
       "http://photon.local:8080/api/v1/stream/frame",
+      "http://photon.local:8080/api/v1/painter/frame",
     ]);
     expect(calls[2]?.init?.method).toBe("POST");
     expect(calls[7]?.init?.body).toBe("M:Off,B:1,");
     expect(calls[7]?.init?.method).toBe("POST");
+    expect(calls[9]?.init?.headers).toEqual({ "Content-Type": "application/octet-stream" });
+    expect(new Uint8Array(calls[9]?.init?.body as ArrayBuffer)[7]).toBe(0xe0);
     expect(calls[10]?.init?.headers).toEqual({ "Content-Type": "application/octet-stream" });
     expect(new Uint8Array(calls[10]?.init?.body as ArrayBuffer)[7]).toBe(0xe0);
   });

@@ -120,10 +120,10 @@ export interface LanClient {
   mode(command: string): Promise<LanCommandResponse>;
   // Persiste le texte du firmware.
   text(text: string): Promise<LanCommandResponse>;
-  // Applique une commande CubePainter.
-  cubePainter(command: string): Promise<LanCommandResponse>;
   // Envoie une frame RGB332 sans nouvelle tentative automatique.
   streamFrame(frame: Uint8Array, signal?: AbortSignal): Promise<LanCommandResponse>;
+  // Envoie une frame RGB332 maintenue pour l'editeur de peinture.
+  painterFrame(frame: Uint8Array, signal?: AbortSignal): Promise<LanCommandResponse>;
   // Lit les capacites et le programme bytecode eventuellement installe.
   bytecodeStatus(): Promise<LanBytecodeStatus>;
   // Relit le conteneur binaire persistant.

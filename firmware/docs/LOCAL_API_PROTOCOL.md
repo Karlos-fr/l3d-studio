@@ -59,7 +59,7 @@ curl.exe -X POST -H "Content-Length: 0" "$api/diagnostics/reset"
 curl.exe -H "Content-Type: text/plain" --data-binary "GETSWITCHSTATE:1" "$api/command"
 curl.exe -H "Content-Type: text/plain" --data-binary "M:ColorAll,S:4,B:1,C1:0000FF," "$api/mode"
 curl.exe -H "Content-Type: text/plain" --data-binary "Bonjour" "$api/text"
-curl.exe -H "Content-Type: text/plain" --data-binary "I511,#FF0000," "$api/cube-painter"
+curl.exe -H "Content-Type: application/octet-stream" --data-binary "@frame.rgb332" "$api/painter/frame"
 curl.exe "$api/bytecode"
 curl.exe -H "Content-Type: application/octet-stream" --data-binary "@programme.l3d.bin" "$api/bytecode/program"
 ```
@@ -257,7 +257,6 @@ Les endpoints de commande reçoivent directement le corps texte historique :
 | `POST /api/v1/command` | Commande destinée à `FnRouter` |
 | `POST /api/v1/mode` | Commande destinée à `SetMode` |
 | `POST /api/v1/text` | Texte destiné à `SetText` |
-| `POST /api/v1/cube-painter` | Commande destinée à `CubePainter` |
 
 Exemple de corps pour `/api/v1/mode` :
 
@@ -283,11 +282,14 @@ result=-103
 Le client ne doit pas renvoyer automatiquement un `POST` après un timeout : la
 commande a pu être appliquée avant la perte de la réponse.
 
-### Frame de streaming web
+### Frames RGB332 de streaming et de peinture
 
-`POST /api/v1/stream/frame`
+```text
+POST /api/v1/stream/frame
+POST /api/v1/painter/frame
+```
 
-Cette route exige simultanement :
+Ces routes exigent simultanement :
 
 - le mode courant `Stream`, ID 76 ;
 - `Content-Type: application/octet-stream` sans parametre ;
@@ -306,6 +308,12 @@ result=0
 Une longueur differente jusqu'a la capacite HTTP retourne `400`. Un corps qui
 depasse la capacite HTTP retourne `413`. Le type incorrect retourne `415` et
 une frame recue hors du mode Stream retourne `409` avec le code `-208`.
+
+Les deux routes partagent exactement le même décodeur, les mêmes coordonnées et
+les mêmes erreurs. `/stream/frame` revient à `Off` après trois secondes sans
+nouvelle frame. `/painter/frame` maintient au contraire la dernière image sans
+requête périodique, jusqu'au changement de mode ou au redémarrage. Cette image
+n'est pas persistée dans l'EEPROM.
 
 ### Animations procédurales bytecode
 
@@ -407,7 +415,7 @@ et [MDN — timers inactifs](https://developer.mozilla.org/docs/Web/API/Window/s
 
 La version 1 ne possède ni authentification, ni appairage, ni autorisation par
 commande, ni TLS. Toute machine pouvant joindre le port 8080 peut lire l'état,
-changer de mode, modifier le texte, écrire via CubePainter, remettre les
+changer de mode, modifier le texte, peindre une frame, remettre les
 diagnostics à zéro et envoyer des frames. Le joker CORS `*` est cohérent avec
 ce choix temporaire ; il ne constitue pas une protection.
 

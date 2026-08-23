@@ -418,7 +418,6 @@ void setup() {
     Particle.function("Function",     FnRouter);
     Particle.function("SetMode",      SetMode);
     Particle.function("SetText",      SetText);
-    Particle.function("CubePainter",  CubePainter);
     
     Particle.variable("micValue",     micValue);
     Particle.variable("debug",        debug);
@@ -584,7 +583,7 @@ void loop() {
 
 #include "animations/digi.cpp"
 
-#include "animations/cube_painter.cpp"
+#include "animations/color_all.cpp"
 
 #include "network/cheerlights.cpp"
 

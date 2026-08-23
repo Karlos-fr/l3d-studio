@@ -62,7 +62,6 @@ export function createLanTransport(client: LanClient): SparkPixelsTransport {
     sendCommand: (command) => mapLanCommand(client.command(command)),
     sendMode: (command) => mapLanCommand(client.mode(command)),
     sendText: (text) => mapLanCommand(client.text(text)),
-    sendCubePainter: (command) => mapLanCommand(client.cubePainter(command)),
   };
 }
 

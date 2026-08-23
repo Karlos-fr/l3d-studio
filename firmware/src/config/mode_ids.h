@@ -35,7 +35,8 @@
 #define RAIN                         30 //credit: Kevin Carlborg, Werner Moecke (Matrix Mode)
 #define CHEERLIGHTS                  31 //credit: Alex Hornstein, Werner Moecke (stability fixes, extra transition effects)
 #define FILLER                       32 //credit: Werner Moecke (based on idea by Alex Hornstein)
-#define CUBE_PAINTER                 33 //credit: Werner Moecke (based on idea by Alex Hornstein)
+// Identifiant historique reserve : ne jamais le reutiliser pour un autre mode.
+#define RESERVED_CUBE_PAINTER_ID     33
 #define CUBE_CLASSICS                34 //credit: http://www.instructables.com/id/Led-Cube-8x8x8/, Kevin Carlborg (L3D Cube port)
 #define IFTTTWEATHER                 35 //credit: Kevin Carlborg, Werner Moecke (code improvements)
 #define DIGI                         36 //credit: Kevin Carlborg

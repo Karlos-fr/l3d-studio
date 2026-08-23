@@ -50,14 +50,13 @@ function extractFunction(source, signature, nextSignature) {
 }
 
 // ----------------------------------------------------------------------------
-// Verifie que les quatre routes appellent exclusivement le coeur de phase 1.
+// Verifie que les trois routes texte appellent exclusivement le coeur commun.
 // ----------------------------------------------------------------------------
-test("les routes LAN partagent les quatre fonctions metier Particle", () => {
+test("les routes LAN partagent les trois fonctions metier Particle", () => {
   const server = readFirmwareSource("src/network/local_api_server.cpp");
   assert.match(server, /localApiRouteCommand\(routeCommandFromBuffer\)/u);
   assert.match(server, /localApiRouteCommand\(setModeFromBuffer\)/u);
   assert.match(server, /localApiRouteCommand\(setTextFromBuffer\)/u);
-  assert.match(server, /localApiRouteCommand\(cubePainterFromBuffer\)/u);
   assert.doesNotMatch(server, /\b(?:FnRouter|SetMode|SetText|CubePainter)\s*\(/u);
 });
 

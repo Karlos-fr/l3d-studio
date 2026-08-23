@@ -26,7 +26,7 @@ version 1.4 ; leurs interfaces navigables sont dans les fichiers .h voisins.
 | 57 | `CRUMBLE` | CrumblingPlane | `src/animations/crumble.cpp` |
 | 29 | `CUBES` | Cubes | `src/animations/cubes.cpp` |
 | 34 | `CUBE_CLASSICS` | CubeClassics | `src/animations/cube_classics.cpp` |
-| 33 | `CUBE_PAINTER` | CubePainter | `src/animations/cube_painter.cpp` |
+| 33 | `RESERVED_CUBE_PAINTER_ID` | réservé, non publié | aucun |
 | 69 | `DIAGONAL_PLANES` | DiagonalPlanes | `src/animations/cube_classics.cpp` |
 | 36 | `DIGI` | Digi | `src/animations/digi.cpp` |
 | 17 | `TWOCOLORCHASE` | DualChase | `src/animations/classic_color_effects.cpp` |
