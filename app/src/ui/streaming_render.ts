@@ -15,6 +15,30 @@ const STREAMING_PANEL_SELECTOR = "[data-streaming-panel]";
 // Hauteur minimale qui protege la lisibilite du cube et des couches.
 const STREAMING_PREVIEW_MINIMUM_HEIGHT = 260;
 
+// Densite maximale du bitmap afin de borner le cout des grands ecrans HiDPI.
+const STREAMING_PREVIEW_MAXIMUM_PIXEL_RATIO = 1.5;
+
+// Centre geometrique des coordonnees zero a sept utilise par la projection.
+const STREAMING_PREVIEW_CUBE_CENTER = 3.5;
+
+// Opacite des reperes eteints afin de voir les voxels places derriere eux.
+const STREAMING_OFF_VOXEL_OPACITY = 0.12;
+
+// Opacite des voxels lumineux qui conserve couleur et profondeur visibles.
+const STREAMING_LIT_VOXEL_OPACITY = 0.68;
+
+// Taille fixe des sprites rasterises une seule fois pour chaque couleur RGB332.
+const STREAMING_VOXEL_SPRITE_SIZE = 48;
+
+// Demi-largeur du cube dessine dans le sprite de reference.
+const STREAMING_VOXEL_SPRITE_HALF_WIDTH = 9;
+
+// Position verticale du centre projete dans le sprite de reference.
+const STREAMING_VOXEL_SPRITE_ANCHOR_Y = 18;
+
+// Sprites bornes aux 256 couleurs physiques plus le repere eteint.
+const streamingVoxelSpriteCache = new Map<number, HTMLCanvasElement>();
+
 // Deux representations disponibles sans modifier la frame source.
 type StreamingPreviewMode = "3d" | "layers";
 
@@ -39,10 +63,26 @@ interface StreamingPreviewVoxel {
   screenX: number;
   screenY: number;
   depth: number;
+  componentIndex: number;
   red: number;
   green: number;
   blue: number;
 }
+
+// Projection triee reutilisee tant que camera et dimensions restent stables.
+const cachedStreamingProjection: StreamingPreviewVoxel[] = [];
+
+// Largeur CSS associee a la projection mise en cache.
+let cachedStreamingProjectionWidth = 0;
+
+// Hauteur CSS associee a la projection mise en cache.
+let cachedStreamingProjectionHeight = 0;
+
+// Orientation horizontale associee a la projection mise en cache.
+let cachedStreamingProjectionYaw = Number.NaN;
+
+// Orientation verticale associee a la projection mise en cache.
+let cachedStreamingProjectionPitch = Number.NaN;
 
 // Geometrie partagee entre le dessin des couches et leur hit-test.
 interface StreamingLayerLayout {
@@ -390,7 +430,7 @@ function drawStreamingThreeDimensional(
 ): void {
   const context = canvas.getContext("2d");
   if (context === null) return;
-  const pixelRatio = window.devicePixelRatio || 1;
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, STREAMING_PREVIEW_MAXIMUM_PIXEL_RATIO);
   const cssWidth = Math.max(canvas.clientWidth, 280);
   const cssHeight = Math.max(canvas.clientHeight, STREAMING_PREVIEW_MINIMUM_HEIGHT);
   const bitmapWidth = Math.round(cssWidth * pixelRatio);
@@ -424,35 +464,116 @@ function drawStreamingThreeDimensional(
   const projectionScale = Math.min(cssWidth, cssHeight) * 0.112;
   drawStreamingCubeFrame(context, centerX, centerY, projectionScale);
 
-  // Liste triee en profondeur afin de masquer correctement les faces arriere.
-  const projectedVoxels: StreamingPreviewVoxel[] = [];
+  // La geometrie et son tri ne changent pas pendant une animation sans rotation.
+  const projectedVoxels = getCachedStreamingProjection(
+    cssWidth,
+    cssHeight,
+    centerX,
+    centerY,
+    projectionScale,
+  );
+  updateStreamingProjectionColors(projectedVoxels, framebuffer.colors);
+  for (const voxel of projectedVoxels) {
+    drawStreamingVoxel(context, voxel, projectionScale * 0.31);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Retourne la projection triee et ne la reconstruit qu'apres rotation ou resize.
+//
+// Parametres :
+// - cssWidth, cssHeight : dimensions courantes de la surface.
+// - centerX, centerY : centre de projection en pixels CSS.
+// - projectionScale : pixels CSS correspondant a une unite logique.
+//
+// Retour :
+// - tableau stable des 512 positions classees du fond vers l'avant.
+//
+// Effet de bord :
+// - remplace le cache partage lorsque sa geometrie est devenue obsolete.
+// ----------------------------------------------------------------------------
+function getCachedStreamingProjection(
+  cssWidth: number,
+  cssHeight: number,
+  centerX: number,
+  centerY: number,
+  projectionScale: number,
+): StreamingPreviewVoxel[] {
+  // Validite stricte du cache pour la camera et la surface courantes.
+  const cacheValid =
+    cachedStreamingProjection.length === STREAM_CUBE_SIDE ** 3 &&
+    cachedStreamingProjectionWidth === cssWidth &&
+    cachedStreamingProjectionHeight === cssHeight &&
+    cachedStreamingProjectionYaw === streamingCameraYaw &&
+    cachedStreamingProjectionPitch === streamingCameraPitch;
+  if (cacheValid) return cachedStreamingProjection;
+
+  cachedStreamingProjection.length = 0;
+  // Cosinus horizontal partage par les 512 voxels.
+  const yawCosine = Math.cos(streamingCameraYaw);
+  // Sinus horizontal partage par les 512 voxels.
+  const yawSine = Math.sin(streamingCameraYaw);
+  // Cosinus vertical partage par les 512 voxels.
+  const pitchCosine = Math.cos(streamingCameraPitch);
+  // Sinus vertical partage par les 512 voxels.
+  const pitchSine = Math.sin(streamingCameraPitch);
   for (let z = 0; z < STREAM_CUBE_SIDE; z += 1) {
     for (let y = 0; y < STREAM_CUBE_SIDE; y += 1) {
       for (let x = 0; x < STREAM_CUBE_SIDE; x += 1) {
-        // Position isometrique de ce voxel pour l'orientation courante.
-        const projected = projectStreamingPoint(
-          x,
-          y,
-          z,
-          streamingCameraYaw,
-          streamingCameraPitch,
-        );
-        // Couleur logique conservee avant l'application de l'eclairage des faces.
-        const [red, green, blue] = framebuffer.getVoxel(x, y, z);
-        projectedVoxels.push({
-          screenX: centerX + projected.horizontal * projectionScale,
-          screenY: centerY - projected.vertical * projectionScale,
-          depth: projected.depth,
-          red,
-          green,
-          blue,
+        // Coordonnee x recentree autour de l'origine de la camera.
+        const centeredX = x - STREAMING_PREVIEW_CUBE_CENTER;
+        // Coordonnee y recentree autour de l'origine de la camera.
+        const centeredY = y - STREAMING_PREVIEW_CUBE_CENTER;
+        // Coordonnee z recentree autour de l'origine de la camera.
+        const centeredZ = z - STREAMING_PREVIEW_CUBE_CENTER;
+        // Abscisse apres rotation horizontale.
+        const horizontal = centeredX * yawCosine - centeredZ * yawSine;
+        // Profondeur intermediaire apres rotation horizontale.
+        const yawDepth = centeredX * yawSine + centeredZ * yawCosine;
+        // Ordonnee finale apres inclinaison verticale.
+        const vertical = centeredY * pitchCosine - yawDepth * pitchSine;
+        // Profondeur finale utilisee par le tri des transparences.
+        const depth = centeredY * pitchSine + yawDepth * pitchCosine;
+        // Index RGB stable du voxel dans le framebuffer contigu.
+        const componentIndex = (z * STREAM_CUBE_SIDE * STREAM_CUBE_SIDE + y * STREAM_CUBE_SIDE + x) * 3;
+        cachedStreamingProjection.push({
+          screenX: centerX + horizontal * projectionScale,
+          screenY: centerY - vertical * projectionScale,
+          depth,
+          componentIndex,
+          red: 0,
+          green: 0,
+          blue: 0,
         });
       }
     }
   }
-  projectedVoxels.sort((left, right) => left.depth - right.depth);
+  cachedStreamingProjection.sort((left, right) => left.depth - right.depth);
+  cachedStreamingProjectionWidth = cssWidth;
+  cachedStreamingProjectionHeight = cssHeight;
+  cachedStreamingProjectionYaw = streamingCameraYaw;
+  cachedStreamingProjectionPitch = streamingCameraPitch;
+  return cachedStreamingProjection;
+}
+
+// ----------------------------------------------------------------------------
+// Copie les couleurs courantes dans une projection sans allouer de triplets RGB.
+//
+// Parametres :
+// - projectedVoxels : positions triees portant leur index de composante source.
+// - colors : framebuffer RGB contigu de la frame courante.
+//
+// Effet de bord :
+// - actualise uniquement les trois canaux de chaque position mise en cache.
+// ----------------------------------------------------------------------------
+function updateStreamingProjectionColors(
+  projectedVoxels: StreamingPreviewVoxel[],
+  colors: Uint8Array,
+): void {
   for (const voxel of projectedVoxels) {
-    drawStreamingVoxel(context, voxel, projectionScale * 0.31);
+    voxel.red = colors[voxel.componentIndex] ?? 0;
+    voxel.green = colors[voxel.componentIndex + 1] ?? 0;
+    voxel.blue = colors[voxel.componentIndex + 2] ?? 0;
   }
 }
 
@@ -469,7 +590,7 @@ function drawStreamingLayers(
 ): void {
   const context = canvas.getContext("2d");
   if (context === null) return;
-  const pixelRatio = window.devicePixelRatio || 1;
+  const pixelRatio = Math.min(window.devicePixelRatio || 1, STREAMING_PREVIEW_MAXIMUM_PIXEL_RATIO);
   const cssWidth = Math.max(canvas.clientWidth, 280);
   const cssHeight = Math.max(canvas.clientHeight, STREAMING_PREVIEW_MINIMUM_HEIGHT);
   const bitmapWidth = Math.round(cssWidth * pixelRatio);
@@ -585,7 +706,7 @@ function drawStreamingCubeFrame(
 }
 
 // ----------------------------------------------------------------------------
-// Dessine un voxel cubique eteint ou lumineux avec trois faces ombrees.
+// Dessine un voxel depuis un sprite rasterise et reutilisable.
 //
 // Parametres :
 // - context : contexte Canvas courant.
@@ -601,69 +722,157 @@ function drawStreamingVoxel(
   const intensity = Math.max(voxel.red, voxel.green, voxel.blue);
   // Legere variation de taille qui renforce la profondeur sans deformer le cube.
   const depthFactor = Math.max(0.82, Math.min(1.14, 1 + voxel.depth * 0.025));
-  // Demi-largeur de la face superieure du voxel.
-  const halfWidth = size * depthFactor;
-  // Demi-hauteur isometrique de la face superieure.
-  const halfHeight = halfWidth * 0.58;
-  // Hauteur des deux faces verticales visibles.
-  const bodyHeight = halfWidth * 1.08;
-  // Canal rouge assombri utilise pour un voxel eteint.
-  const red = intensity === 0 ? 18 : voxel.red;
-  // Canal vert assombri utilise pour un voxel eteint.
-  const green = intensity === 0 ? 37 : voxel.green;
-  // Canal bleu assombri utilise pour un voxel eteint.
-  const blue = intensity === 0 ? 72 : voxel.blue;
-  if (intensity > 0) {
-    context.shadowColor = `rgba(${red}, ${green}, ${blue}, 0.42)`;
-    context.shadowBlur = 3.5;
-  }
-  drawStreamingVoxelFace(
-    context,
-    [
-      [voxel.screenX, voxel.screenY - halfHeight],
-      [voxel.screenX + halfWidth, voxel.screenY],
-      [voxel.screenX, voxel.screenY + halfHeight],
-      [voxel.screenX - halfWidth, voxel.screenY],
-    ],
-    scaleStreamingColor(red, green, blue, intensity === 0 ? 0.75 : 1.2),
-  );
-  context.shadowBlur = 0;
-  drawStreamingVoxelFace(
-    context,
-    [
-      [voxel.screenX - halfWidth, voxel.screenY],
-      [voxel.screenX, voxel.screenY + halfHeight],
-      [voxel.screenX, voxel.screenY + halfHeight + bodyHeight],
-      [voxel.screenX - halfWidth, voxel.screenY + bodyHeight],
-    ],
-    scaleStreamingColor(red, green, blue, intensity === 0 ? 0.42 : 0.68),
-  );
-  drawStreamingVoxelFace(
-    context,
-    [
-      [voxel.screenX + halfWidth, voxel.screenY],
-      [voxel.screenX, voxel.screenY + halfHeight],
-      [voxel.screenX, voxel.screenY + halfHeight + bodyHeight],
-      [voxel.screenX + halfWidth, voxel.screenY + bodyHeight],
-    ],
-    scaleStreamingColor(red, green, blue, intensity === 0 ? 0.55 : 0.84),
+  // Sprite deja calcule pour la couleur physique RGB332 la plus proche.
+  const sprite = getStreamingVoxelSprite(voxel.red, voxel.green, voxel.blue, intensity);
+  // Facteur qui restitue la largeur logique du cube de reference.
+  const spriteScale = (size * depthFactor) / STREAMING_VOXEL_SPRITE_HALF_WIDTH;
+  // Dimension finale du halo et du cube en pixels CSS.
+  const renderedSize = STREAMING_VOXEL_SPRITE_SIZE * spriteScale;
+  context.drawImage(
+    sprite,
+    voxel.screenX - renderedSize / 2,
+    voxel.screenY - STREAMING_VOXEL_SPRITE_ANCHOR_Y * spriteScale,
+    renderedSize,
+    renderedSize,
   );
 }
 
 // ----------------------------------------------------------------------------
-// Remplit une face polygonale d'un voxel projete.
+// Retourne le sprite eteint ou RGB332 correspondant a un voxel.
 //
 // Parametres :
-// - context : contexte Canvas courant.
-// - points : quatre sommets dans leur ordre de parcours.
-// - color : couleur CSS deja ombree pour cette face.
+// - red, green, blue : canaux RGB888 produits par l'animation web.
+// - intensity : canal maximal utilise pour detecter un voxel eteint.
+//
+// Retour :
+// - petit canvas transparent partage par tous les voxels de meme couleur.
+//
+// Effet de bord :
+// - cree au plus 257 sprites, puis les reutilise sans nouveau trace vectoriel.
 // ----------------------------------------------------------------------------
-function drawStreamingVoxelFace(
+function getStreamingVoxelSprite(
+  red: number,
+  green: number,
+  blue: number,
+  intensity: number,
+): HTMLCanvasElement {
+  // Couleur physique compacte utilisee comme cle de cache stable.
+  const rgb332 = ((red >> 5) << 5) | ((green >> 5) << 2) | (blue >> 6);
+  // Zero reste reserve au repere eteint et les couleurs commencent a un.
+  const cacheKey = intensity === 0 ? 0 : rgb332 + 1;
+  // Sprite existant retourne sans recreer gradients ni polygones.
+  const cachedSprite = streamingVoxelSpriteCache.get(cacheKey);
+  if (cachedSprite !== undefined) return cachedSprite;
+  // Rouge restitue depuis ses trois bits physiques.
+  const spriteRed = intensity === 0 ? 18 : Math.round(((rgb332 >> 5) & 0x07) * 255 / 7);
+  // Vert restitue depuis ses trois bits physiques.
+  const spriteGreen = intensity === 0 ? 37 : Math.round(((rgb332 >> 2) & 0x07) * 255 / 7);
+  // Bleu restitue depuis ses deux bits physiques.
+  const spriteBlue = intensity === 0 ? 72 : Math.round((rgb332 & 0x03) * 255 / 3);
+  // Nouveau sprite construit une seule fois pour cette cle bornee.
+  const sprite = createStreamingVoxelSprite(spriteRed, spriteGreen, spriteBlue, intensity > 0);
+  streamingVoxelSpriteCache.set(cacheKey, sprite);
+  return sprite;
+}
+
+// ----------------------------------------------------------------------------
+// Rasterise un cube translucide et son halo lumineux optionnel.
+//
+// Parametres :
+// - red, green, blue : couleur RGB332 restituee sur huit bits.
+// - lit : vrai pour ajouter le coeur et le halo d'une LED active.
+//
+// Retour :
+// - sprite Canvas transparent pret pour des centaines de drawImage rapides.
+// ----------------------------------------------------------------------------
+function createStreamingVoxelSprite(
+  red: number,
+  green: number,
+  blue: number,
+  lit: boolean,
+): HTMLCanvasElement {
+  // Surface autonome qui evite gradients et chemins dans la boucle de frame.
+  const sprite = document.createElement("canvas");
+  sprite.width = STREAMING_VOXEL_SPRITE_SIZE;
+  sprite.height = STREAMING_VOXEL_SPRITE_SIZE;
+  // Contexte local utilise uniquement pendant la creation du sprite.
+  const context = sprite.getContext("2d");
+  if (context === null) return sprite;
+  // Centre horizontal commun au halo et aux trois faces.
+  const centerX = STREAMING_VOXEL_SPRITE_SIZE / 2;
+  // Centre vertical de la face superieure et du coeur lumineux.
+  const centerY = STREAMING_VOXEL_SPRITE_ANCHOR_Y;
+  // Demi-hauteur isometrique de la face superieure.
+  const halfHeight = STREAMING_VOXEL_SPRITE_HALF_WIDTH * 0.58;
+  // Hauteur des faces laterales du cube de reference.
+  const bodyHeight = STREAMING_VOXEL_SPRITE_HALF_WIDTH * 1.08;
+  // Transparence commune du verre eteint ou de la LED active.
+  const opacity = lit ? STREAMING_LIT_VOXEL_OPACITY : STREAMING_OFF_VOXEL_OPACITY;
+
+  if (lit) {
+    // Halo radial prerendu dont le cout ne depend plus de la cadence des frames.
+    const halo = context.createRadialGradient(centerX, centerY, 1, centerX, centerY, 22);
+    halo.addColorStop(0, `rgb(${red} ${green} ${blue} / 0.58)`);
+    halo.addColorStop(0.28, `rgb(${red} ${green} ${blue} / 0.32)`);
+    halo.addColorStop(1, `rgb(${red} ${green} ${blue} / 0)`);
+    context.fillStyle = halo;
+    context.fillRect(0, 0, STREAMING_VOXEL_SPRITE_SIZE, STREAMING_VOXEL_SPRITE_SIZE);
+  }
+
+  fillStreamingVoxelSpriteFace(
+    context,
+    [
+      [centerX, centerY - halfHeight],
+      [centerX + STREAMING_VOXEL_SPRITE_HALF_WIDTH, centerY],
+      [centerX, centerY + halfHeight],
+      [centerX - STREAMING_VOXEL_SPRITE_HALF_WIDTH, centerY],
+    ],
+    scaleStreamingColor(red, green, blue, lit ? 1.2 : 0.75, opacity),
+  );
+  fillStreamingVoxelSpriteFace(
+    context,
+    [
+      [centerX - STREAMING_VOXEL_SPRITE_HALF_WIDTH, centerY],
+      [centerX, centerY + halfHeight],
+      [centerX, centerY + halfHeight + bodyHeight],
+      [centerX - STREAMING_VOXEL_SPRITE_HALF_WIDTH, centerY + bodyHeight],
+    ],
+    scaleStreamingColor(red, green, blue, lit ? 0.68 : 0.42, opacity * 0.88),
+  );
+  fillStreamingVoxelSpriteFace(
+    context,
+    [
+      [centerX + STREAMING_VOXEL_SPRITE_HALF_WIDTH, centerY],
+      [centerX, centerY + halfHeight],
+      [centerX, centerY + halfHeight + bodyHeight],
+      [centerX + STREAMING_VOXEL_SPRITE_HALF_WIDTH, centerY + bodyHeight],
+    ],
+    scaleStreamingColor(red, green, blue, lit ? 0.84 : 0.55, opacity * 0.94),
+  );
+
+  if (lit) {
+    context.beginPath();
+    context.arc(centerX, centerY - halfHeight * 0.18, 2.2, 0, Math.PI * 2);
+    context.fillStyle = `rgb(255 255 255 / 0.72)`;
+    context.fill();
+  }
+  return sprite;
+}
+
+// ----------------------------------------------------------------------------
+// Remplit une face du sprite cree hors de la boucle d'animation.
+//
+// Parametres :
+// - context : contexte du petit Canvas mis en cache.
+// - points : quatre sommets dans leur ordre de parcours.
+// - color : couleur translucide et deja ombree de la face.
+// ----------------------------------------------------------------------------
+function fillStreamingVoxelSpriteFace(
   context: CanvasRenderingContext2D,
   points: ReadonlyArray<readonly [number, number]>,
   color: string,
 ): void {
-  // Premier sommet indispensable pour amorcer le chemin Canvas.
+  // Premier sommet indispensable pour amorcer le chemin ferme.
   const firstPoint = points[0];
   if (firstPoint === undefined) return;
   context.beginPath();
@@ -675,9 +884,6 @@ function drawStreamingVoxelFace(
   context.closePath();
   context.fillStyle = color;
   context.fill();
-  context.strokeStyle = "rgba(255, 255, 255, 0.055)";
-  context.lineWidth = 0.45;
-  context.stroke();
 }
 
 // ----------------------------------------------------------------------------
@@ -686,6 +892,7 @@ function drawStreamingVoxelFace(
 // Parametres :
 // - red, green, blue : canaux RGB sources entre 0 et 255.
 // - factor : facteur d'eclaircissement ou d'assombrissement.
+// - opacity : transparence bornee appliquee a la face.
 //
 // Retour :
 // - couleur CSS bornee utilisable directement par le canvas.
@@ -695,6 +902,9 @@ function scaleStreamingColor(
   green: number,
   blue: number,
   factor: number,
+  opacity: number,
 ): string {
-  return `rgb(${Math.min(255, Math.round(red * factor))} ${Math.min(255, Math.round(green * factor))} ${Math.min(255, Math.round(blue * factor))})`;
+  // Opacite protegee avant sa serialisation dans la couleur CSS.
+  const boundedOpacity = Math.max(0, Math.min(1, opacity));
+  return `rgb(${Math.min(255, Math.round(red * factor))} ${Math.min(255, Math.round(green * factor))} ${Math.min(255, Math.round(blue * factor))} / ${boundedOpacity})`;
 }

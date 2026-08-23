@@ -107,6 +107,7 @@ function runWorkspaceRenderTests(): void {
     expect(root.innerHTML).toContain("show-streaming-animations");
     expect(root.innerHTML).toContain("show-streaming-painting");
     expect(root.innerHTML).toContain('data-field="streaming-animation"');
+    expect(root.innerHTML).not.toContain("streaming-preview-dots");
     expect(root.innerHTML).not.toContain('data-field="painter-color"');
   });
 

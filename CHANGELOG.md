@@ -6,6 +6,19 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Aperçu 3D du streaming
+
+- Transparence de tous les voxels afin de laisser apparaître les lumières
+  situées derrière les cubes de premier plan.
+- Mise en cache de la projection et du tri des 512 voxels entre les frames,
+  mutualisation des calculs trigonométriques et suppression des allocations RGB
+  temporaires.
+- Limitation raisonnable de la densité Canvas sur les écrans HiDPI et retrait
+  des ombres et contours recalculés pour chaque face.
+- Remplacement des 1 536 tracés polygonaux par frame par des sprites RGB332
+  réutilisables, avec cœur lumineux et halo radial précalculé pour chaque LED.
+- Retrait de l'indicateur décoratif à quatre points des vues 3D et par couches.
+
 ### Refonte de l'écran Cube
 
 - Recentrage du panneau de connexion, remplacement de la fermeture textuelle

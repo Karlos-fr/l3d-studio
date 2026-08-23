@@ -1459,28 +1459,6 @@ textarea:focus-visible {
   user-select: none;
 }
 
-/* Repere discret de vue conforme a la maquette sans capturer le pointeur. */
-.streaming-preview-dots {
-  position: absolute;
-  bottom: 0.65rem;
-  left: 50%;
-  display: flex;
-  gap: 0.24rem;
-  pointer-events: none;
-  transform: translateX(-50%);
-}
-
-.streaming-preview-dots i {
-  width: 0.25rem;
-  height: 0.25rem;
-  border-radius: 50%;
-  background: #536074;
-}
-
-.streaming-preview-dots i:first-child {
-  background: #f8fafc;
-}
-
 /* Action de plein ecran superposee sans reduire la zone de dessin. */
 .streaming-fullscreen-action {
   position: absolute;

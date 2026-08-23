@@ -389,7 +389,6 @@ function renderStreamingPanel(state: AppState): string {
           </div>
           <div class="streaming-preview-surface">
             <canvas class="streaming-preview ${animationWorkspaceSelected ? "" : "is-painting"}" data-streaming-preview role="tabpanel" aria-label="Aperçu 3D rotatif du cube"></canvas>
-            <span class="streaming-preview-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
             <button class="streaming-fullscreen-action" data-streaming-fullscreen type="button" aria-label="Afficher l'aperçu en plein écran" title="Plein écran">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5" /></svg>
             </button>
