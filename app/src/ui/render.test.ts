@@ -23,6 +23,7 @@ function runStreamingPanelRenderTests(): void {
   // --------------------------------------------------------------------------
   it("affiche l'atelier Animations par defaut", () => {
     const state = createInitialState(null);
+    state.activeWorkspace = "streaming";
     const root: RenderRoot = { innerHTML: "" };
     renderApp(root as HTMLElement, state);
     expect(root.innerHTML).toContain("show-streaming-animations");
@@ -36,6 +37,7 @@ function runStreamingPanelRenderTests(): void {
   // --------------------------------------------------------------------------
   it("affiche uniquement les outils essentiels du peintre", () => {
     const state = createInitialState(null);
+    state.activeWorkspace = "streaming";
     state.streaming.workspace = "painting";
     const root: RenderRoot = { innerHTML: "" };
     renderApp(root as HTMLElement, state);

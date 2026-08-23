@@ -105,7 +105,6 @@ function runDiagnosticsChartsTests(): void {
     const html = renderDiagnosticsCharts([point], "all");
 
     expect(html).toContain("Memoire (Kio)");
-    expect(html).toContain("Heure locale");
     expect(html).toContain("data-tooltip=");
     expect(html).toContain('tabindex="0"');
     expect(html).toContain("Mode 1");
@@ -119,10 +118,10 @@ function runDiagnosticsChartsTests(): void {
     const history = [createHistoryPoint(1_000)];
 
     expect(renderDiagnosticsCharts(history, "all", 320)).toContain(
-      'viewBox="0 0 320 230"',
+      'viewBox="0 0 320 190"',
     );
     expect(renderDiagnosticsCharts(history, "all", 1_024)).toContain(
-      'viewBox="0 0 720 230"',
+      'viewBox="0 0 328 190"',
     );
   });
 }

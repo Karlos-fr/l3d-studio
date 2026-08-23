@@ -48,6 +48,7 @@ function createCanvasDouble(): HTMLCanvasElement {
   }
   return {
     clientWidth: 400,
+    clientHeight: 260,
     getBoundingClientRect,
   } as HTMLCanvasElement;
 }

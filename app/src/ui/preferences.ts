@@ -5,7 +5,7 @@
 // ne stocke pas les identifiants Particle et ne lance aucun appel reseau.
 // ============================================================================
 
-import type { AppState } from "./state";
+import type { AppState, AppWorkspace } from "./state";
 
 // Contrat minimal de stockage utilise par les preferences locales.
 export interface AppPreferencesStorage {
@@ -15,6 +15,7 @@ export interface AppPreferencesStorage {
 }
 
 export interface AppPreferences {
+  activeWorkspace?: AppWorkspace;
   lanHost?: string;
   lanPort?: number;
   selectedModeName: string | null;
@@ -66,6 +67,7 @@ export function loadAppPreferences(storage: AppPreferencesStorage): AppPreferenc
 // ----------------------------------------------------------------------------
 export function saveAppPreferences(storage: AppPreferencesStorage, state: AppState): void {
   const preferences: AppPreferences = {
+    activeWorkspace: state.activeWorkspace,
     lanHost: state.lanHost,
     lanPort: state.lanPort,
     selectedModeName: state.selectedModeName,

@@ -34,7 +34,7 @@ export function renderDiagnosticsPanel(state: AppState): string {
           <button class="secondary-action" data-action="refresh-diagnostics" type="button" ${disabled}>
             Actualiser maintenant
           </button>
-          <button class="secondary-action danger-action" data-action="reset-diagnostics" type="button" ${disabled}>
+          <button class="secondary-action danger-action diagnostics-reset-action" data-action="reset-diagnostics" type="button" ${disabled}>
             Remettre les minimums a zero
           </button>
         </div>
@@ -111,12 +111,18 @@ export function renderDiagnosticsLiveContent(
 ): string {
   const history = diagnosticsHistoryValues(state.diagnostics);
   return `
-    ${renderDiagnosticsMessages(state)}
-    ${renderDiagnosticsSample(state)}
-    <div class="diagnostics-chart-tooltip" data-chart-tooltip role="status" aria-live="polite">
-      Survole ou selectionne un point pour afficher ses valeurs.
+    <div class="diagnostics-dashboard">
+      <div class="diagnostics-summary-column">
+        ${renderDiagnosticsMessages(state)}
+        ${renderDiagnosticsSample(state)}
+      </div>
+      <div class="diagnostics-visual-column">
+        ${renderDiagnosticsCharts(history, state.diagnostics.chartWindow, chartWidth)}
+        <div class="diagnostics-chart-tooltip" data-chart-tooltip role="status" aria-live="polite">
+          Survole ou selectionne un point pour afficher ses valeurs.
+        </div>
+      </div>
     </div>
-    ${renderDiagnosticsCharts(history, state.diagnostics.chartWindow, chartWidth)}
   `;
 }
 
@@ -191,25 +197,30 @@ function renderDiagnosticsMessages(state: AppState): string {
 // ----------------------------------------------------------------------------
 function renderDiagnosticsSample(state: AppState): string {
   const sample = state.diagnostics.latestSample;
-  if (sample === null) return "<p>Aucun echantillon de diagnostics.</p>";
+  if (sample === null) {
+    return '<div class="diagnostics-sample"><h3>Dernier echantillon</h3><p>Aucune mesure disponible.</p></div>';
+  }
   const values = sample.diagnostics;
   const capturedAt = new Date(sample.capturedAtMilliseconds).toLocaleTimeString("fr-FR");
   return `
-    <p>Dernier echantillon : ${escapeHtml(capturedAt)}, source ${sample.source}, latence ${sample.latencyMilliseconds.toFixed(0)} ms.</p>
-    <dl class="metrics-grid diagnostics-metrics">
-      <div><dt>Memoire libre</dt><dd>${formatMemory(values.freeMemory)}</dd></div>
-      <div><dt>Minimum global</dt><dd>${formatMemory(values.minimumFreeMemory)}</dd></div>
-      <div><dt>Minimum du mode</dt><dd>${formatMemory(values.modeMinimumFreeMemory)}</dd></div>
-      <div><dt>Avant / apres frame</dt><dd>${formatMemory(values.frameMemoryBefore)} / ${formatMemory(values.frameMemoryAfter)}</dd></div>
-      <div><dt>Frame derniere</dt><dd>${formatFrameMilliseconds(values.lastFrameMicros)}</dd></div>
-      <div><dt>Frame moyenne</dt><dd>${formatFrameMilliseconds(values.averageFrameMicros)}</dd></div>
-      <div><dt>Pire frame</dt><dd>${formatFrameMilliseconds(values.worstFrameMicros)}</dd></div>
-      <div><dt>FPS moyen</dt><dd>${(values.fpsTimesTen / 10).toFixed(1)}</dd></div>
-      <div><dt>Uptime</dt><dd>${values.uptimeSeconds} s</dd></div>
-      <div><dt>Mode / frames</dt><dd>${values.modeId} / ${values.frameCount}</dd></div>
-      <div><dt>Wi-Fi / Cloud OTA</dt><dd>${formatBooleanState(values.wifiReady)} / ${formatBooleanState(values.particleConnected)}</dd></div>
-      <div><dt>Reset / OOM</dt><dd>${values.resetReason} / ${values.outOfMemoryCount}</dd></div>
-    </dl>
+    <div class="diagnostics-sample">
+      <h3>Dernier echantillon</h3>
+      <p class="diagnostics-sample-meta">${escapeHtml(capturedAt)} · ${sample.source} · ${sample.latencyMilliseconds.toFixed(0)} ms</p>
+      <dl class="metrics-grid diagnostics-metrics">
+        <div><dt>Memoire libre</dt><dd>${formatMemory(values.freeMemory)}</dd></div>
+        <div><dt>Minimum global</dt><dd>${formatMemory(values.minimumFreeMemory)}</dd></div>
+        <div><dt>Minimum du mode</dt><dd>${formatMemory(values.modeMinimumFreeMemory)}</dd></div>
+        <div><dt>Avant / apres frame</dt><dd>${formatMemory(values.frameMemoryBefore)} / ${formatMemory(values.frameMemoryAfter)}</dd></div>
+        <div><dt>Frame derniere</dt><dd>${formatFrameMilliseconds(values.lastFrameMicros)}</dd></div>
+        <div><dt>Frame moyenne</dt><dd>${formatFrameMilliseconds(values.averageFrameMicros)}</dd></div>
+        <div><dt>Pire frame</dt><dd>${formatFrameMilliseconds(values.worstFrameMicros)}</dd></div>
+        <div><dt>FPS moyen</dt><dd>${(values.fpsTimesTen / 10).toFixed(1)}</dd></div>
+        <div><dt>Uptime</dt><dd>${values.uptimeSeconds} s</dd></div>
+        <div><dt>Mode / frames</dt><dd>${values.modeId} / ${values.frameCount}</dd></div>
+        <div><dt>Wi-Fi / Cloud OTA</dt><dd>${formatBooleanState(values.wifiReady)} / ${formatBooleanState(values.particleConnected)}</dd></div>
+        <div><dt>Reset / OOM</dt><dd>${values.resetReason} / ${values.outOfMemoryCount}</dd></div>
+      </dl>
+    </div>
   `;
 }
 

@@ -12,8 +12,8 @@ import type { AppState } from "./state";
 // Selecteur du panneau de streaming web.
 const STREAMING_PANEL_SELECTOR = "[data-streaming-panel]";
 
-// Hauteur CSS stable de l'apercu 3D.
-const STREAMING_PREVIEW_HEIGHT = 260;
+// Hauteur minimale qui protege la lisibilite du cube et des couches.
+const STREAMING_PREVIEW_MINIMUM_HEIGHT = 260;
 
 // Deux representations disponibles sans modifier la frame source.
 type StreamingPreviewMode = "3d" | "layers";
@@ -91,8 +91,9 @@ export function getStreamingLayerVoxelAtPoint(
   if (bounds.width <= 0 || bounds.height <= 0) return null;
   const cssWidth = Math.max(canvas.clientWidth, 280);
   const pointX = (clientX - bounds.left) * (cssWidth / bounds.width);
-  const pointY = (clientY - bounds.top) * (STREAMING_PREVIEW_HEIGHT / bounds.height);
-  const layout = calculateStreamingLayerLayout(cssWidth);
+  const cssHeight = Math.max(canvas.clientHeight, STREAMING_PREVIEW_MINIMUM_HEIGHT);
+  const pointY = (clientY - bounds.top) * (cssHeight / bounds.height);
+  const layout = calculateStreamingLayerLayout(cssWidth, cssHeight);
   for (let z = 0; z < STREAM_CUBE_SIDE; z += 1) {
     const layerColumn = z % 4;
     const layerRow = Math.floor(z / 4);
@@ -186,6 +187,7 @@ function drawStreamingPreview(
   latestStreamingFramebuffer = framebuffer;
   bindStreamingPreviewTabs(panelElement, canvas);
   bindStreamingCamera(canvas);
+  bindStreamingFullscreen(panelElement, canvas);
   syncStreamingPreviewTabs(panelElement, canvas);
   drawStreamingCanvas(canvas, framebuffer);
 }
@@ -295,6 +297,49 @@ function bindStreamingCamera(canvas: HTMLCanvasElement): void {
 }
 
 // ----------------------------------------------------------------------------
+// Branche le bouton plein ecran sur le conteneur visuel du canvas.
+//
+// Parametres :
+// - panelElement : panneau contenant le bouton a initialiser une seule fois.
+// - canvas : canvas dont le parent constitue la surface plein ecran.
+//
+// Effet de bord :
+// - demande le plein ecran au navigateur lorsque cette API est disponible.
+// ----------------------------------------------------------------------------
+function bindStreamingFullscreen(
+  panelElement: HTMLElement,
+  canvas: HTMLCanvasElement,
+): void {
+  if (panelElement.dataset.streamingFullscreenBound === "1") return;
+  // Bouton optionnel reserve a la vue 3D principale.
+  const button = panelElement.querySelector<HTMLButtonElement>("[data-streaming-fullscreen]");
+  // Conteneur qui conserve les controles superposes en plein ecran.
+  const surface = canvas.parentElement;
+  if (button === null || surface === null) return;
+  // Surface non nulle capturee par le callback apres la validation du DOM.
+  const fullscreenSurface = surface;
+  panelElement.dataset.streamingFullscreenBound = "1";
+
+  // --------------------------------------------------------------------------
+  // Ouvre ou ferme la surface sans modifier la camera ni le framebuffer.
+  //
+  // Effet de bord :
+  // - appelle l'API plein ecran du navigateur.
+  // --------------------------------------------------------------------------
+  function toggleStreamingFullscreen(): void {
+    if (document.fullscreenElement === fullscreenSurface) {
+      void document.exitFullscreen();
+      return;
+    }
+    if (fullscreenSurface.requestFullscreen !== undefined) {
+      void fullscreenSurface.requestFullscreen();
+    }
+  }
+
+  button.addEventListener("click", toggleStreamingFullscreen);
+}
+
+// ----------------------------------------------------------------------------
 // Projette puis dessine les 512 positions, le cadre et les voxels allumes.
 //
 // Parametres :
@@ -347,7 +392,7 @@ function drawStreamingThreeDimensional(
   if (context === null) return;
   const pixelRatio = window.devicePixelRatio || 1;
   const cssWidth = Math.max(canvas.clientWidth, 280);
-  const cssHeight = STREAMING_PREVIEW_HEIGHT;
+  const cssHeight = Math.max(canvas.clientHeight, STREAMING_PREVIEW_MINIMUM_HEIGHT);
   const bitmapWidth = Math.round(cssWidth * pixelRatio);
   const bitmapHeight = Math.round(cssHeight * pixelRatio);
   if (canvas.width !== bitmapWidth || canvas.height !== bitmapHeight) {
@@ -356,18 +401,35 @@ function drawStreamingThreeDimensional(
   }
   context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   context.clearRect(0, 0, cssWidth, cssHeight);
-  context.fillStyle = "#08111f";
+  // Halo bleu nuit qui detache le volume du fond de la carte.
+  const background = context.createRadialGradient(
+    cssWidth * 0.5,
+    cssHeight * 0.42,
+    10,
+    cssWidth * 0.5,
+    cssHeight * 0.5,
+    Math.max(cssWidth, cssHeight) * 0.65,
+  );
+  background.addColorStop(0, "#101f35");
+  background.addColorStop(0.55, "#091525");
+  background.addColorStop(1, "#060d18");
+  context.fillStyle = background;
   context.fillRect(0, 0, cssWidth, cssHeight);
 
+  // Centre horizontal de la projection dans la surface courante.
   const centerX = cssWidth / 2;
+  // Centre vertical legerement abaisse pour equilibrer les faces visibles.
   const centerY = cssHeight / 2 + 3;
-  const projectionScale = Math.min(cssWidth, cssHeight) * 0.105;
+  // Echelle responsive commune au cadre et aux 512 voxels.
+  const projectionScale = Math.min(cssWidth, cssHeight) * 0.112;
   drawStreamingCubeFrame(context, centerX, centerY, projectionScale);
 
+  // Liste triee en profondeur afin de masquer correctement les faces arriere.
   const projectedVoxels: StreamingPreviewVoxel[] = [];
   for (let z = 0; z < STREAM_CUBE_SIDE; z += 1) {
     for (let y = 0; y < STREAM_CUBE_SIDE; y += 1) {
       for (let x = 0; x < STREAM_CUBE_SIDE; x += 1) {
+        // Position isometrique de ce voxel pour l'orientation courante.
         const projected = projectStreamingPoint(
           x,
           y,
@@ -375,6 +437,7 @@ function drawStreamingThreeDimensional(
           streamingCameraYaw,
           streamingCameraPitch,
         );
+        // Couleur logique conservee avant l'application de l'eclairage des faces.
         const [red, green, blue] = framebuffer.getVoxel(x, y, z);
         projectedVoxels.push({
           screenX: centerX + projected.horizontal * projectionScale,
@@ -388,11 +451,9 @@ function drawStreamingThreeDimensional(
     }
   }
   projectedVoxels.sort((left, right) => left.depth - right.depth);
-  for (const voxel of projectedVoxels) drawStreamingVoxel(context, voxel);
-
-  context.fillStyle = "rgba(226, 232, 240, 0.72)";
-  context.font = "12px system-ui";
-  context.fillText("Glisser pour tourner", 12, cssHeight - 12);
+  for (const voxel of projectedVoxels) {
+    drawStreamingVoxel(context, voxel, projectionScale * 0.31);
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -410,7 +471,7 @@ function drawStreamingLayers(
   if (context === null) return;
   const pixelRatio = window.devicePixelRatio || 1;
   const cssWidth = Math.max(canvas.clientWidth, 280);
-  const cssHeight = STREAMING_PREVIEW_HEIGHT;
+  const cssHeight = Math.max(canvas.clientHeight, STREAMING_PREVIEW_MINIMUM_HEIGHT);
   const bitmapWidth = Math.round(cssWidth * pixelRatio);
   const bitmapHeight = Math.round(cssHeight * pixelRatio);
   if (canvas.width !== bitmapWidth || canvas.height !== bitmapHeight) {
@@ -422,7 +483,7 @@ function drawStreamingLayers(
   context.fillStyle = "#08111f";
   context.fillRect(0, 0, cssWidth, cssHeight);
 
-  const layout = calculateStreamingLayerLayout(cssWidth);
+  const layout = calculateStreamingLayerLayout(cssWidth, cssHeight);
   for (let z = 0; z < STREAM_CUBE_SIDE; z += 1) {
     const layerColumn = z % 4;
     const layerRow = Math.floor(z / 4);
@@ -454,16 +515,25 @@ function drawStreamingLayers(
 //
 // Parametres :
 // - cssWidth : largeur logique disponible en pixels CSS.
+// - cssHeight : hauteur logique disponible en pixels CSS.
 //
 // Retour :
 // - largeur de couche, hauteur de couche et taille de cellule.
 // ----------------------------------------------------------------------------
-function calculateStreamingLayerLayout(cssWidth: number): StreamingLayerLayout {
+function calculateStreamingLayerLayout(
+  cssWidth: number,
+  cssHeight: number,
+): StreamingLayerLayout {
+  // Largeur reservee a chacune des quatre couches d'une ligne.
   const layerWidth = cssWidth / 4;
   return {
     layerWidth,
-    layerHeight: STREAMING_PREVIEW_HEIGHT / 2,
-    cellSize: Math.min((layerWidth - 20) / STREAM_CUBE_SIDE, 11),
+    layerHeight: cssHeight / 2,
+    cellSize: Math.min(
+      (layerWidth - 20) / STREAM_CUBE_SIDE,
+      (cssHeight / 2 - 42) / STREAM_CUBE_SIDE,
+      14,
+    ),
   };
 }
 
@@ -515,29 +585,116 @@ function drawStreamingCubeFrame(
 }
 
 // ----------------------------------------------------------------------------
-// Dessine un repere eteint discret ou un voxel lumineux avec profondeur.
+// Dessine un voxel cubique eteint ou lumineux avec trois faces ombrees.
 //
 // Parametres :
 // - context : contexte Canvas courant.
 // - voxel : position projetee, profondeur et couleur RGB.
+// - size : largeur de base derivee de l'espacement de la projection.
 // ----------------------------------------------------------------------------
 function drawStreamingVoxel(
   context: CanvasRenderingContext2D,
   voxel: StreamingPreviewVoxel,
+  size: number,
 ): void {
+  // Canal maximal utilise pour distinguer un voxel allume d'un repere eteint.
   const intensity = Math.max(voxel.red, voxel.green, voxel.blue);
-  const depthFactor = Math.max(0.75, Math.min(1.25, 1 + voxel.depth * 0.035));
-  context.beginPath();
-  if (intensity === 0) {
-    context.fillStyle = "rgba(148, 163, 184, 0.13)";
-    context.arc(voxel.screenX, voxel.screenY, 0.75 * depthFactor, 0, Math.PI * 2);
-  } else {
-    const radius = (2.2 + intensity / 110) * depthFactor;
-    context.fillStyle = `rgb(${voxel.red} ${voxel.green} ${voxel.blue})`;
-    context.shadowColor = `rgba(${voxel.red}, ${voxel.green}, ${voxel.blue}, 0.65)`;
-    context.shadowBlur = 5;
-    context.arc(voxel.screenX, voxel.screenY, radius, 0, Math.PI * 2);
+  // Legere variation de taille qui renforce la profondeur sans deformer le cube.
+  const depthFactor = Math.max(0.82, Math.min(1.14, 1 + voxel.depth * 0.025));
+  // Demi-largeur de la face superieure du voxel.
+  const halfWidth = size * depthFactor;
+  // Demi-hauteur isometrique de la face superieure.
+  const halfHeight = halfWidth * 0.58;
+  // Hauteur des deux faces verticales visibles.
+  const bodyHeight = halfWidth * 1.08;
+  // Canal rouge assombri utilise pour un voxel eteint.
+  const red = intensity === 0 ? 18 : voxel.red;
+  // Canal vert assombri utilise pour un voxel eteint.
+  const green = intensity === 0 ? 37 : voxel.green;
+  // Canal bleu assombri utilise pour un voxel eteint.
+  const blue = intensity === 0 ? 72 : voxel.blue;
+  if (intensity > 0) {
+    context.shadowColor = `rgba(${red}, ${green}, ${blue}, 0.42)`;
+    context.shadowBlur = 3.5;
   }
-  context.fill();
+  drawStreamingVoxelFace(
+    context,
+    [
+      [voxel.screenX, voxel.screenY - halfHeight],
+      [voxel.screenX + halfWidth, voxel.screenY],
+      [voxel.screenX, voxel.screenY + halfHeight],
+      [voxel.screenX - halfWidth, voxel.screenY],
+    ],
+    scaleStreamingColor(red, green, blue, intensity === 0 ? 0.75 : 1.2),
+  );
   context.shadowBlur = 0;
+  drawStreamingVoxelFace(
+    context,
+    [
+      [voxel.screenX - halfWidth, voxel.screenY],
+      [voxel.screenX, voxel.screenY + halfHeight],
+      [voxel.screenX, voxel.screenY + halfHeight + bodyHeight],
+      [voxel.screenX - halfWidth, voxel.screenY + bodyHeight],
+    ],
+    scaleStreamingColor(red, green, blue, intensity === 0 ? 0.42 : 0.68),
+  );
+  drawStreamingVoxelFace(
+    context,
+    [
+      [voxel.screenX + halfWidth, voxel.screenY],
+      [voxel.screenX, voxel.screenY + halfHeight],
+      [voxel.screenX, voxel.screenY + halfHeight + bodyHeight],
+      [voxel.screenX + halfWidth, voxel.screenY + bodyHeight],
+    ],
+    scaleStreamingColor(red, green, blue, intensity === 0 ? 0.55 : 0.84),
+  );
+}
+
+// ----------------------------------------------------------------------------
+// Remplit une face polygonale d'un voxel projete.
+//
+// Parametres :
+// - context : contexte Canvas courant.
+// - points : quatre sommets dans leur ordre de parcours.
+// - color : couleur CSS deja ombree pour cette face.
+// ----------------------------------------------------------------------------
+function drawStreamingVoxelFace(
+  context: CanvasRenderingContext2D,
+  points: ReadonlyArray<readonly [number, number]>,
+  color: string,
+): void {
+  // Premier sommet indispensable pour amorcer le chemin Canvas.
+  const firstPoint = points[0];
+  if (firstPoint === undefined) return;
+  context.beginPath();
+  context.moveTo(firstPoint[0], firstPoint[1]);
+  for (let index = 1; index < points.length; index += 1) {
+    const point = points[index];
+    if (point !== undefined) context.lineTo(point[0], point[1]);
+  }
+  context.closePath();
+  context.fillStyle = color;
+  context.fill();
+  context.strokeStyle = "rgba(255, 255, 255, 0.055)";
+  context.lineWidth = 0.45;
+  context.stroke();
+}
+
+// ----------------------------------------------------------------------------
+// Applique un facteur de lumiere aux trois canaux d'une face.
+//
+// Parametres :
+// - red, green, blue : canaux RGB sources entre 0 et 255.
+// - factor : facteur d'eclaircissement ou d'assombrissement.
+//
+// Retour :
+// - couleur CSS bornee utilisable directement par le canvas.
+// ----------------------------------------------------------------------------
+function scaleStreamingColor(
+  red: number,
+  green: number,
+  blue: number,
+  factor: number,
+): string {
+  return `rgb(${Math.min(255, Math.round(red * factor))} ${Math.min(255, Math.round(green * factor))} ${Math.min(255, Math.round(blue * factor))})`;
 }

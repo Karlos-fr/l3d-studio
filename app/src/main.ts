@@ -699,7 +699,16 @@ function bootstrapApplication(): void {
   // - action : nom complet `bytecode-*` issu du DOM.
   // ----------------------------------------------------------------------------
   async function handleBytecodeAction(action: string): Promise<void> {
-    if (action === "bytecode-compile") compileCurrentBytecodeSource();
+    if (action === "bytecode-view-editor") {
+      state.bytecode.activeView = "editor";
+      rerender();
+    } else if (action === "bytecode-view-simulation") {
+      state.bytecode.activeView = "simulation";
+      rerender();
+    } else if (action === "bytecode-view-photon") {
+      state.bytecode.activeView = "photon";
+      rerender();
+    } else if (action === "bytecode-compile") compileCurrentBytecodeSource();
     else if (action === "bytecode-save") saveCurrentBytecodeSource();
     else if (action === "bytecode-duplicate") duplicateCurrentBytecodeSource();
     else if (action === "bytecode-rename") renameCurrentBytecodeSource();

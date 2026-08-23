@@ -40,7 +40,7 @@ import { syncLanTestButton } from "./lan_controls";
 import { normalizeStreamingFps, type StreamingFps } from "../streaming/engine";
 import type { PainterTool } from "../painting/model";
 import { getStreamingLayerVoxelAtPoint } from "./streaming_render";
-import type { StreamingWorkspace } from "./state";
+import type { AppWorkspace, StreamingWorkspace } from "./state";
 
 export interface UiEventContext {
   rootElement: HTMLElement;
@@ -120,6 +120,15 @@ const PAINTER_ERASE_ACTION = "painter-tool-erase";
 
 // Nom de l'action qui efface le dessin local complet.
 const CLEAR_PAINTER_ACTION = "clear-painter";
+
+// Prefixe commun des actions de navigation sans routeur externe.
+const SHOW_WORKSPACE_ACTION_PREFIX = "show-workspace-";
+
+// Action qui ouvre ou ferme la configuration LAN globale.
+const TOGGLE_CONNECTION_ACTION = "toggle-connection";
+
+// Action qui copie la derniere reponse technique dans le presse-papiers.
+const COPY_LAST_RESPONSE_ACTION = "copy-last-response";
 
 // Selecteur des champs de formulaire controles par l'etat applicatif.
 const STATE_FIELD_SELECTOR = "[data-field]";
@@ -255,6 +264,9 @@ function attachStateFields(context: UiEventContext): void {
   );
 
   fieldElements.forEach((fieldElement) => {
+    if (fieldElement instanceof HTMLInputElement && fieldElement.type === "range") {
+      updateRangeAppearance(fieldElement);
+    }
     fieldElement.addEventListener("input", () => {
       if (fieldElement instanceof HTMLInputElement && fieldElement.type === "file") {
         return;
@@ -273,6 +285,7 @@ function attachStateFields(context: UiEventContext): void {
       if (fieldElement instanceof HTMLInputElement && fieldElement.type === "range") {
         handleFieldChange(context, fieldElement, false);
         updateRangeOutput(fieldElement);
+        updateRangeAppearance(fieldElement);
         return;
       }
 
@@ -296,6 +309,29 @@ function updateRangeOutput(fieldElement: HTMLInputElement): void {
   if (outputElement === null || outputElement === undefined) return;
   const suffix = outputElement.dataset.rangeSuffix ?? "";
   outputElement.textContent = `${fieldElement.value}${suffix}`;
+}
+
+// ----------------------------------------------------------------------------
+// Calcule la progression visuelle violette d'un slider natif.
+//
+// Parametres :
+// - fieldElement : range dont les bornes et la valeur pilotent le degrade CSS.
+//
+// Effet de bord :
+// - actualise la variable CSS locale sans reconstruire le champ.
+// ----------------------------------------------------------------------------
+function updateRangeAppearance(fieldElement: HTMLInputElement): void {
+  // Borne minimale native avec un repli compatible HTML.
+  const minimum = Number(fieldElement.min || "0");
+  // Borne maximale native avec un repli compatible HTML.
+  const maximum = Number(fieldElement.max || "100");
+  // Valeur numerique courante du controle.
+  const value = Number(fieldElement.value);
+  // Amplitude protegee contre une division par zero.
+  const range = Math.max(maximum - minimum, 1);
+  // Pourcentage borne utilise par les pistes Chromium et Safari.
+  const progress = Math.min(100, Math.max(0, ((value - minimum) / range) * 100));
+  fieldElement.style.setProperty("--range-progress", `${progress}%`);
 }
 
 // ----------------------------------------------------------------------------
@@ -367,6 +403,22 @@ function clearDiagnosticsChartTooltip(event: Event): void {
 // - modifie l'etat ou appelle le serveur LAN selon l'action.
 // ----------------------------------------------------------------------------
 async function handleAction(context: UiEventContext, action: string): Promise<void> {
+  if (action.startsWith(SHOW_WORKSPACE_ACTION_PREFIX)) {
+    selectAppWorkspace(context, action.slice(SHOW_WORKSPACE_ACTION_PREFIX.length));
+    return;
+  }
+
+  if (action === TOGGLE_CONNECTION_ACTION) {
+    context.state.connectionPanelOpen = !context.state.connectionPanelOpen;
+    context.rerender();
+    return;
+  }
+
+  if (action === COPY_LAST_RESPONSE_ACTION) {
+    await copyLastResponse(context);
+    return;
+  }
+
   if (context.state.isBusy) {
     return;
   }
@@ -588,6 +640,59 @@ function handleFieldChange(
     return;
   }
 
+  context.rerender();
+}
+
+// ----------------------------------------------------------------------------
+// Selectionne un espace connu et conserve ce choix dans le navigateur.
+//
+// Parametres :
+// - context : etat, stockage et fonction de rendu courants.
+// - requestedWorkspace : suffixe recu depuis l'action declarative.
+//
+// Effet de bord :
+// - ferme le panneau LAN, persiste l'espace puis remplace le contenu principal.
+// ----------------------------------------------------------------------------
+function selectAppWorkspace(context: UiEventContext, requestedWorkspace: string): void {
+  if (!isAppWorkspace(requestedWorkspace)) return;
+  context.state.activeWorkspace = requestedWorkspace;
+  context.state.connectionPanelOpen = false;
+  saveAppPreferences(context.storage, context.state);
+  context.rerender();
+}
+
+// ----------------------------------------------------------------------------
+// Verifie qu'une valeur correspond a l'un des cinq espaces autorises.
+//
+// Parametres :
+// - value : valeur issue du nom d'action DOM.
+//
+// Retour :
+// - vrai pour un identifiant de navigation pris en charge.
+// ----------------------------------------------------------------------------
+function isAppWorkspace(value: string): value is AppWorkspace {
+  return value === "cube" || value === "streaming" || value === "procedural" ||
+    value === "firmware" || value === "diagnostics";
+}
+
+// ----------------------------------------------------------------------------
+// Copie la derniere reponse LAN lorsque l'API du navigateur est disponible.
+//
+// Parametres :
+// - context : etat courant et fonction de rendu de l'application.
+//
+// Effet de bord :
+// - ecrit dans le presse-papiers puis actualise le message global.
+// ----------------------------------------------------------------------------
+async function copyLastResponse(context: UiEventContext): Promise<void> {
+  if (context.state.lastResponse === null) return;
+  try {
+    if (navigator.clipboard === undefined) throw new Error("Presse-papiers indisponible");
+    await navigator.clipboard.writeText(context.state.lastResponse);
+    context.state.statusMessage = "Dernière réponse LAN copiée.";
+  } catch {
+    context.state.statusMessage = "Copie impossible dans ce navigateur.";
+  }
   context.rerender();
 }
 

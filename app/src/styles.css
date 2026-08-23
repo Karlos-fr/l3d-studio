@@ -7,25 +7,49 @@
 
 :root {
   /* Couleur de fond principale de l'application. */
-  --color-page: #111316;
+  --color-page: #07101d;
 
   /* Couleur du panneau principal de travail. */
-  --color-surface: #1c2026;
+  --color-surface: #101a29;
+
+  /* Couleur des cartes et groupes internes. */
+  --color-surface-soft: #121e2e;
+
+  /* Couleur des champs et zones techniques. */
+  --color-control: #0b1523;
 
   /* Couleur de texte principale. */
   --color-text: #eef2f6;
 
   /* Couleur de texte secondaire pour les informations de statut. */
-  --color-muted: #9ea8b3;
+  --color-muted: #8e9bad;
 
   /* Couleur d'accent utilisee pour les actions principales. */
-  --color-accent: #2dd4bf;
+  --color-accent: #8b5cf6;
+
+  /* Couleur d'accent renforcee pour les survols. */
+  --color-accent-strong: #7c3aed;
+
+  /* Couleur de succes independante de l'accent principal. */
+  --color-success: #4ade80;
+
+  /* Couleur de danger partagee par les actions irreversibles. */
+  --color-danger: #f87171;
 
   /* Couleur de bordure discrete pour separer les zones. */
-  --color-border: #303741;
+  --color-border: #223149;
+
+  /* Rayon commun des panneaux principaux. */
+  --radius-panel: 12px;
+
+  /* Rayon commun des controles interactifs. */
+  --radius-control: 8px;
+
+  /* Anneau de focus fortement contraste. */
+  --color-focus: #ddd6fe;
 
   /* Premiere couleur stable des courbes de diagnostics. */
-  --color-chart-1: #2dd4bf;
+  --color-chart-1: #4ade80;
 
   /* Deuxieme couleur stable des courbes de diagnostics. */
   --color-chart-2: #60a5fa;
@@ -54,27 +78,133 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  color: var(--color-text);
+  background:
+    radial-gradient(circle at 76% 0%, rgba(76, 29, 149, 0.18), transparent 36rem),
+    var(--color-page);
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+}
+
+button,
+.status-pill,
+.field-help {
+  overflow-wrap: anywhere;
 }
 
 .app-shell {
   display: grid;
   min-height: 100vh;
-  grid-template-rows: auto 1fr;
+  grid-template-columns: 190px minmax(0, 1fr);
+}
+
+.app-frame {
+  min-width: 0;
+}
+
+/* Navigation principale persistante des ecrans larges. */
+.app-sidebar {
+  position: sticky;
+  top: 0;
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+  height: 100vh;
+  padding: 1.25rem 0.75rem;
+  border-right: 1px solid var(--color-border);
+  background: linear-gradient(180deg, #101a2b, #0b1523 58%, #09121f);
+}
+
+.app-brand {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  padding: 0 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.app-brand-mark {
+  color: #a78bfa;
+  font-size: 1.25rem;
+}
+
+.workspace-navigation {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.workspace-navigation-mobile {
+  display: none;
+}
+
+.workspace-nav-item,
+.sidebar-connection {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 2.9rem;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 0 0.7rem;
+  color: #a5afbd;
+  background: transparent;
+  cursor: pointer;
+}
+
+.workspace-nav-item:hover,
+.workspace-nav-item.is-active,
+.sidebar-connection:hover,
+.sidebar-connection.is-active {
+  border-color: #4d4379;
+  color: var(--color-text);
+  background: linear-gradient(90deg, rgba(124, 91, 214, 0.3), rgba(80, 64, 144, 0.22));
+}
+
+.nav-symbol {
+  display: inline-grid;
+  flex: 0 0 1.6rem;
+  width: 1.6rem;
+  height: 1.6rem;
+  place-items: center;
+  color: #c4b5fd;
+}
+
+.nav-symbol svg {
+  display: block;
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.sidebar-connection {
+  align-self: end;
+  margin-top: auto;
 }
 
 .app-header {
-  display: flex;
+  display: grid;
   align-items: center;
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 1rem;
-  padding: 1rem 1.25rem;
+  min-height: 5rem;
+  padding: 0.85rem 1.5rem;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: rgba(9, 18, 31, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.app-header-copy {
+  min-width: 0;
 }
 
 .app-title {
@@ -84,31 +214,126 @@ input {
 }
 
 .app-status {
+  display: block;
+  margin-top: 0.15rem;
   color: var(--color-muted);
   font-size: 0.875rem;
+}
+
+.connection-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 19rem;
+  min-height: 2.8rem;
+  border: 1px solid var(--color-border);
+  border-radius: 9px;
+  padding: 0.4rem 0.7rem;
+  color: var(--color-text);
+  background: #0d1827;
+  cursor: pointer;
+}
+
+.connection-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+.connection-summary.is-connected .connection-dot {
+  background: #4ade80;
+  box-shadow: 0 0 0.65rem rgba(74, 222, 128, 0.45);
+}
+
+.connection-summary.is-active {
+  border-color: #6d5a9d;
+  background: #282044;
+}
+
+.connection-summary-copy {
+  display: grid;
+  min-width: 0;
+  text-align: left;
+}
+
+.connection-summary-copy strong,
+.connection-summary-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection-summary-copy small {
+  color: var(--color-muted);
+}
+
+.global-status {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  margin: -0.5rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-main {
   display: grid;
   align-content: start;
   gap: 1rem;
-  width: min(100%, 960px);
+  width: min(100%, 1180px);
   margin: 0 auto;
-  padding: 1.25rem;
+  padding: 1.5rem;
+}
+
+.connection-panel {
+  width: min(calc(100% - 3rem), 860px);
+  margin: 1rem 1.5rem 0 auto;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
+}
+
+.icon-action {
+  display: inline-grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text);
+  background: var(--color-control);
+  cursor: pointer;
 }
 
 .panel {
   display: grid;
   gap: 0.75rem;
-  padding: 1rem;
+  padding: 1rem 1.05rem;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: var(--color-surface);
+  border-radius: var(--radius-panel);
+  background: linear-gradient(145deg, rgba(18, 30, 47, 0.98), rgba(13, 24, 39, 0.98));
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.18);
+}
+
+.workspace-stack {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.workspace-note {
+  margin: 0;
+  border-left: 3px solid #7c3aed;
+  padding: 0.65rem 0.8rem;
+  color: var(--color-muted);
+  background: rgba(124, 58, 237, 0.08);
+  font-size: 0.82rem;
 }
 
 .panel h2 {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
 }
 
 .panel p {
@@ -132,6 +357,8 @@ input {
   border: 1px solid var(--color-border);
   border-radius: 999px;
   padding: 0 0.625rem;
+  color: #aab5c4;
+  background: rgba(11, 21, 35, 0.7);
   font-size: 0.75rem;
   font-weight: 700;
 }
@@ -163,18 +390,92 @@ input {
 }
 
 input,
-select {
-  min-height: 2.5rem;
+select,
+textarea {
+  min-height: 2.75rem;
   width: 100%;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   padding: 0 0.75rem;
   color: var(--color-text);
-  background: #101215;
+  background: var(--color-control);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 input[type="range"] {
+  --range-progress: 0%;
+  appearance: none;
+  min-height: 1.25rem;
+  height: 1.25rem;
+  border: 0;
   padding: 0;
+  background: transparent;
+  box-shadow: none;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+/* Piste Chromium et Safari avec progression calculee par l'interface. */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 0.28rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) 0,
+    var(--color-accent) var(--range-progress),
+    #30405a var(--range-progress),
+    #30405a 100%
+  );
+}
+
+/* Curseur blanc compact de la maquette sous Chromium et Safari. */
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  margin-top: -0.31rem;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #f8fafc;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+}
+
+/* Piste restante sous Firefox. */
+input[type="range"]::-moz-range-track {
+  height: 0.28rem;
+  border-radius: 999px;
+  background: #30405a;
+}
+
+input[type="range"]::-moz-range-progress {
+  height: 0.28rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 0.75rem;
+  height: 0.75rem;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  background: #f8fafc;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+}
+
+/* Aligne la piste et sa valeur sur la meme ligne. */
+.range-control {
+  display: grid;
+  align-items: center;
+  gap: 0.7rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  width: 100%;
+}
+
+.range-control [data-range-output] {
+  min-width: 2.4rem;
+  color: var(--color-text);
+  font-size: 0.78rem;
+  text-align: right;
 }
 
 input[type="color"] {
@@ -211,6 +512,31 @@ legend {
 .mode-options {
   display: grid;
   gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  padding-top: 0.9rem;
+}
+
+.mode-options-disclosure {
+  border: 1px solid #2b3a52;
+  border-radius: var(--radius-control);
+  padding: 0.75rem;
+  background: var(--color-surface-soft);
+}
+
+.mode-options-disclosure summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: var(--color-text);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.mode-options-disclosure summary small {
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 400;
 }
 
 .metrics-grid {
@@ -225,8 +551,8 @@ legend {
   gap: 0.25rem;
   padding: 0.75rem;
   border: 1px solid var(--color-border);
-  border-radius: 8px;
-  background: #101215;
+  border-radius: var(--radius-control);
+  background: var(--color-control);
 }
 
 .metrics-grid dt {
@@ -242,28 +568,92 @@ legend {
 
 .primary-action {
   width: fit-content;
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   padding: 0 1rem;
   border: 0;
-  border-radius: 6px;
-  color: #06211e;
-  background: var(--color-accent);
+  border-radius: var(--radius-control);
+  color: #ffffff;
+  background: linear-gradient(135deg, #8b5cf6, #7146dc);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.2);
   cursor: pointer;
 }
 
+/* Reprend la grille compacte et la hierarchie de la maquette Etat du cube. */
+.cube-state-panel {
+  gap: 0.65rem;
+  padding: 0.9rem;
+  background: #121923;
+}
+
+.cube-state-panel h2 {
+  font-size: 0.92rem;
+}
+
+.cube-state-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.cube-state-grid .cube-state-card {
+  align-content: center;
+  min-height: 5rem;
+  padding: 0.75rem 0.85rem;
+  border-color: #283548;
+  background: linear-gradient(145deg, #172232, #131c29);
+}
+
+.cube-state-grid dt {
+  color: #8d9aab;
+  font-size: 0.68rem;
+}
+
+.cube-state-grid .cube-state-value {
+  color: #f8fafc;
+  font-size: 1.35rem;
+  line-height: 1.15;
+}
+
+.cube-state-grid .cube-state-value small {
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.cube-state-grid .cube-state-mode .cube-state-value {
+  color: #a78bfa;
+}
+
+.cube-state-grid .cube-state-speed .cube-state-value,
+.cube-state-grid .cube-state-rssi .cube-state-value {
+  color: var(--color-success);
+}
+
 .secondary-action {
-  min-height: 2.5rem;
+  min-height: 2.75rem;
   padding: 0 0.875rem;
   border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border-radius: var(--radius-control);
   color: var(--color-text);
-  background: #101215;
+  background: var(--color-control);
   cursor: pointer;
 }
 
 .danger-action {
   border-color: #7f1d1d;
-  color: #fecaca;
+  color: var(--color-danger);
+}
+
+.primary-action:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9b73f8, var(--color-accent-strong));
+}
+
+.secondary-action:hover:not(:disabled),
+.icon-action:hover:not(:disabled) {
+  border-color: #6d5a9d;
+  background: #211b30;
+}
+
+.diagnostics-reset-action {
+  background: #2a1518;
 }
 
 /* Alerte visible lorsqu'un minimum memoire ou compteur OOM se degrade. */
@@ -287,18 +677,31 @@ legend {
 /* Separe les graphiques tout en conservant un flux vertical responsive. */
 .diagnostics-charts {
   display: grid;
-  gap: 1.25rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
   margin-top: 1rem;
 }
 
 /* Encadre chaque graphique avec son titre, sa legende et son resume. */
 .diagnostics-chart {
   min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: linear-gradient(155deg, rgba(16, 29, 46, 0.95), rgba(9, 19, 32, 0.96));
 }
 
 .diagnostics-chart h3 {
-  margin: 0 0 0.375rem;
-  font-size: 0.95rem;
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+/* Aligne le titre et la legende dans une entete compacte. */
+.diagnostics-chart-heading {
+  display: grid;
+  gap: 0.4rem;
+  min-height: 3rem;
 }
 
 /* Adapte le SVG a son conteneur sans provoquer de nouvelle collecte reseau. */
@@ -313,11 +716,11 @@ legend {
 .chart-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1rem;
-  margin: 0 0 0.25rem;
+  gap: 0.35rem 0.7rem;
+  margin: 0;
   padding: 0;
   color: var(--color-muted);
-  font-size: 0.75rem;
+  font-size: 0.67rem;
   list-style: none;
 }
 
@@ -328,28 +731,29 @@ legend {
 }
 
 .chart-legend-swatch {
-  width: 1rem;
-  height: 3px;
+  width: 0.75rem;
+  height: 2px;
   background: var(--chart-series-color);
 }
 
 /* Cadre neutre de la zone quantitative du graphique. */
 .chart-frame {
-  fill: #101215;
+  fill: rgba(7, 16, 29, 0.72);
   stroke: var(--color-border);
   stroke-width: 1;
 }
 
 /* Grille legere qui aide la lecture sans concurrencer les series. */
 .chart-grid {
-  stroke: var(--color-border);
+  stroke: #2a3a52;
   stroke-width: 1;
+  opacity: 0.72;
 }
 
 .chart-axis-label,
 .chart-axis-title {
   fill: var(--color-muted);
-  font-size: 12px;
+  font-size: 10px;
 }
 
 /* Courbe sans remplissage dont la couleur vient de sa serie stable. */
@@ -358,7 +762,8 @@ legend {
   stroke: var(--chart-series-color);
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2;
+  stroke-width: 2.25;
+  filter: drop-shadow(0 0 2px var(--chart-series-color));
 }
 
 /* Marque les modes, interruptions, redemarrages et OOM sur la chronologie. */
@@ -406,8 +811,11 @@ legend {
 /* Sortie partagee qui rend le survol egalement lisible hors du SVG. */
 .diagnostics-chart-tooltip {
   min-height: 1.5rem;
-  margin-top: 0.75rem;
+  margin: 0.75rem 0 0;
+  border-left: 2px solid var(--color-accent);
+  padding: 0.35rem 0.6rem;
   color: var(--color-text);
+  background: rgba(139, 92, 246, 0.06);
   font-size: 0.875rem;
 }
 
@@ -417,17 +825,91 @@ legend {
   font-size: 0.75rem;
 }
 
+/* Conserve le resume pour les lecteurs d'ecran sans surcharger la carte. */
+.diagnostics-chart-summary {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Compose la synthese et les courbes comme le tableau de bord de reference. */
+.diagnostics-dashboard {
+  display: grid;
+  align-items: start;
+  gap: 0.75rem;
+  grid-template-columns: minmax(210px, 0.28fr) minmax(0, 1fr);
+  margin-top: 0.85rem;
+}
+
+.diagnostics-summary-column,
+.diagnostics-visual-column {
+  min-width: 0;
+}
+
+.diagnostics-visual-column .diagnostics-charts {
+  margin-top: 0;
+}
+
+.diagnostics-sample {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  background: linear-gradient(155deg, rgba(16, 29, 46, 0.95), rgba(9, 19, 32, 0.96));
+}
+
+.diagnostics-sample h3 {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.diagnostics-sample-meta {
+  margin-top: 0.3rem !important;
+  font-size: 0.68rem;
+}
+
+/* Affiche les nombreuses mesures sous forme de lignes compactes. */
+.diagnostics-metrics {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-top: 0.55rem;
+}
+
+.diagnostics-metrics > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-width: 0;
+  border-bottom: 1px solid rgba(34, 49, 73, 0.72);
+  padding: 0.38rem 0;
+}
+
+.diagnostics-metrics dd {
+  text-align: right;
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+}
+
 .primary-action:disabled,
 .secondary-action:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.65;
 }
 
 .primary-action:focus-visible,
 .secondary-action:focus-visible,
+.workspace-nav-item:focus-visible,
+.sidebar-connection:focus-visible,
+.connection-summary:focus-visible,
+.icon-action:focus-visible,
 input:focus-visible,
-select:focus-visible {
-  outline: 3px solid #ccfbf1;
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid var(--color-focus);
   outline-offset: 2px;
 }
 
@@ -442,7 +924,51 @@ select:focus-visible {
   border-radius: 8px;
   padding: 0.75rem;
   color: var(--color-text);
-  background: #101215;
+  background: var(--color-control);
+}
+
+.firmware-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.firmware-card {
+  min-width: 0;
+}
+
+.firmware-card-wide {
+  grid-column: 1 / -1;
+}
+
+.danger-zone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  grid-column: 1 / -1;
+  border: 1px solid #7f1d1d;
+  border-radius: 7px;
+  padding: 0.75rem;
+  background: #2a1518;
+}
+
+.danger-zone p {
+  color: #fecaca;
+  font-size: 0.78rem;
+}
+
+.response-panel summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.response-panel[open] summary {
+  margin-bottom: 0.5rem;
 }
 
 @media (min-width: 720px) {
@@ -463,8 +989,19 @@ select:focus-visible {
     font-size: 0.8rem;
   }
 }
+
+@media (min-width: 761px) and (max-width: 899px) {
+  .diagnostics-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostics-charts {
+    grid-template-columns: 1fr;
+  }
+}
 .streaming-controls {
   align-items: end;
+  grid-template-columns: 1fr;
 }
 
 .streaming-controls input[type="range"] {
@@ -473,17 +1010,56 @@ select:focus-visible {
 
 .streaming-slider-value {
   display: block;
-  margin-top: 0.25rem;
+  margin: 0;
   color: var(--muted-text, #9fb3c8);
   font-size: 0.82rem;
 }
 
 .streaming-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
   margin: 1rem 0;
   color: var(--muted-text, #9fb3c8);
+}
+
+.streaming-stats span {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  padding: 0.65rem;
+  background: rgba(11, 21, 35, 0.76);
+  font-size: 0.75rem;
+}
+
+.streaming-stats strong {
+  color: var(--color-text);
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+}
+
+/* Dispose les reglages face a un apercu volontairement dominant. */
+.streaming-stage {
+  display: grid;
+  align-items: start;
+  gap: 1rem;
+  grid-template-columns: minmax(240px, 0.65fr) minmax(0, 1.35fr);
+}
+
+.streaming-control-column,
+.streaming-preview-column {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.streaming-destination {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  color: #99f6e4 !important;
+  background: #0f2f2c;
 }
 
 /* Atelier en deux colonnes qui reste utilisable sur un ecran etroit. */
@@ -498,7 +1074,46 @@ select:focus-visible {
 .bytecode-preview-column,
 .bytecode-device {
   display: grid;
+  align-content: start;
   gap: 0.75rem;
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: 0.85rem;
+  background: var(--color-surface-soft);
+}
+
+.bytecode-device {
+  grid-column: 1 / -1;
+}
+
+.procedural-view h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.procedural-tabs {
+  display: none;
+}
+
+.procedural-tab {
+  min-height: 2.75rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0.4rem 0.8rem;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.procedural-tab.is-active {
+  border-color: #8b5cf6;
+  color: var(--color-text);
+}
+
+.storage-limit {
+  border-left: 3px solid #8b5cf6;
+  padding-left: 0.7rem;
 }
 
 /* Zone assembleur monospace suffisamment haute sans editeur lourd. */
@@ -519,10 +1134,12 @@ select:focus-visible {
   gap: 0.6rem;
 }
 
-/* Metriques compactes separees visuellement du code. */
+/* Metriques compactes lisibles sur le fond sombre de l'atelier procedural. */
 .bytecode-metrics span {
-  background: var(--surface-muted, #f4f6f8);
+  border: 1px solid var(--color-border);
   border-radius: 0.35rem;
+  color: var(--color-text);
+  background: var(--color-control);
   padding: 0.4rem 0.55rem;
 }
 
@@ -548,16 +1165,19 @@ select:focus-visible {
   display: inline-flex;
   gap: 0.25rem;
   margin-bottom: 0.55rem;
-  padding: 0.2rem;
-  border-radius: 0.55rem;
-  background: rgba(15, 23, 42, 0.7);
+  padding: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  background: transparent;
 }
 
 .streaming-workspace-tab,
 .streaming-preview-tab {
+  min-height: 2.35rem;
   padding: 0.4rem 0.75rem;
   border: 0;
-  border-radius: 0.4rem;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
   color: var(--muted-text, #9fb3c8);
   cursor: pointer;
@@ -565,20 +1185,102 @@ select:focus-visible {
 
 .streaming-workspace-tab.is-active,
 .streaming-preview-tab.is-active {
-  background: rgba(59, 130, 246, 0.24);
-  color: #e2e8f0;
+  border-bottom-color: var(--color-accent);
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.1);
+}
+
+/* Cadre profond commun aux apercus 3D et proceduraux. */
+.streaming-preview-surface {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: #06101d;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    inset 0 -28px 48px rgba(0, 0, 0, 0.22);
 }
 
 .streaming-preview {
   display: block;
   width: 100%;
-  height: 260px;
-  border: 1px solid rgba(148, 163, 184, 0.25);
-  border-radius: 0.6rem;
-  background: #08111f;
+  height: 360px;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
   cursor: grab;
   touch-action: none;
   user-select: none;
+}
+
+/* Repere discret de vue conforme a la maquette sans capturer le pointeur. */
+.streaming-preview-dots {
+  position: absolute;
+  bottom: 0.65rem;
+  left: 50%;
+  display: flex;
+  gap: 0.24rem;
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.streaming-preview-dots i {
+  width: 0.25rem;
+  height: 0.25rem;
+  border-radius: 50%;
+  background: #536074;
+}
+
+.streaming-preview-dots i:first-child {
+  background: #f8fafc;
+}
+
+/* Action de plein ecran superposee sans reduire la zone de dessin. */
+.streaming-fullscreen-action {
+  position: absolute;
+  right: 0.55rem;
+  bottom: 0.5rem;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid #2b3a52;
+  border-radius: 7px;
+  color: #a9b6c8;
+  background: rgba(7, 16, 29, 0.8);
+  cursor: pointer;
+}
+
+.streaming-fullscreen-action:hover {
+  border-color: #6d5a9d;
+  color: #ffffff;
+  background: rgba(43, 31, 72, 0.92);
+}
+
+.streaming-fullscreen-action svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+
+.streaming-preview-surface:fullscreen {
+  display: grid;
+  width: 100vw;
+  height: 100vh;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  background: #050c16;
+}
+
+.streaming-preview-surface:fullscreen .streaming-preview {
+  width: 100vw;
+  height: 100vh;
 }
 
 .streaming-preview.is-rotating {
@@ -624,4 +1326,165 @@ select:focus-visible {
 .painting-tools .is-selected {
   border-color: var(--color-accent);
   color: #99f6e4;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    display: block;
+  }
+
+  .app-sidebar {
+    display: none;
+  }
+
+  .app-header {
+    grid-template-columns: minmax(0, 1fr) minmax(8rem, auto);
+    min-height: 4.5rem;
+    padding: 0.7rem 0.85rem;
+  }
+
+  .app-title {
+    font-size: 1rem;
+  }
+
+  .app-status {
+    font-size: 0.75rem;
+  }
+
+  .connection-summary {
+    max-width: 10.5rem;
+  }
+
+  .connection-summary-copy strong {
+    font-size: 0.75rem;
+  }
+
+  .connection-summary-copy small {
+    font-size: 0.65rem;
+  }
+
+  .global-status {
+    display: none;
+  }
+
+  .app-main {
+    padding: 0.85rem 0.75rem 5.5rem;
+  }
+
+  .panel {
+    padding: 0.85rem;
+  }
+
+  .cube-state-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .diagnostics-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .connection-panel {
+    width: calc(100% - 1.5rem);
+    margin: 0.75rem;
+  }
+
+  .workspace-navigation-mobile {
+    position: fixed;
+    z-index: 20;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0;
+    padding: 0.35rem max(0.3rem, env(safe-area-inset-right)) max(0.35rem, env(safe-area-inset-bottom)) max(0.3rem, env(safe-area-inset-left));
+    border-top: 1px solid var(--color-border);
+    background: rgba(14, 20, 28, 0.98);
+  }
+
+  .workspace-navigation-mobile .workspace-nav-item {
+    display: grid;
+    min-width: 0;
+    min-height: 3.6rem;
+    gap: 0.15rem;
+    place-items: center;
+    padding: 0.25rem 0.1rem;
+    font-size: 0.65rem;
+  }
+
+  .workspace-navigation-mobile .nav-symbol {
+    width: 1.45rem;
+    height: 1.45rem;
+  }
+
+  .streaming-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .streaming-preview {
+    height: 310px;
+  }
+
+  .procedural-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .bytecode-layout {
+    display: block;
+  }
+
+  .procedural-view {
+    display: none;
+  }
+
+  .procedural-view.is-active {
+    display: grid;
+  }
+
+  .bytecode-preview {
+    min-height: 18rem;
+  }
+
+  .firmware-grid,
+  .diagnostics-charts {
+    grid-template-columns: 1fr;
+  }
+
+  .firmware-card-wide {
+    grid-column: auto;
+  }
+
+  .danger-zone {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mode-options-disclosure summary,
+  .response-panel summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .button-row > button,
+  .diagnostics-actions > button {
+    min-width: 2.75rem;
+  }
+}
+
+@media (max-width: 380px) {
+  .connection-summary-copy small,
+  .app-status {
+    display: none;
+  }
+
+  .connection-summary {
+    max-width: 8rem;
+  }
+
+  .workspace-navigation-mobile .workspace-nav-item {
+    font-size: 0.6rem;
+  }
 }

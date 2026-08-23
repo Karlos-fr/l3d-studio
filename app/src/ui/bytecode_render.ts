@@ -33,18 +33,19 @@ export function renderBytecodePanel(state: AppState): string {
   const selectedLibraryEntry = bytecode.selectedSourceKey.startsWith("library:");
   const photon = bytecode.photonStatus;
   const capabilityLabel = formatCapabilities(bytecode.compiledCapabilities);
-  let sourceOptions = "";
+  let exampleOptions = "";
   for (const example of BYTECODE_REFERENCE_PROGRAMS) {
-    sourceOptions += renderOption(
+    exampleOptions += renderOption(
       `example:${example.id}`,
-      `Exemple — ${BYTECODE_EXAMPLE_LABELS[example.id] ?? example.id}`,
+      BYTECODE_EXAMPLE_LABELS[example.id] ?? example.id,
       bytecode.selectedSourceKey,
     );
   }
+  let libraryOptions = "";
   for (const entry of bytecode.library) {
-    sourceOptions += renderOption(
+    libraryOptions += renderOption(
       `library:${entry.id}`,
-      `Bibliothèque — ${entry.name}`,
+      entry.name,
       bytecode.selectedSourceKey,
     );
   }
@@ -57,12 +58,22 @@ export function renderBytecodePanel(state: AppState): string {
       </div>
       <p>Écris une animation compacte, simule-la ici, puis installe-la directement sur le Photon par le LAN.</p>
 
+      <div class="procedural-tabs" role="tablist" aria-label="Étapes de l'atelier procédural">
+        ${renderProceduralTab("editor", "Éditeur", bytecode.activeView)}
+        ${renderProceduralTab("simulation", "Simulation", bytecode.activeView)}
+        ${renderProceduralTab("photon", "Photon", bytecode.activeView)}
+      </div>
+
       <div class="bytecode-layout">
-        <div class="bytecode-editor-column">
+        <section class="bytecode-editor-column procedural-view ${bytecode.activeView === "editor" ? "is-active" : ""}" id="procedural-editor" data-procedural-view="editor" role="tabpanel" aria-labelledby="procedural-tab-editor">
+          <h3>Éditeur et bibliothèque locale</h3>
           <div class="form-grid">
             <label>
               Source
-              <select data-field="bytecode-source-select">${sourceOptions}</select>
+              <select data-field="bytecode-source-select">
+                <optgroup label="Exemples intégrés">${exampleOptions}</optgroup>
+                ${libraryOptions.length === 0 ? "" : `<optgroup label="Bibliothèque du navigateur">${libraryOptions}</optgroup>`}
+              </select>
             </label>
             <label>
               Nom
@@ -86,10 +97,21 @@ export function renderBytecodePanel(state: AppState): string {
             <span>Payload max : 185 octets</span>
             <span>Capacités : ${escapeHtml(capabilityLabel)}</span>
           </div>
-        </div>
+          <div class="bytecode-toolbar">
+            <button class="secondary-action" data-action="bytecode-export" type="button">Exporter la bibliothèque</button>
+            <label class="secondary-action file-action">
+              Importer
+              <input accept="application/json,.json" data-field="bytecode-import" type="file">
+            </label>
+          </div>
+        </section>
 
-        <div class="bytecode-preview-column">
-          <canvas class="streaming-preview bytecode-preview" data-bytecode-preview aria-label="Aperçu 3D de l'animation procédurale"></canvas>
+        <section class="bytecode-preview-column procedural-view ${bytecode.activeView === "simulation" ? "is-active" : ""}" id="procedural-simulation" data-procedural-view="simulation" role="tabpanel" aria-labelledby="procedural-tab-simulation">
+          <h3>Simulation dans le navigateur</h3>
+          <div class="streaming-preview-surface bytecode-preview-surface">
+            <canvas class="streaming-preview bytecode-preview" data-bytecode-preview aria-label="Aperçu 3D de l'animation procédurale"></canvas>
+            <span class="streaming-preview-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          </div>
           <div class="button-row">
             <button class="primary-action" data-action="bytecode-sim-start" type="button" ${bytecode.compiledContainer === null ? "disabled" : ""}>Démarrer</button>
             <button class="secondary-action" data-action="bytecode-sim-pause" type="button" ${bytecode.compiledContainer === null ? "disabled" : ""}>Pause</button>
@@ -102,38 +124,52 @@ export function renderBytecodePanel(state: AppState): string {
             <span>FPS : <strong data-bytecode-simulation-fps>${bytecode.simulation.measuredFps.toFixed(1)}</strong></span>
             <span>Dernière faute : <strong data-bytecode-simulation-fault>${bytecode.simulation.lastFault ?? "aucune"}</strong></span>
           </div>
-        </div>
-      </div>
+        </section>
 
-      <div class="bytecode-toolbar">
-        <button class="secondary-action" data-action="bytecode-export" type="button">Exporter la bibliothèque</button>
-        <label class="secondary-action file-action">
-          Importer
-          <input accept="application/json,.json" data-field="bytecode-import" type="file">
-        </label>
-      </div>
-
-      <div class="bytecode-device">
-        <div class="panel-heading">
-          <h3>Programme installé sur le Photon</h3>
-          <span class="status-pill">${photon === null
-            ? "Photon non lu"
-            : photon.installed
-              ? `${photon.usedBytes} / ${photon.capacityBytes} octets, CRC ${formatCrc(photon.crc)}`
-              : `Emplacement vide, ${photon.capacityBytes} octets disponibles`}</span>
-        </div>
-        <div class="button-row">
-          <button class="secondary-action" data-action="bytecode-read" type="button" ${lanAvailable && !state.isBusy ? "" : "disabled"}>Lire</button>
-          <button class="primary-action" data-action="bytecode-install" type="button" ${lanAvailable && bytecode.compiledContainer !== null && !state.isBusy ? "" : "disabled"}>Installer</button>
-          <button class="primary-action" data-action="bytecode-run" type="button" ${lanAvailable && photon?.installed && !state.isBusy ? "" : "disabled"}>Lancer</button>
-          <button class="secondary-action" data-action="bytecode-stop" type="button" ${lanAvailable && !state.isBusy ? "" : "disabled"}>Arrêter</button>
-          <button class="danger-action" data-action="bytecode-delete-program" type="button" ${lanAvailable && photon?.installed && !state.isBusy ? "" : "disabled"}>Supprimer du Photon</button>
-        </div>
-        <p data-bytecode-operation-message>${escapeHtml(bytecode.operationMessage)}</p>
-        <p class="field-help">Installation exclusivement par le LAN configuré ci-dessus.</p>
+        <section class="bytecode-device procedural-view ${bytecode.activeView === "photon" ? "is-active" : ""}" id="procedural-photon" data-procedural-view="photon" role="tabpanel" aria-labelledby="procedural-tab-photon">
+          <div class="panel-heading">
+            <h3>Programme installé sur le Photon</h3>
+            <span class="status-pill">${photon === null
+              ? "Photon non lu"
+              : photon.installed
+                ? `${photon.usedBytes} / ${photon.capacityBytes} octets, CRC ${formatCrc(photon.crc)}`
+                : `Emplacement vide, ${photon.capacityBytes} octets disponibles`}</span>
+          </div>
+          <p class="storage-limit"><strong>Un seul programme</strong> peut être installé, dans un conteneur de 197 octets maximum.</p>
+          <div class="button-row">
+            <button class="secondary-action" data-action="bytecode-read" type="button" ${lanAvailable && !state.isBusy ? "" : "disabled"}>Lire</button>
+            <button class="primary-action" data-action="bytecode-install" type="button" ${lanAvailable && bytecode.compiledContainer !== null && !state.isBusy ? "" : "disabled"}>Installer</button>
+            <button class="primary-action" data-action="bytecode-run" type="button" ${lanAvailable && photon?.installed && !state.isBusy ? "" : "disabled"}>Lancer</button>
+            <button class="secondary-action" data-action="bytecode-stop" type="button" ${lanAvailable && !state.isBusy ? "" : "disabled"}>Arrêter</button>
+            <button class="danger-action" data-action="bytecode-delete-program" type="button" ${lanAvailable && photon?.installed && !state.isBusy ? "" : "disabled"}>Supprimer du Photon</button>
+          </div>
+          <p data-bytecode-operation-message>${escapeHtml(bytecode.operationMessage)}</p>
+          <p class="field-help">Installation exclusivement par le LAN configuré dans l'en-tête.</p>
+        </section>
       </div>
     </section>
   `;
+}
+
+// ----------------------------------------------------------------------------
+// Rend un onglet mobile de l'atelier procedural.
+//
+// Parametres :
+// - view : identifiant stable de la vue cible.
+// - label : texte affiche dans le bouton.
+// - activeView : vue actuellement selectionnee.
+//
+// Retour :
+// - bouton ARIA pilote par une action bytecode locale.
+// ----------------------------------------------------------------------------
+function renderProceduralTab(
+  view: AppState["bytecode"]["activeView"],
+  label: string,
+  activeView: AppState["bytecode"]["activeView"],
+): string {
+  // Etat ARIA et classe visuelle partages par le meme bouton.
+  const selected = view === activeView;
+  return `<button class="procedural-tab ${selected ? "is-active" : ""}" id="procedural-tab-${view}" data-action="bytecode-view-${view}" type="button" role="tab" aria-controls="procedural-${view}" aria-selected="${selected}">${label}</button>`;
 }
 
 // ----------------------------------------------------------------------------

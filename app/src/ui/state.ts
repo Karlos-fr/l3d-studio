@@ -24,6 +24,12 @@ import type { PainterTool } from "../painting/model";
 // Deux ateliers partagent le transport et l'apercu du panneau Streaming.
 export type StreamingWorkspace = "animations" | "painting";
 
+// Cinq espaces fonctionnels remplacent la page verticale historique.
+export type AppWorkspace = "cube" | "streaming" | "procedural" | "firmware" | "diagnostics";
+
+// Trois vues mobiles organisent l'atelier procedural sans dupliquer son etat.
+export type BytecodeWorkspaceView = "editor" | "simulation" | "photon";
+
 // Etat visible de la session de streaming web.
 export interface StreamingUiState {
   active: boolean;
@@ -42,6 +48,7 @@ export interface StreamingUiState {
 
 // Etat visible de l'editeur et de la VM procedurale.
 export interface BytecodeUiState {
+  activeView: BytecodeWorkspaceView;
   selectedSourceKey: string;
   sourceName: string;
   sourceText: string;
@@ -57,6 +64,8 @@ export interface BytecodeUiState {
 
 export interface AppState {
   applicationName: string;
+  activeWorkspace: AppWorkspace;
+  connectionPanelOpen: boolean;
   connectionStatus: string;
   lanHost: string;
   lanPort: number;
@@ -87,6 +96,9 @@ export interface AppState {
 
 // Nom affiche dans l'en-tete de l'application.
 const APPLICATION_NAME = "L3D Studio";
+
+// Espace principal propose lors du premier chargement.
+const INITIAL_APP_WORKSPACE: AppWorkspace = "cube";
 
 // Statut initial affiche avant toute lecture du serveur local.
 const INITIAL_CONNECTION_STATUS = "LAN non teste";
@@ -134,6 +146,15 @@ export function createInitialState(
   if (initialProgram === undefined) throw new Error("Le corpus bytecode est vide.");
   return {
     applicationName: APPLICATION_NAME,
+    activeWorkspace:
+      preferences?.activeWorkspace === "cube" ||
+      preferences?.activeWorkspace === "streaming" ||
+      preferences?.activeWorkspace === "procedural" ||
+      preferences?.activeWorkspace === "firmware" ||
+      preferences?.activeWorkspace === "diagnostics"
+        ? preferences.activeWorkspace
+        : INITIAL_APP_WORKSPACE,
+    connectionPanelOpen: false,
     connectionStatus: INITIAL_CONNECTION_STATUS,
     lanHost: preferences?.lanHost ?? INITIAL_LAN_HOST,
     lanPort: preferences?.lanPort ?? INITIAL_LAN_PORT,
@@ -164,6 +185,7 @@ export function createInitialState(
       painterColor: "#2dd4bf",
     },
     bytecode: {
+      activeView: "editor",
       selectedSourceKey: `example:${initialProgram.id}`,
       sourceName: "Rain",
       sourceText: initialProgram.source,

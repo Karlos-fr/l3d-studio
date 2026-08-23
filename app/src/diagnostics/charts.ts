@@ -48,20 +48,20 @@ const MAXIMUM_CHART_WIDTH = 720;
 // Largeur minimale qui conserve axes et libelles lisibles sur mobile.
 const MINIMUM_CHART_WIDTH = 280;
 
-// Hauteur logique de chaque graphique SVG.
-const CHART_HEIGHT = 230;
+// Hauteur logique compacte de chaque graphique SVG.
+const CHART_HEIGHT = 190;
 
 // Marge reservee aux valeurs de l'axe vertical.
-const CHART_LEFT = 64;
+const CHART_LEFT = 48;
 
 // Marge droite protegeant le dernier point et sa cible interactive.
 const CHART_RIGHT = 18;
 
 // Marge haute reservee aux marqueurs d'evenements.
-const CHART_TOP = 20;
+const CHART_TOP = 16;
 
 // Marge basse reservee aux heures et au titre de l'axe.
-const CHART_BOTTOM = 44;
+const CHART_BOTTOM = 34;
 
 // Nombre maximal de points interactifs rendus par graphique.
 export const MAX_RENDERED_DIAGNOSTICS_POINTS = 120;
@@ -217,7 +217,10 @@ export function renderDiagnosticsCharts(
 ): string {
   const windowedHistory = selectDiagnosticsWindow(history, chartWindow);
   const renderedHistory = limitRenderedPoints(windowedHistory);
-  const chartWidth = normalizeChartWidth(requestedWidth);
+  // Largeur par carte lorsque les trois graphiques tiennent sur une ligne.
+  const chartWidth = normalizeChartWidth(
+    requestedWidth >= 900 ? (requestedWidth - 40) / 3 : requestedWidth,
+  );
   if (renderedHistory.length === 0) {
     return '<p class="diagnostics-chart-empty">Aucune donnee historique a tracer.</p>';
   }
@@ -333,8 +336,10 @@ function renderSingleChart(
   const description = buildChartDescription(definition, history);
   return `
     <section class="diagnostics-chart" aria-labelledby="diagnostics-chart-${definition.id}-title">
-      <h3 id="diagnostics-chart-${definition.id}-title">${definition.title}</h3>
-      ${renderLegend(definition)}
+      <div class="diagnostics-chart-heading">
+        <h3 id="diagnostics-chart-${definition.id}-title">${definition.title}</h3>
+        ${renderLegend(definition)}
+      </div>
       <svg viewBox="0 0 ${chartWidth} ${CHART_HEIGHT}" role="img" aria-label="${escapeAttribute(description)}" preserveAspectRatio="xMidYMid meet">
         <title>${escapeHtml(definition.title)}</title>
         <desc>${escapeHtml(description)}</desc>
@@ -428,7 +433,7 @@ function renderAxes(
     <text class="chart-axis-label" x="${CHART_LEFT - 8}" y="${plotBottom + 4}" text-anchor="end">${formatAxisValue(yScale.domainMinimum, definition.unit)}</text>
     <text class="chart-axis-label" x="${CHART_LEFT}" y="${plotBottom + 18}" text-anchor="start">${formatLocalTime(firstTime)}</text>
     <text class="chart-axis-label" x="${chartWidth - CHART_RIGHT}" y="${plotBottom + 18}" text-anchor="end">${formatLocalTime(lastTime)}</text>
-    <text class="chart-axis-title" x="${(CHART_LEFT + chartWidth - CHART_RIGHT) / 2}" y="${CHART_HEIGHT - 4}" text-anchor="middle">Heure locale — ${escapeHtml(definition.axisLabel)}</text>
+    <text class="chart-axis-title" x="${(CHART_LEFT + chartWidth - CHART_RIGHT) / 2}" y="${CHART_HEIGHT - 3}" text-anchor="middle">${escapeHtml(definition.axisLabel)}</text>
   `;
 }
 
