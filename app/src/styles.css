@@ -1491,19 +1491,36 @@ textarea:focus-visible {
   stroke-width: 1.7;
 }
 
-.streaming-preview-surface:fullscreen {
+.streaming-preview-column:fullscreen {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.5rem;
   width: 100vw;
   height: 100vh;
-  place-items: center;
+  padding: 0.75rem;
   border: 0;
   border-radius: 0;
   background: #050c16;
 }
 
-.streaming-preview-surface:fullscreen .streaming-preview {
-  width: 100vw;
-  height: 100vh;
+.streaming-preview-column:fullscreen .streaming-preview-tabs {
+  justify-self: center;
+  margin: 0;
+}
+
+.streaming-preview-column:fullscreen .streaming-preview-surface {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.streaming-preview-column:fullscreen .streaming-preview {
+  width: 100%;
+  height: 100%;
+}
+
+.streaming-preview-column:fullscreen .streaming-destination {
+  display: none;
 }
 
 .streaming-preview.is-rotating {

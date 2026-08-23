@@ -18,6 +18,12 @@ const STREAMING_PREVIEW_MINIMUM_HEIGHT = 260;
 // Densite maximale du bitmap afin de borner le cout des grands ecrans HiDPI.
 const STREAMING_PREVIEW_MAXIMUM_PIXEL_RATIO = 1.5;
 
+// Densite 3D plein ecran plus fine sans suivre les ratios extremes des ecrans.
+const STREAMING_FULLSCREEN_MAXIMUM_PIXEL_RATIO = 2;
+
+// Sur-echantillonnage minimal du plein ecran sur les moniteurs a densite 1x.
+const STREAMING_FULLSCREEN_MINIMUM_PIXEL_RATIO = 1.5;
+
 // Centre geometrique des coordonnees zero a sept utilise par la projection.
 const STREAMING_PREVIEW_CUBE_CENTER = 3.5;
 
@@ -27,14 +33,14 @@ const STREAMING_OFF_VOXEL_OPACITY = 0.12;
 // Opacite des voxels lumineux qui conserve couleur et profondeur visibles.
 const STREAMING_LIT_VOXEL_OPACITY = 0.68;
 
-// Taille fixe des sprites rasterises une seule fois pour chaque couleur RGB332.
-const STREAMING_VOXEL_SPRITE_SIZE = 48;
+// Taille tres haute definition des sprites reutilises pour chaque couleur RGB332.
+const STREAMING_VOXEL_SPRITE_SIZE = 192;
 
 // Demi-largeur du cube dessine dans le sprite de reference.
-const STREAMING_VOXEL_SPRITE_HALF_WIDTH = 9;
+const STREAMING_VOXEL_SPRITE_HALF_WIDTH = 36;
 
 // Position verticale du centre projete dans le sprite de reference.
-const STREAMING_VOXEL_SPRITE_ANCHOR_Y = 18;
+const STREAMING_VOXEL_SPRITE_ANCHOR_Y = 96;
 
 // Sprites bornes aux 256 couleurs physiques plus le repere eteint.
 const streamingVoxelSpriteCache = new Map<number, HTMLCanvasElement>();
@@ -337,11 +343,11 @@ function bindStreamingCamera(canvas: HTMLCanvasElement): void {
 }
 
 // ----------------------------------------------------------------------------
-// Branche le bouton plein ecran sur le conteneur visuel du canvas.
+// Branche le bouton plein ecran sur la colonne complete de l'apercu.
 //
 // Parametres :
 // - panelElement : panneau contenant le bouton a initialiser une seule fois.
-// - canvas : canvas dont le parent constitue la surface plein ecran.
+// - canvas : canvas dont la colonne contient aussi les onglets de coupe.
 //
 // Effet de bord :
 // - demande le plein ecran au navigateur lorsque cette API est disponible.
@@ -353,12 +359,36 @@ function bindStreamingFullscreen(
   if (panelElement.dataset.streamingFullscreenBound === "1") return;
   // Bouton optionnel reserve a la vue 3D principale.
   const button = panelElement.querySelector<HTMLButtonElement>("[data-streaming-fullscreen]");
-  // Conteneur qui conserve les controles superposes en plein ecran.
-  const surface = canvas.parentElement;
-  if (button === null || surface === null) return;
-  // Surface non nulle capturee par le callback apres la validation du DOM.
-  const fullscreenSurface = surface;
+  // Colonne qui conserve les onglets 3D et Couches z en plein ecran.
+  const previewColumn = canvas.closest<HTMLElement>(".streaming-preview-column");
+  if (button === null || previewColumn === null) return;
+  // Colonne non nulle capturee par le callback apres la validation du DOM.
+  const fullscreenSurface = previewColumn;
   panelElement.dataset.streamingFullscreenBound = "1";
+
+  // --------------------------------------------------------------------------
+  // Redessine avec les dimensions definitives appliquees par le navigateur.
+  //
+  // Effet de bord :
+  // - resynchronise bitmap, grille visible et coordonnees de peinture.
+  // --------------------------------------------------------------------------
+  function redrawStreamingFullscreen(): void {
+    if (latestStreamingFramebuffer !== null) {
+      drawStreamingCanvas(canvas, latestStreamingFramebuffer);
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Attend la prochaine frame de mise en page avant le redessin plein ecran.
+  //
+  // Effet de bord :
+  // - programme un rendu Canvas apres la transition du navigateur.
+  // --------------------------------------------------------------------------
+  function scheduleStreamingFullscreenRedraw(): void {
+    window.requestAnimationFrame(redrawStreamingFullscreen);
+  }
+
+  fullscreenSurface.addEventListener("fullscreenchange", scheduleStreamingFullscreenRedraw);
 
   // --------------------------------------------------------------------------
   // Ouvre ou ferme la surface sans modifier la camera ni le framebuffer.
@@ -368,11 +398,11 @@ function bindStreamingFullscreen(
   // --------------------------------------------------------------------------
   function toggleStreamingFullscreen(): void {
     if (document.fullscreenElement === fullscreenSurface) {
-      void document.exitFullscreen();
+      void document.exitFullscreen().then(scheduleStreamingFullscreenRedraw);
       return;
     }
     if (fullscreenSurface.requestFullscreen !== undefined) {
-      void fullscreenSurface.requestFullscreen();
+      void fullscreenSurface.requestFullscreen().then(scheduleStreamingFullscreenRedraw);
     }
   }
 
@@ -430,7 +460,17 @@ function drawStreamingThreeDimensional(
 ): void {
   const context = canvas.getContext("2d");
   if (context === null) return;
-  const pixelRatio = Math.min(window.devicePixelRatio || 1, STREAMING_PREVIEW_MAXIMUM_PIXEL_RATIO);
+  // Etat plein ecran utilise pour choisir une definition adaptee a la projection.
+  const fullscreen = document.fullscreenElement === canvas.closest(".streaming-preview-column");
+  // Ratio materiel du navigateur avec un repli standard a un.
+  const devicePixelRatio = window.devicePixelRatio || 1;
+  // Ratio final utilise pour dimensionner le bitmap de la projection 3D.
+  const pixelRatio = fullscreen
+    ? Math.min(
+        Math.max(devicePixelRatio, STREAMING_FULLSCREEN_MINIMUM_PIXEL_RATIO),
+        STREAMING_FULLSCREEN_MAXIMUM_PIXEL_RATIO,
+      )
+    : Math.min(devicePixelRatio, STREAMING_PREVIEW_MAXIMUM_PIXEL_RATIO);
   const cssWidth = Math.max(canvas.clientWidth, 280);
   const cssHeight = Math.max(canvas.clientHeight, STREAMING_PREVIEW_MINIMUM_HEIGHT);
   const bitmapWidth = Math.round(cssWidth * pixelRatio);
@@ -653,7 +693,6 @@ function calculateStreamingLayerLayout(
     cellSize: Math.min(
       (layerWidth - 20) / STREAM_CUBE_SIDE,
       (cssHeight / 2 - 42) / STREAM_CUBE_SIDE,
-      14,
     ),
   };
 }
@@ -811,7 +850,14 @@ function createStreamingVoxelSprite(
 
   if (lit) {
     // Halo radial prerendu dont le cout ne depend plus de la cadence des frames.
-    const halo = context.createRadialGradient(centerX, centerY, 1, centerX, centerY, 22);
+    const halo = context.createRadialGradient(
+      centerX,
+      centerY,
+      2,
+      centerX,
+      centerY,
+      STREAMING_VOXEL_SPRITE_SIZE * 0.46,
+    );
     halo.addColorStop(0, `rgb(${red} ${green} ${blue} / 0.58)`);
     halo.addColorStop(0.28, `rgb(${red} ${green} ${blue} / 0.32)`);
     halo.addColorStop(1, `rgb(${red} ${green} ${blue} / 0)`);
@@ -852,7 +898,13 @@ function createStreamingVoxelSprite(
 
   if (lit) {
     context.beginPath();
-    context.arc(centerX, centerY - halfHeight * 0.18, 2.2, 0, Math.PI * 2);
+    context.arc(
+      centerX,
+      centerY - halfHeight * 0.18,
+      STREAMING_VOXEL_SPRITE_HALF_WIDTH * 0.244,
+      0,
+      Math.PI * 2,
+    );
     context.fillStyle = `rgb(255 255 255 / 0.72)`;
     context.fill();
   }

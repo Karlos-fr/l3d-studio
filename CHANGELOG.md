@@ -18,6 +18,14 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 - Remplacement des 1 536 tracés polygonaux par frame par des sprites RGB332
   réutilisables, avec cœur lumineux et halo radial précalculé pour chaque LED.
 - Retrait de l'indicateur décoratif à quatre points des vues 3D et par couches.
+- Extension du plein écran à toute la colonne d'aperçu afin de conserver les
+  onglets Vue 3D et Couches z pendant la peinture sur les différentes coupes.
+- Redessin du Canvas après les transitions plein écran pour garder coordonnées
+  et pixels alignés, et dimensionnement sans plafond des huit grandes grilles.
+- Doublement de la définition des sprites LED et densité Canvas 3D renforcée
+  uniquement en plein écran pour des cubes plus nets sans perdre la fluidité.
+- Passage des sprites LED à 192 × 192, suréchantillonnage plein écran à 1,5×
+  minimum et recentrage vertical empêchant de rogner le haut des halos.
 
 ### Refonte de l'écran Cube
 

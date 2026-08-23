@@ -12,17 +12,21 @@ import {
 } from "./streaming_render";
 
 // ----------------------------------------------------------------------------
-// Cree une surface de 400 par 260 pixels suffisante pour le hit-test pur.
+// Cree une surface dimensionnee pour le hit-test pur.
+//
+// Parametres :
+// - width : largeur CSS et client de la doublure.
+// - height : hauteur CSS et client de la doublure.
 //
 // Retour :
 // - doublure Canvas dont les coordonnees client correspondent aux pixels CSS.
 // ----------------------------------------------------------------------------
-function createCanvasDouble(): HTMLCanvasElement {
+function createCanvasDouble(width = 400, height = 260): HTMLCanvasElement {
   // --------------------------------------------------------------------------
   // Retourne les bornes fixes utilisees par le calcul des cellules.
   //
   // Retour :
-  // - rectangle de 400 par 260 pixels a l'origine.
+    // - rectangle aux dimensions demandees et place a l'origine.
   // --------------------------------------------------------------------------
   function getBoundingClientRect(): DOMRect {
     // ------------------------------------------------------------------------
@@ -37,18 +41,18 @@ function createCanvasDouble(): HTMLCanvasElement {
     return {
       x: 0,
       y: 0,
-      width: 400,
-      height: 260,
+      width,
+      height,
       top: 0,
-      right: 400,
-      bottom: 260,
+      right: width,
+      bottom: height,
       left: 0,
       toJSON,
     };
   }
   return {
-    clientWidth: 400,
-    clientHeight: 260,
+    clientWidth: width,
+    clientHeight: height,
     getBoundingClientRect,
   } as HTMLCanvasElement;
 }
@@ -66,6 +70,24 @@ function runStreamingRenderTests(): void {
     expect(getStreamingLayerVoxelAtPoint(canvas, 35, 75)).toEqual({ x: 2, y: 3, z: 0 });
     expect(getStreamingLayerVoxelAtPoint(canvas, 385, 165)).toEqual({ x: 7, y: 7, z: 7 });
     expect(getStreamingLayerVoxelAtPoint(canvas, 5, 5)).toBeNull();
+  });
+
+  // --------------------------------------------------------------------------
+  // Verifie que les grandes cellules plein ecran gardent le meme hit-test.
+  // --------------------------------------------------------------------------
+  it("peint dans les grandes grilles du plein ecran", () => {
+    const canvas = createCanvasDouble(1600, 900);
+    selectStreamingPreviewMode("layers");
+    expect(getStreamingLayerVoxelAtPoint(canvas, 176.25, 148.75)).toEqual({
+      x: 3,
+      y: 5,
+      z: 0,
+    });
+    expect(getStreamingLayerVoxelAtPoint(canvas, 1518.75, 836.25)).toEqual({
+      x: 6,
+      y: 0,
+      z: 7,
+    });
   });
 
   // --------------------------------------------------------------------------
