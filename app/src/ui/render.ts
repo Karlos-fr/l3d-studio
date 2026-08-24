@@ -393,7 +393,6 @@ function renderStreamingPanel(state: AppState): string {
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5" /></svg>
             </button>
           </div>
-          <p class="field-help streaming-destination">Destination : ${escapeHtml(state.lanHost || "adresse LAN non configurée")}:${state.lanPort}</p>
         </div>
       </div>
     </section>
