@@ -476,10 +476,31 @@ function renderPaintingControls(state: AppState, lanConfigured: boolean): string
           Couleur
           <input data-field="painter-color" type="color" value="${escapeHtml(state.streaming.painterColor)}">
         </label>
+        <label class="painting-brightness-control">
+          Luminosité LED
+          <span class="range-control">
+            <input data-field="painter-brightness" type="range" min="1" max="100" step="1" value="${state.streaming.painterBrightnessPercent}">
+            <span class="streaming-slider-value" data-range-output data-range-suffix=" %">${state.streaming.painterBrightnessPercent} %</span>
+          </span>
+        </label>
+        <label class="painting-brightness-control">
+          Luminosité globale
+          <span class="range-control">
+            <input data-field="painter-global-brightness" type="range" min="1" max="100" step="1" value="${state.streaming.painterGlobalBrightnessPercent}">
+            <span class="streaming-slider-value" data-range-output data-range-suffix=" %">${state.streaming.painterGlobalBrightnessPercent} %</span>
+          </span>
+        </label>
         <div class="painting-tools" role="group" aria-label="Outil de peinture">
           <button class="secondary-action ${state.streaming.painterTool === "draw" ? "is-selected" : ""}" data-action="painter-tool-draw" type="button" aria-pressed="${state.streaming.painterTool === "draw"}">Crayon</button>
           <button class="secondary-action ${state.streaming.painterTool === "erase" ? "is-selected" : ""}" data-action="painter-tool-erase" type="button" aria-pressed="${state.streaming.painterTool === "erase"}">Gomme</button>
           <button class="secondary-action danger-action" data-action="clear-painter" type="button">Tout effacer</button>
+        </div>
+        <div class="painting-file-actions" role="group" aria-label="Import et export du dessin">
+          <button class="secondary-action" data-action="export-painter" type="button">Exporter JSON</button>
+          <label class="secondary-action file-action">
+            Importer JSON
+            <input data-field="painter-import" type="file" accept="application/json,.json">
+          </label>
         </div>
         <button class="${state.streaming.active ? "secondary-action" : "primary-action"}" data-action="${state.streaming.active ? "stop-streaming" : "start-streaming"}" data-streaming-toggle type="button" ${state.isBusy || (!state.streaming.active && !lanConfigured) ? "disabled" : ""}>
           ${state.streaming.active ? "Arrêter" : "Afficher sur le cube"}

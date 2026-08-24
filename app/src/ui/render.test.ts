@@ -124,6 +124,10 @@ function runWorkspaceRenderTests(): void {
     expect(root.innerHTML).toContain('data-action="painter-tool-draw"');
     expect(root.innerHTML).toContain('data-action="painter-tool-erase"');
     expect(root.innerHTML).toContain('data-action="clear-painter"');
+    expect(root.innerHTML).toContain('data-field="painter-brightness"');
+    expect(root.innerHTML).toContain('data-field="painter-global-brightness"');
+    expect(root.innerHTML).toContain('data-action="export-painter"');
+    expect(root.innerHTML).toContain('data-field="painter-import"');
     expect(root.innerHTML).toContain("Afficher sur le cube");
     expect(root.innerHTML).not.toContain('data-field="streaming-fps"');
   });

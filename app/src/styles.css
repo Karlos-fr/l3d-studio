@@ -1555,11 +1555,43 @@ textarea:focus-visible {
   font-size: 0.875rem;
 }
 
+/* Laisse les deux curseurs de luminosite partager la largeur disponible. */
+.painting-brightness-control {
+  flex: 1 1 12rem;
+}
+
 /* Groupe les outils mutuellement exclusifs et l'effacement complet. */
 .painting-tools {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* Regroupe les actions de fichier sans imposer leur largeur sur mobile. */
+.painting-file-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* Presente le selecteur natif comme les autres boutons secondaires. */
+.painting-file-actions .file-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Masque visuellement l'input tout en conservant clavier et lecteur d'ecran. */
+.painting-file-actions .file-action input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 /* Rend l'outil actif visible sans ajouter de composant UI. */

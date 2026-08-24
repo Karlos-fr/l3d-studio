@@ -32,6 +32,8 @@ ni le serveur HTTP du Photon.
 - lancement des animations natives et réglage de leurs paramètres ;
 - texte persistant et commandes avancées ;
 - peinture voxel par voxel envoyée automatiquement après chaque modification ;
+- luminosité propre à chaque LED, luminosité globale non destructive et
+  import/export JSON versionné des dessins ;
 - streaming RGB332 d'animations calculées dans le navigateur ;
 - édition, simulation et installation d'animations bytecode procédurales ;
 - diagnostics périodiques et graphiques de RAM, durée de frame, FPS et uptime ;
@@ -54,6 +56,20 @@ Le protocole complet, les erreurs et les exemples `curl` sont documentés dans
 [LOCAL_API_PROTOCOL.md](../firmware/docs/LOCAL_API_PROTOCOL.md). Le langage
 procédural est décrit dans
 [BYTECODE_LANGUAGE.md](../firmware/docs/BYTECODE_LANGUAGE.md).
+
+## Dessins JSON
+
+L'atelier **Streaming → Peinture** exporte un fichier `l3d-dessin.json`. Il
+contient uniquement les voxels allumés avec leurs coordonnées `x`, `y`, `z`,
+leur couleur RGB888, leur luminosité individuelle et la luminosité globale du
+dessin. L'import accepte exclusivement le format `l3d-painting` version 1 pour
+un cube 8 × 8 × 8, au maximum 512 voxels et des luminosités de 1 à 100 %.
+
+La luminosité **LED** appartient au pinceau et est enregistrée avec chaque
+voxel peint. La luminosité **globale** ne détruit pas ces valeurs : elle agit
+uniquement sur le réglage matériel du cube. L'aperçu conserve les teintes
+visibles même à faible luminosité globale. Elle démarre à 1 % pour respecter
+la limite de luminosité utilisée pendant les validations matérielles.
 
 ## Organisation
 

@@ -57,6 +57,9 @@ export interface UiEventContext {
   selectPainterTool: (tool: PainterTool) => void;
   paintStreamingVoxel: (x: number, y: number, z: number) => void;
   clearPainter: () => void;
+  updatePainterGlobalBrightness: (persistChange: boolean) => void;
+  exportCurrentPainterDrawing: () => void;
+  importCurrentPainterDrawing: (file: File) => Promise<void>;
   handleBytecodeAction: (action: string) => Promise<void>;
   handleBytecodeField: (
     fieldElement: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
@@ -120,6 +123,9 @@ const PAINTER_ERASE_ACTION = "painter-tool-erase";
 
 // Nom de l'action qui efface le dessin local complet.
 const CLEAR_PAINTER_ACTION = "clear-painter";
+
+// Nom de l'action qui telecharge le document JSON du peintre.
+const EXPORT_PAINTER_ACTION = "export-painter";
 
 // Prefixe commun des actions de navigation sans routeur externe.
 const SHOW_WORKSPACE_ACTION_PREFIX = "show-workspace-";
@@ -473,6 +479,11 @@ async function handleAction(context: UiEventContext, action: string): Promise<vo
     return;
   }
 
+  if (action === EXPORT_PAINTER_ACTION) {
+    context.exportCurrentPainterDrawing();
+    return;
+  }
+
   if (action === REFRESH_DIAGNOSTICS_ACTION) {
     await refreshDiagnostics(context);
     return;
@@ -541,6 +552,14 @@ function handleFieldChange(
 ): void {
   const fieldName = fieldElement.dataset.field ?? "";
 
+  if (fieldName === "painter-import" && fieldElement instanceof HTMLInputElement) {
+    // Premier fichier JSON choisi dans le selecteur natif.
+    const file = fieldElement.files?.[0];
+    if (file !== undefined) void context.importCurrentPainterDrawing(file);
+    fieldElement.value = "";
+    return;
+  }
+
   if (fieldName.startsWith("bytecode-")) {
     void context.handleBytecodeField(fieldElement, commitChange);
     return;
@@ -597,6 +616,19 @@ function handleFieldChange(
     }
   } else if (fieldName === "painter-color" && fieldElement instanceof HTMLInputElement) {
     context.state.streaming.painterColor = fieldElement.value;
+  } else if (fieldName === "painter-brightness") {
+    // Luminosite individuelle demandee par le slider du pinceau.
+    const requestedBrightness = Number.parseInt(fieldElement.value, 10);
+    if (Number.isFinite(requestedBrightness)) {
+      context.state.streaming.painterBrightnessPercent = Math.max(1, Math.min(100, requestedBrightness));
+    }
+  } else if (fieldName === "painter-global-brightness") {
+    // Luminosite globale demandee sans alterer les voxels enregistres.
+    const requestedBrightness = Number.parseInt(fieldElement.value, 10);
+    if (Number.isFinite(requestedBrightness)) {
+      context.state.streaming.painterGlobalBrightnessPercent = Math.max(1, Math.min(100, requestedBrightness));
+      context.updatePainterGlobalBrightness(commitChange);
+    }
   } else if (fieldName === "mode-name") {
     context.state.selectedModeName = fieldElement.value;
   } else if (fieldName === "brightness") {
@@ -635,7 +667,9 @@ function handleFieldChange(
     fieldName === "diagnostics-window" ||
     fieldName === "lan-host" ||
     fieldName === "lan-port" ||
-    fieldName === "painter-color"
+    fieldName === "painter-color" ||
+    fieldName === "painter-brightness" ||
+    fieldName === "painter-global-brightness"
   ) {
     return;
   }

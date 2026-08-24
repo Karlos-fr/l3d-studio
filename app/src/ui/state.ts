@@ -50,6 +50,8 @@ export interface StreamingUiState {
   statusMessage: string;
   painterTool: PainterTool;
   painterColor: string;
+  painterBrightnessPercent: number;
+  painterGlobalBrightnessPercent: number;
 }
 
 // Etat visible de l'editeur et de la VM procedurale.
@@ -197,6 +199,8 @@ export function createInitialState(
       statusMessage: "Streaming arrêté.",
       painterTool: "draw",
       painterColor: "#2dd4bf",
+      painterBrightnessPercent: 100,
+      painterGlobalBrightnessPercent: 1,
     },
     bytecode: {
       activeView: "editor",

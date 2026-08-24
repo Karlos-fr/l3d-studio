@@ -43,12 +43,16 @@ import {
   BytecodeSimulationRunner,
   type BytecodeSimulationSnapshot,
 } from "./bytecode/simulation";
-import type { StreamingFramebuffer } from "./streaming/framebuffer";
+import { StreamingFramebuffer } from "./streaming/framebuffer";
 import { serializeRgb332 } from "./streaming/serializer";
 import {
-  loadPainterFramebuffer,
+  clearPainterDrawing,
+  exportPainterDrawing,
+  importPainterDrawing,
+  loadPainterDrawing,
   paintVoxel,
-  savePainterFramebuffer,
+  renderPainterDrawing,
+  savePainterDrawing,
   type PainterTool,
 } from "./painting/model";
 import { PainterFrameSender } from "./painting/sender";
@@ -91,8 +95,12 @@ function bootstrapApplication(): void {
   const state = createInitialState(preferences);
   state.bytecode.library = loadBytecodeLibrary(window.localStorage);
 
-  // Framebuffer du peintre restaure independamment de l'animation courante.
-  const painterFramebuffer = loadPainterFramebuffer(window.localStorage);
+  // Document du peintre restaure avec couleurs et luminosites independantes.
+  let painterDrawing = loadPainterDrawing(window.localStorage);
+  // Framebuffer attenue par voxel, partage par le transport et l'apercu.
+  const painterFramebuffer = new StreamingFramebuffer();
+  state.streaming.painterGlobalBrightnessPercent = painterDrawing.globalBrightnessPercent;
+  renderPainterDrawing(painterDrawing, painterFramebuffer);
 
   // ----------------------------------------------------------------------------
   // Synchronise une tranche de simulation avec l'etat et l'apercu existants.
@@ -131,6 +139,9 @@ function bootstrapApplication(): void {
 
   // Temporisation qui regroupe les nombreux evenements produits par le slider.
   let streamingBrightnessTimer: number | null = null;
+
+  // Temporisation propre a la luminosite globale du dessin statique.
+  let painterBrightnessTimer: number | null = null;
 
   // Animation creee depuis le registre et remplacable sans recreer le moteur.
   let activeStreamingAnimation: StreamingAnimation = createStreamingAnimation(
@@ -304,7 +315,7 @@ function bootstrapApplication(): void {
       state.streaming.statusMessage = "Activation du mode peinture...";
       rerender();
       await streamingLanClient.mode(
-        `M:Stream,S:0,B:${state.streaming.brightnessPercent},`,
+        `M:Stream,S:0,B:${state.streaming.painterGlobalBrightnessPercent},`,
       );
       const streamState = await streamingLanClient.state();
       if (streamState.modeId !== STREAM_MODE_ID) {
@@ -410,6 +421,10 @@ function bootstrapApplication(): void {
       window.clearTimeout(streamingBrightnessTimer);
       streamingBrightnessTimer = null;
     }
+    if (painterBrightnessTimer !== null) {
+      window.clearTimeout(painterBrightnessTimer);
+      painterBrightnessTimer = null;
+    }
     updateStreamingView(mountedRootElement, state, getStreamingPreviewFramebuffer());
   }
 
@@ -450,9 +465,9 @@ function bootstrapApplication(): void {
   // Retour :
   // - vrai lorsque localStorage a accepte le dessin.
   // ----------------------------------------------------------------------------
-  function persistPainterFramebuffer(): boolean {
+  function persistPainterDrawing(): boolean {
     try {
-      savePainterFramebuffer(window.localStorage, painterFramebuffer);
+      savePainterDrawing(window.localStorage, painterDrawing);
       return true;
     } catch {
       state.streaming.statusMessage = "Dessin modifié, mais son stockage local a échoué.";
@@ -471,16 +486,19 @@ function bootstrapApplication(): void {
   // ----------------------------------------------------------------------------
   function paintStreamingVoxel(x: number, y: number, z: number): void {
     if (state.isBusy) return;
+    // Indicateur qui evite rendu et stockage lorsque le voxel est invalide.
     const changed = paintVoxel(
-      painterFramebuffer,
+      painterDrawing,
       x,
       y,
       z,
       state.streaming.painterColor,
+      state.streaming.painterBrightnessPercent,
       state.streaming.painterTool,
     );
     if (!changed) return;
-    persistPainterFramebuffer();
+    renderPainterDrawing(painterDrawing, painterFramebuffer);
+    persistPainterDrawing();
     painterFrameSender.schedule(painterFramebuffer);
     updateStreamingView(mountedRootElement, state, painterFramebuffer);
   }
@@ -492,10 +510,93 @@ function bootstrapApplication(): void {
   // - met les 512 voxels a noir sans modifier l'outil courant.
   // ----------------------------------------------------------------------------
   function clearPainter(): void {
-    painterFramebuffer.clear();
-    persistPainterFramebuffer();
+    clearPainterDrawing(painterDrawing);
+    renderPainterDrawing(painterDrawing, painterFramebuffer);
+    persistPainterDrawing();
     painterFrameSender.schedule(painterFramebuffer);
     updateStreamingView(mountedRootElement, state, painterFramebuffer);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Envoie la luminosite globale differee du dessin actif.
+  //
+  // Effet de bord :
+  // - appelle la commande de luminosite du firmware sans renvoyer les 512 voxels.
+  // ----------------------------------------------------------------------------
+  async function sendPainterBrightness(): Promise<void> {
+    painterBrightnessTimer = null;
+    if (!state.streaming.active || streamingLanClient === null) return;
+    try {
+      await streamingLanClient.mode(`B:${state.streaming.painterGlobalBrightnessPercent},`);
+    } catch {
+      state.streaming.statusMessage = "La luminosité globale n'a pas pu être envoyée au cube.";
+      updateStreamingView(mountedRootElement, state, painterFramebuffer);
+    }
+  }
+
+  // ----------------------------------------------------------------------------
+  // Applique la luminosite globale au document et au reglage materiel.
+  //
+  // Parametres :
+  // - persistChange : ecrit le JSON seulement a la fin du geste utilisateur.
+  //
+  // Effet de bord :
+  // - persiste le dessin et regroupe la commande LAN active.
+  // ----------------------------------------------------------------------------
+  function updatePainterGlobalBrightness(persistChange: boolean): void {
+    painterDrawing.globalBrightnessPercent = state.streaming.painterGlobalBrightnessPercent;
+    if (persistChange) persistPainterDrawing();
+    if (painterBrightnessTimer !== null) window.clearTimeout(painterBrightnessTimer);
+    if (state.streaming.active && streamingLanClient !== null) {
+      painterBrightnessTimer = window.setTimeout(sendPainterBrightness, STREAMING_BRIGHTNESS_DEBOUNCE_MS);
+    }
+    updateStreamingView(mountedRootElement, state, painterFramebuffer);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Telecharge le dessin courant dans son format JSON versionne.
+  //
+  // Effet de bord :
+  // - cree un telechargement local sans inclure l'adresse LAN.
+  // ----------------------------------------------------------------------------
+  function exportCurrentPainterDrawing(): void {
+    // Archive JSON publique du dessin courant.
+    const serialized = exportPainterDrawing(painterDrawing);
+    // URL temporaire qui permet le telechargement sans serveur intermediaire.
+    const url = URL.createObjectURL(new Blob([serialized], { type: "application/json" }));
+    // Lien ephemere utilise pour declencher le telechargement navigateur.
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = "l3d-dessin.json";
+    anchor.click();
+    URL.revokeObjectURL(url);
+    state.streaming.statusMessage = "Dessin JSON exporté.";
+    updateStreamingView(mountedRootElement, state, painterFramebuffer);
+  }
+
+  // ----------------------------------------------------------------------------
+  // Remplace le brouillon par un fichier JSON integralement valide.
+  //
+  // Parametres :
+  // - file : fichier local choisi par l'utilisateur.
+  //
+  // Effet de bord :
+  // - remplace, persiste, redessine et envoie le dessin si la peinture est active.
+  // ----------------------------------------------------------------------------
+  async function importCurrentPainterDrawing(file: File): Promise<void> {
+    try {
+      painterDrawing = importPainterDrawing(await file.text());
+      state.streaming.painterGlobalBrightnessPercent = painterDrawing.globalBrightnessPercent;
+      renderPainterDrawing(painterDrawing, painterFramebuffer);
+      updatePainterGlobalBrightness(true);
+      painterFrameSender.schedule(painterFramebuffer);
+      state.streaming.statusMessage = "Dessin JSON importé.";
+    } catch (error) {
+      state.streaming.statusMessage = error instanceof Error
+        ? `Import refusé : ${error.message}`
+        : "Import refusé : fichier JSON invalide.";
+    }
+    rerender();
   }
 
   // ----------------------------------------------------------------------------
@@ -905,6 +1006,9 @@ function bootstrapApplication(): void {
       selectPainterTool,
       paintStreamingVoxel,
       clearPainter,
+      updatePainterGlobalBrightness,
+      exportCurrentPainterDrawing,
+      importCurrentPainterDrawing,
       handleBytecodeAction,
       handleBytecodeField,
     };

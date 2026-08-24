@@ -6,6 +6,17 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Peinture versionnée et luminosités
+
+- Ajout d'une luminosité de pinceau enregistrée indépendamment pour chaque LED
+  et d'une luminosité globale non destructive, modifiable pendant l'affichage.
+- Conservation des teintes dans l'aperçu lorsque la luminosité matérielle
+  globale est faible, afin d'éviter leur arrondi visuel vers le noir.
+- Ajout de l'export et de l'import `l3d-dessin.json`, avec format, version,
+  cube 8 × 8 × 8, bornes, doublons et taille intégralement validés.
+- Migration automatique des anciens brouillons RGB locaux vers le document
+  version 2 avec une luminosité individuelle initiale de 100 %.
+
 ### Aperçu 3D du streaming
 
 - Transparence de tous les voxels afin de laisser apparaître les lumières
