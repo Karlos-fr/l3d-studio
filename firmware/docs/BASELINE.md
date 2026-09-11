@@ -69,6 +69,7 @@ particle compile photon firmware --target 2.3.1 --saveTo <binaire>
 | 2026-08-17 | Serveur LAN phase 1, commandes separees des transports | 2.3.1 | 111 672 | 13 788 | 111 676 | 19 400 |
 | 2026-08-19 | Serveur LAN v1 complet et mode Stream 76 | 2.3.1 | 118 296 | 15 204 | 118 300 | 12 776 |
 | 2026-08-23 | Bytecode v1, stockage transactionnel et routes LAN | 2.3.1 | 123 584 | 15 228 | 123 588 | 7 488 |
+| 2026-09-11 | Nouveau mode natif K2000 | 2.3.1 | 121 232 | 14 604 | 121 236 | 9 840 |
 
 Les mesures identiques confirment que le passage de `.ino` à `.cpp`, les
 prototypes explicites et le déplacement du pilote n'ont pas changé le binaire

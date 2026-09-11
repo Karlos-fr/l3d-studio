@@ -6,6 +6,14 @@ jalons ci-dessous suivent donc les dates et les commits Git.
 
 ## Non publié
 
+### Scanner K2000
+
+- Ajout du mode natif `K2000` (ID 78), avec balayage rouge en demi-positions,
+  halo latéral et rebond continu sur les huit colonnes.
+- Ajout d'une option **Effet 3D** qui prolonge la lumière sur quatre couches
+  depuis la face avant `z=7` vers le fond, avec une atténuation entière, sans
+  allocation ni attente bloquante.
+
 ### Peinture versionnée et luminosités
 
 - Ajout d'une luminosité de pinceau enregistrée indépendamment pour chaque LED

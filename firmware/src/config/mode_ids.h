@@ -82,6 +82,7 @@
 #if L3D_BYTECODE_ENABLED
 #define BYTECODE                     77 //credit: L3D Studio
 #endif
+#define KITT_SCANNER                 78 //credit: L3D Studio
 
 /* ======================= ADD NEW AUX SWITCH ID HERE. ======================= */
 // AUX SWITCH ID Defines

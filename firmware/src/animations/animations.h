@@ -34,6 +34,7 @@
 #include "text.h"
 #include "tranquility.h"
 #include "gyrophare_fr.h"
+#include "kitt_scanner.h"
 #include "warm_fade.h"
 #include "whirlwind.h"
 #include "zone.h"

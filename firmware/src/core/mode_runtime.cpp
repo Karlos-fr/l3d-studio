@@ -219,6 +219,9 @@ void runMode() {
 		case GYROPHARE_FR:
 			runGyrophareFr();
 			break;
+		case KITT_SCANNER:
+			runKittScanner();
+			break;
 		case STREAM:
 			streamTick();
 			break;
@@ -483,6 +486,10 @@ void resetVariables(int modeIndex) {
 		case GYROPHARE_FR:
 			transitionAll(black, LINEAR);
 			resetGyrophareFr();
+			break;
+		case KITT_SCANNER:
+			transitionAll(black, LINEAR);
+			resetKittScanner();
 			break;
 		case COLLIDE2:
 		    transitionAll(black, LINEAR);

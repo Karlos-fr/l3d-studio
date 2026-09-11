@@ -602,6 +602,8 @@ void loop() {
 
 #include "animations/gyrophare_fr.cpp"
 
+#include "animations/kitt_scanner.cpp"
+
 #include "animations/text.cpp"
 
 #include "animations/squarral.cpp"

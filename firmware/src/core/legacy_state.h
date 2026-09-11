@@ -52,6 +52,7 @@ static const modeParams modeStruct[] =
 //		{  LIFE,                        "GameOfLife",           0,          0,      FALSE   },  //credit: Ben? grajohnt? modded by socaljj
 		{  GOLDRAIN,                    "GoldRain",             0,          1,      FALSE   },  //credit: Werner Moecke (based on Alex Hornstein's "Purple Rain")
 		{  GYROPHARE_FR,                "GyrophareFR",          0,          3,      FALSE   },  //credit: L3D Studio
+		{  KITT_SCANNER,                "K2000",                0,          1,      FALSE   },  //credit: L3D Studio
 		{  STREAM,                      "Stream",               0,          0,      FALSE   },  //credit: L3D Studio
 #if L3D_BYTECODE_ENABLED
 		{  BYTECODE,                    "L3DProgram",           0,          0,      FALSE   },  //credit: L3D Studio
@@ -117,6 +118,7 @@ static const switchParams switchTitleStruct[] =
 	   {  ACIDRAIN,      "Sound Reactive",      "",                    "",                    ""                     },
 	   {  GOLDRAIN,      "Sound Reactive",      "",                    "",                    ""                     },
 	   {  GYROPHARE_FR,  "Bicolore",            "Reactif au son",      "Trainee",             ""                     },
+	   {  KITT_SCANNER,  "Effet 3D",            "",                    "",                    ""                     },
 };
 
 /* ======================= ADD NEW AUX SWITCH STRUCT HERE. ======================= 
@@ -171,9 +173,9 @@ volatile bool stopDemo;		//Set to TRUE when the Interrupt Timer demoTimer gets t
 
 // Nombre attendu de modes actifs selon la presence de la VM installable.
 #if L3D_BYTECODE_ENABLED
-const uint8_t ACTIVE_MODE_COUNT = 68;
+const uint8_t ACTIVE_MODE_COUNT = 69;
 #else
-const uint8_t ACTIVE_MODE_COUNT = 67;
+const uint8_t ACTIVE_MODE_COUNT = 68;
 #endif
 
 static_assert(sizeof modeStruct / sizeof modeStruct[0] == ACTIVE_MODE_COUNT,

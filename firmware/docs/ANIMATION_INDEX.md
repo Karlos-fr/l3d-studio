@@ -40,6 +40,7 @@ version 1.4 ; leurs interfaces navigables sont dans les fichiers .h voisins.
 | 40 | `GOLDRAIN` | GoldRain | `src/animations/rain_salvos.cpp` |
 | 75 | `GYROPHARE_FR` | GyrophareFR | `src/animations/gyrophare_fr.cpp` |
 | 35 | `IFTTTWEATHER` | IFTTT | `src/network/ifttt_weather.cpp` |
+| 78 | `KITT_SCANNER` | K2000 | `src/animations/kitt_scanner.cpp` |
 | 71 | `LIGHTNING_BOX` | LightningBox | `src/animations/lightning_in_a_box.cpp` |
 | 52 | `LINESPIN` | LineSpin | `src/animations/cube_classics.cpp` |
 | 62 | `DSPIRAL` | LineSpiral | `src/animations/d_spiral.cpp` |
