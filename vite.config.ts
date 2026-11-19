@@ -12,6 +12,8 @@ const GITHUB_PAGES_BASE_PATH = "/l3d-studio/";
 
 export default defineConfig({
   base: GITHUB_PAGES_BASE_PATH,
+  // Deux pages : le studio et le cube virtuel.
+  build: { rollupOptions: { input: { main: "index.html", cube: "cube.html" } } },
   server: {
     host: "127.0.0.1",
     port: 5173,

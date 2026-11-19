@@ -1,0 +1,31 @@
+<!-- =========================================================================
+     Cube - Page du cube L3D virtuel
+     -------------------------------------------------------------------------
+     Modele photographique du cube 8x8x8 anime par son vrai firmware. Le studio
+     s'y connecte avec l'adresse « cube-virtuel ». Logique : app/src/cube.
+     ========================================================================= -->
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>L3D Cube virtuel</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #000; color: #8b8b90; font: 13px system-ui, sans-serif; overflow: hidden; }
+      #cube { display: block; width: 100%; height: 100%; cursor: grab; touch-action: none; }
+      #cube:active { cursor: grabbing; }
+      .caption { position: fixed; left: 20px; bottom: 18px; line-height: 1.5; pointer-events: none; transition: opacity 0.6s; }
+      .caption strong { color: #d9d9de; font-weight: 600; letter-spacing: 0.02em; }
+      .caption code { color: #c4b5fd; }
+      body:not([data-state="ready"]) .caption { opacity: 0; }
+      #message { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
+      body[data-state="ready"] #message { display: none; }
+    </style>
+  </head>
+  <body>
+    <canvas id="cube" aria-label="Cube L3D 8x8x8 en 3D"></canvas>
+    <p class="caption"><strong>L3D Cube 8×8×8</strong><br />Studio : adresse <code>cube-virtuel</code>, port 8080</p>
+    <p id="message">Chargement du cube…</p>
+    <script type="module" src="/app/src/cube/cube_page.ts"></script>
+  </body>
+</html>
