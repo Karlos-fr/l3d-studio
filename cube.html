@@ -18,6 +18,10 @@
       .caption strong { color: #d9d9de; font-weight: 600; letter-spacing: 0.02em; }
       .caption code { color: #c4b5fd; }
       body:not([data-state="ready"]) .caption { opacity: 0; }
+      .dimmer { position: fixed; right: 20px; bottom: 18px; display: flex; align-items: center; gap: 10px; transition: opacity 0.6s; }
+      .dimmer input { width: 160px; accent-color: #a78bfa; }
+      .dimmer output { min-width: 3.2em; color: #d9d9de; font-variant-numeric: tabular-nums; }
+      body:not([data-state="ready"]) .dimmer { opacity: 0; }
       #message { position: fixed; inset: 0; display: grid; place-items: center; pointer-events: none; }
       body[data-state="ready"] #message { display: none; }
     </style>
@@ -25,6 +29,10 @@
   <body>
     <canvas id="cube" aria-label="Cube L3D 8x8x8 en 3D"></canvas>
     <p class="caption"><strong>L3D Cube 8×8×8</strong><br />Studio : adresse <code>cube-virtuel</code>, port 8080</p>
+    <label class="dimmer">Lumière de la pièce
+      <input id="room-light" type="range" min="0" max="100" step="1" value="100" />
+      <output id="room-light-value" for="room-light">100 %</output>
+    </label>
     <p id="message">Chargement du cube…</p>
     <script type="module" src="/app/src/cube/cube_page.ts"></script>
   </body>

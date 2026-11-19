@@ -17,6 +17,7 @@ import { buildCube } from "./cube_model";
 import type { WorkerInit, WorkerOut } from "./emulator_worker";
 
 const EEPROM_KEY = "l3d-studio:cube-eeprom";
+const ROOM_LIGHT_KEY = "l3d-studio:cube-room-light";
 
 // ----------------------------------------------------------------------------
 // Demarre le Photon virtuel et transmet chaque image de LED.
@@ -81,7 +82,30 @@ async function main(): Promise<void> {
   key.shadow.bias = -0.0002;
   const rim = new THREE.DirectionalLight(0xbfd6ff, 0.9);
   rim.position.set(0.6, 0.5, -0.8);
-  scene.add(key, key.target, rim, new THREE.AmbientLight(0xffffff, 0.04));
+  const ambient = new THREE.AmbientLight(0xffffff, 0.04);
+  scene.add(key, key.target, rim, ambient);
+  // Lumiere de la piece reglable de 0 a 100 % : dans le noir, seules les LED restent.
+  const dimmer = document.querySelector<HTMLInputElement>("#room-light");
+  const dimmerValue = document.querySelector<HTMLOutputElement>("#room-light-value");
+  const applyRoomLight = (percent: number) => {
+    const f = Math.max(0, Math.min(100, percent)) / 100;
+    key.intensity = 9 * f;
+    rim.intensity = 0.9 * f;
+    ambient.intensity = 0.04 * f;
+    scene.environmentIntensity = 0.22 * f;
+    if (dimmerValue !== null) dimmerValue.textContent = `${Math.round(f * 100)} %`;
+  };
+  let roomLight = 100;
+  try { roomLight = Number(localStorage.getItem(ROOM_LIGHT_KEY) ?? 100); } catch { roomLight = 100; }
+  if (!Number.isFinite(roomLight)) roomLight = 100;
+  if (dimmer !== null) {
+    dimmer.value = String(roomLight);
+    dimmer.addEventListener("input", () => {
+      applyRoomLight(Number(dimmer.value));
+      try { localStorage.setItem(ROOM_LIGHT_KEY, dimmer.value); } catch { /* stockage indisponible */ }
+    });
+  }
+  applyRoomLight(roomLight);
 
   // Sol noir laque : il ne recoit aucune lumiere et ne montre que le reflet du cube, fondu vers le noir.
   const mirror = reflector({ resolutionScale: 0.6 });
