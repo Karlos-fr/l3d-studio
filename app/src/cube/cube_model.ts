@@ -216,9 +216,10 @@ export function buildCube(): CubeModel {
   const face = ledFaceTextures();
   const top = new THREE.MeshPhysicalNodeMaterial({ map: face.map, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.05 });
   // La lentille rayonne la couleur ; un halo plus large traverse le boitier blanc.
-  top.emissiveNode = ledColour.mul(texture(face.glow).r.pow(float(1.4))).mul(4.5);
+  // Allumee, une WS2812 eclaire toute sa face : la lentille brule, le boitier blanc diffuse autour.
+  top.emissiveNode = ledColour.mul(texture(face.glow).r.pow(float(1.2)).mul(0.75).add(0.25)).mul(16);
   const body = new THREE.MeshPhysicalNodeMaterial({ color: 0xf2efe8, roughness: 0.5 });
-  body.emissiveNode = ledColour.mul(0.35);
+  body.emissiveNode = ledColour.mul(1.6);
   const back = new THREE.MeshStandardNodeMaterial({ color: 0xe9e6de, roughness: 0.6 });
   back.emissiveNode = vec3(0);
   const leds = new THREE.InstancedMesh(new THREE.BoxGeometry(5 * MM, 5 * MM, 1.6 * MM), [body, body, body, body, top, back], N * N * N);

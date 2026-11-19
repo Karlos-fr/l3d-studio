@@ -126,7 +126,7 @@ async function main(): Promise<void> {
   const pipeline = new THREE.RenderPipeline(renderer);
   const scenePass = pass(scene, camera, { samples: 4 });
   const colour = scenePass.getTextureNode("output");
-  pipeline.outputNode = colour.add(bloom(colour, 0.85, 0.45, 0.9));
+  pipeline.outputNode = colour.add(bloom(colour, 1.25, 0.55, 1.0));
 
   function resize(): void {
     const width = canvas!.clientWidth;
