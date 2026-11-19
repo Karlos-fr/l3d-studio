@@ -21,6 +21,7 @@ import type {
   LanBytecodeStatus,
   LanErrorCategory,
 } from "./types";
+import { VIRTUAL_CUBE_HOST, virtualCubeFetch } from "./virtual_cube";
 
 // Port contractuel du serveur local lorsque l'utilisateur ne le precise pas.
 const DEFAULT_LAN_PORT = 8080;
@@ -143,7 +144,8 @@ export function createLanClient(config: LanClientConfig): LanClient {
   const host = normalizeLanHost(config.host);
   const port = normalizeLanPort(config.port ?? DEFAULT_LAN_PORT);
   const timeoutMilliseconds = config.timeoutMilliseconds ?? DEFAULT_LAN_TIMEOUT_MILLISECONDS;
-  const fetchFn = config.fetchFn ?? fetch;
+  // L'adresse reservee cube-virtuel passe par la chambre 3D au lieu du reseau.
+  const fetchFn = config.fetchFn ?? (host === VIRTUAL_CUBE_HOST ? virtualCubeFetch : fetch);
   const baseUrl = `http://${host}:${port}/api/v1`;
 
   return {

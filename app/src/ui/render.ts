@@ -152,7 +152,7 @@ function renderTransportPanel(state: AppState): string {
       <div class="form-grid connection-form-grid">
         <label>
           Adresse ou nom local du Photon
-          <input data-field="lan-host" inputmode="url" placeholder="photon.local ou 192.168.1.50" value="${escapeHtml(state.lanHost)}" />
+          <input data-field="lan-host" inputmode="url" placeholder="photon.local, 192.168.1.50 ou cube-virtuel" value="${escapeHtml(state.lanHost)}" />
         </label>
         <label>
           Port LAN
