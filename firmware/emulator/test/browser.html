@@ -1,0 +1,114 @@
+<!doctype html>
+<!-- ==========================================================================
+  EmulatorBrowserDemo - Le Photon virtuel dans un navigateur
+  ----------------------------------------------------------------------------
+  Charge dist/l3d-emulator.mjs, fait tourner le firmware, affiche les 512 LED en
+  8 tranches (z = 0 a 7) et interroge l'API LAN par la prise TCP virtuelle.
+  A servir en HTTP depuis firmware/emulator (le WebAssembly ne se charge pas en file://).
+=========================================================================== -->
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Photon virtuel L3D</title>
+  <style>
+    body { margin: 24px; background: #111; color: #ddd; font: 14px system-ui, sans-serif; }
+    #slices { display: flex; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+    canvas { background: #000; border: 1px solid #333; image-rendering: pixelated; }
+    pre { background: #1b1b1b; padding: 10px; min-height: 9em; }
+    select, button { font: inherit; }
+  </style>
+</head>
+<body>
+  <h1>Photon virtuel L3D</h1>
+  <p>
+    <select id="mode">
+      <option value="M:AcidDream,">AcidDream</option>
+      <option value="M:ColorAll,S:4,B:40,C1:0000FF,">ColorAll bleu</option>
+      <option value="M:Rain,">Rain</option>
+      <option value="M:Matrix,">Matrix</option>
+      <option value="M:KittScanner,">K2000</option>
+      <option value="M:Off,">Off</option>
+    </select>
+    <button id="apply">Envoyer</button>
+    <span id="fps"></span>
+  </p>
+  <div id="slices"></div>
+  <pre id="state">Demarrage…</pre>
+  <script type="module">
+    import createL3dEmulator from '../dist/l3d-emulator.mjs';
+
+    const emulator = await createL3dEmulator();
+    const setup = emulator.cwrap('emu_setup', null, [], { async: true });
+    const tick = emulator.cwrap('emu_tick', null, [], { async: true });
+    const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    await setup();
+
+    // Boucle du firmware : rend la main au navigateur au moins toutes les 8 ms.
+    (async () => {
+      let lastYield = performance.now();
+      for (;;) {
+        await tick();
+        if (performance.now() - lastYield > 8) { await sleep(0); lastYield = performance.now(); }
+      }
+    })();
+
+    async function http(method, path, body = '') {
+      const bytes = new TextEncoder().encode(body);
+      const head = `${method} /api/v1${path} HTTP/1.1\r\nHost: cube.local\r\n`
+        + (method === 'POST' ? `Content-Type: text/plain\r\nContent-Length: ${bytes.length}\r\n` : '') + '\r\n';
+      const request = new Uint8Array([...new TextEncoder().encode(head), ...bytes]);
+      emulator.HEAPU8.set(request, emulator._emu_request_buffer());
+      if (!emulator._emu_request_submit(request.length)) return 'prise occupee';
+      while (!emulator._emu_response_ready()) await sleep(5);
+      const pointer = emulator._emu_response_buffer();
+      const text = new TextDecoder().decode(emulator.HEAPU8.slice(pointer, pointer + emulator._emu_response_length()));
+      emulator._emu_response_consume();
+      return text;
+    }
+
+    // 8 tranches de 8 x 8, couleurs relevees a la luminosite pres pour rester visibles.
+    const slices = [];
+    for (let z = 0; z < 8; z += 1) {
+      const canvas = Object.assign(document.createElement('canvas'), { width: 8, height: 8 });
+      canvas.style.width = canvas.style.height = '96px';
+      document.getElementById('slices').append(canvas);
+      slices.push(canvas.getContext('2d'));
+    }
+    const grb = emulator._emu_pixel_order_grb() === 1;
+    let lastShow = 0; let lastTime = performance.now();
+    function draw() {
+      const base = emulator._emu_pixels();
+      const pixels = emulator.HEAPU8;
+      let peak = 1;
+      for (let i = 0; i < 1536; i += 1) peak = Math.max(peak, pixels[base + i]);
+      const gain = 255 / peak;
+      slices.forEach((context, z) => {
+        const image = context.createImageData(8, 8);
+        for (let x = 0; x < 8; x += 1) for (let y = 0; y < 8; y += 1) {
+          const p = base + emulator._emu_voxel_index(x, y, z) * 3;
+          const [r, g, b] = grb ? [pixels[p + 1], pixels[p], pixels[p + 2]] : [pixels[p], pixels[p + 1], pixels[p + 2]];
+          const k = ((7 - y) * 8 + x) * 4;
+          image.data.set([r * gain, g * gain, b * gain, 255], k);
+        }
+        context.putImageData(image, 0, 0);
+      });
+      const now = performance.now();
+      if (now - lastTime > 1000) {
+        const shows = emulator._emu_show_count();
+        document.getElementById('fps').textContent = `${Math.round((shows - lastShow) * 1000 / (now - lastTime))} images/s`;
+        lastShow = shows; lastTime = now;
+      }
+      requestAnimationFrame(draw);
+    }
+    draw();
+
+    async function refresh() { document.getElementById('state').textContent = (await http('GET', '/state')).split('\r\n\r\n')[1] ?? ''; }
+    document.getElementById('apply').addEventListener('click', async () => {
+      await http('POST', '/mode', document.getElementById('mode').value);
+      await refresh();
+    });
+    await refresh();
+    window.emulatorReady = true;
+  </script>
+</body>
+</html>
