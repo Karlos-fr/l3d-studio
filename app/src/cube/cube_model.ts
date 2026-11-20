@@ -29,12 +29,17 @@ const PITCH = 20;
 const PANEL = 2;
 const INNER = 85.2;
 const PCB = 1.0;
-// Hauteurs dans le panneau (mm depuis le bas), d'apres les rainures et les trous du DXF.
-const BOARD_Y = 35.0;
+// Hauteurs dans le panneau (mm depuis le bas), d'apres les rainures et les trous du DXF :
+// les cales d'angle de 3 mm passent dans les rainures basse (34,7) et haute (217,7),
+// la carte de base et le couvercle sont visses dessus.
+const GROOVE_LOW = 34.7;
+const GROOVE_HIGH = 217.7;
+const CORNER_T = 3;
+const BOARD_Y = GROOVE_LOW + CORNER_T;
 const BOARD_T = 1.6;
 const COMB_TOP = 217.9;
 const COMB_T = 4;
-const LID_Y = 218.2;
+const LID_Y = GROOVE_HIGH + CORNER_T;
 // La languette haute de la barrette traverse le peigne et affleure sous le couvercle.
 const STICK_TOP = 217.4;
 const HEADER_H = 8.5;
@@ -126,24 +131,31 @@ export function buildCube(): CubeModel {
   const board = new THREE.Mesh(new THREE.BoxGeometry(170 * MM, BOARD_T * MM, 170 * MM), [m.fr4, m.fr4, m.solder, m.solder, m.fr4, m.fr4]);
   board.position.y = (BOARD_Y + BOARD_T / 2) * MM;
   group.add(board);
-  const boardTop = (BOARD_Y + BOARD_T) * MM;
-  // Cales d'angle en acrylique sous la carte, vis a tete cylindrique dessus.
+  // Cales d'angle (corner.DXF) : huit, dans les rainures des deux panneaux voisins, l'angle
+  // arrondi depasse a l'exterieur. Leur trou tombe sur ceux du couvercle (81 mm du centre).
   const corner = data.corner as unknown as Outline;
   const hole = corner.holes[0] ?? [[0, 0]];
-  const hx = hole.reduce((s, p) => s + p[0], 0) / hole.length;
-  const hy = hole.reduce((s, p) => s + p[1], 0) / hole.length;
-  const cornerGeometry = extrude(corner, 5, 0.0002);
+  const hx = (Math.min(...hole.map((p) => p[0])) + Math.max(...hole.map((p) => p[0]))) / 2;
+  const hy = (Math.min(...hole.map((p) => p[1])) + Math.max(...hole.map((p) => p[1]))) / 2;
+  const cornerGeometry = extrude(corner, CORNER_T, 0.0002);
   cornerGeometry.translate(-hx * MM, -hy * MM, 0);
-  cornerGeometry.rotateX(Math.PI / 2);
-  const screwGeometry = new THREE.CylinderGeometry(2.7 * MM, 2.7 * MM, 1.7 * MM, 24);
-  for (const [sx, sz] of [[1, 1], [-1, 1], [-1, -1], [1, -1]] as const) {
-    const block = new THREE.Mesh(cornerGeometry, m.acrylic);
-    block.position.set(sx * 81 * MM, BOARD_Y * MM, sz * 81 * MM);
-    block.rotation.y = Math.atan2(sx, sz) + Math.PI * 0.75;
-    group.add(block);
-    const screw = new THREE.Mesh(screwGeometry, m.steel);
-    screw.position.set(sx * 81 * MM, boardTop + 0.85 * MM, sz * 81 * MM);
-    group.add(screw);
+  // Repere du trace : +x et -y vont vers l'exterieur du coin ; l'epaisseur monte.
+  cornerGeometry.rotateX(-Math.PI / 2);
+  const screwGeometry = new THREE.CylinderGeometry(2.6 * MM, 2.6 * MM, 1.6 * MM, 24);
+  const lidTop = (LID_Y + PANEL) * MM;
+  const boardTop = (BOARD_Y + BOARD_T) * MM;
+  for (let k = 0; k < 4; k += 1) {
+    const holder = new THREE.Group();
+    holder.rotation.y = (k * Math.PI) / 2;
+    for (const [y, screwY] of [[GROOVE_LOW * MM, boardTop], [GROOVE_HIGH * MM, lidTop]] as const) {
+      const block = new THREE.Mesh(cornerGeometry, m.acrylic);
+      block.position.set(81 * MM, y, 81 * MM);
+      holder.add(block);
+      const screw = new THREE.Mesh(screwGeometry, m.steel);
+      screw.position.set(81 * MM, screwY + 0.8 * MM, 81 * MM);
+      holder.add(screw);
+    }
+    group.add(holder);
   }
   // Connectique sous la carte, face aux decoupes du panneau arriere.
   const parts: [number, number, number, number, number, number, THREE.Material][] = [
