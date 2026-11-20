@@ -88,7 +88,33 @@ function materials() {
   const plastic = new THREE.MeshStandardMaterial({ color: 0x0e0e0f, roughness: 0.55 });
   const gold = new THREE.MeshStandardMaterial({ color: 0xd8b25a, metalness: 1, roughness: 0.28 });
   const steel = new THREE.MeshStandardMaterial({ color: 0xc8cacc, metalness: 1, roughness: 0.32 });
-  return { acrylic, acrylicFace, acrylicEdge, solder, fr4, plastic, gold, steel };
+  const recess = new THREE.MeshStandardMaterial({ color: 0x2c2d2f, metalness: 1, roughness: 0.6 });
+  return { acrylic, acrylicFace, acrylicEdge, solder, fr4, plastic, gold, steel, recess };
+}
+
+// ----------------------------------------------------------------------------
+// Vis M3 x 6 a tete cylindrique bombee et empreinte cruciforme (ISO 7045) :
+// tete de 5,5 mm sur 2,1 mm, tige filetee de 3 mm au pas de 0,5 mm sur 6 mm.
+// Origine : face d'appui sous la tete ; la tige descend vers -y.
+// ----------------------------------------------------------------------------
+function m3Screw(steel: THREE.Material, recess: THREE.Material): THREE.Group {
+  const screw = new THREE.Group();
+  const p = (r: number, y: number) => new THREE.Vector2(r * MM, y * MM);
+  const head = [p(0, 2.1), p(1.2, 2.08), p(2.1, 1.85), p(2.6, 1.3), p(2.75, 0.6), p(2.75, 0), p(1.5, 0)];
+  screw.add(new THREE.Mesh(new THREE.LatheGeometry(head, 32), steel));
+  // Filet : dents de 0,5 mm entre le diametre exterieur (3) et le noyau (2,4).
+  const thread = [p(0, -6), p(1.2, -6)];
+  for (let y = -5.75; y < 0; y += 0.5) thread.push(p(1.5, y), p(1.2, y + 0.25));
+  thread.push(p(1.2, 0), p(0, 0));
+  screw.add(new THREE.Mesh(new THREE.LatheGeometry(thread, 20), steel));
+  // Empreinte cruciforme sombre, legerement enfoncee dans le dome.
+  for (const angle of [0, Math.PI / 2]) {
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(2.9 * MM, 0.5 * MM, 0.7 * MM), recess);
+    arm.position.y = 1.9 * MM;
+    arm.rotation.y = angle;
+    screw.add(arm);
+  }
+  return screw;
 }
 
 // ----------------------------------------------------------------------------
@@ -141,7 +167,7 @@ export function buildCube(): CubeModel {
   cornerGeometry.translate(-hx * MM, -hy * MM, 0);
   // Repere du trace : +x et -y vont vers l'exterieur du coin ; l'epaisseur monte.
   cornerGeometry.rotateX(-Math.PI / 2);
-  const screwGeometry = new THREE.CylinderGeometry(2.6 * MM, 2.6 * MM, 1.6 * MM, 24);
+  const screw = m3Screw(m.steel, m.recess);
   const lidTop = (LID_Y + PANEL) * MM;
   const boardTop = (BOARD_Y + BOARD_T) * MM;
   for (let k = 0; k < 4; k += 1) {
@@ -151,9 +177,11 @@ export function buildCube(): CubeModel {
       const block = new THREE.Mesh(cornerGeometry, m.acrylic);
       block.position.set(81 * MM, y, 81 * MM);
       holder.add(block);
-      const screw = new THREE.Mesh(screwGeometry, m.steel);
-      screw.position.set(81 * MM, screwY + 0.8 * MM, 81 * MM);
-      holder.add(screw);
+      // Vis M3 x 6 : la tete porte sur la carte ou le couvercle, la tige traverse la cale.
+      const fixing = screw.clone();
+      fixing.position.set(81 * MM, screwY, 81 * MM);
+      fixing.rotation.y = k * 0.7 + (screwY === lidTop ? 0.3 : 0);
+      holder.add(fixing);
     }
     group.add(holder);
   }
