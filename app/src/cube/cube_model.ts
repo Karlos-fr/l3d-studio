@@ -5,7 +5,8 @@
 // scripts/cube-assets.mjs) et des photos du cube reel :
 // - quatre panneaux d'acrylique transparent de 2 mm assembles en moulinet par
 //   tenons a crochet, couvercle de 170,4 mm dans la rainure haute ;
-// - carte de base noire dans la rainure basse, sur quatre cales d'angle vissees ;
+// - carte de base noire vissee sous les quatre cales d'angle de la rainure basse ;
+// - Particle Photon enfiche sous la carte, micro-USB face a la decoupe arriere ;
 // - 64 barrettes en circuit noir (serigraphie blanche D1 a D8, J1), enfichees
 //   dans des connecteurs femelles noirs, tenues en haut par 8 peignes de 4 mm ;
 // - 512 LED WS2812B 5050 tournees vers l'avant, dont la lentille s'allume ;
@@ -18,6 +19,7 @@ import * as THREE from "three/webgpu";
 import { float, instancedDynamicBufferAttribute, texture, vec3 } from "three/tsl";
 import data from "./case_data.json";
 import { engravingTexture, ledFaceTextures, stickSilkscreen } from "./cube_textures";
+import { buildPhoton, PHOTON_PCB, PHOTON_SPACER, type PhotonData } from "./photon_model";
 
 type Point = [number, number];
 type Outline = { outline: Point[]; holes: Point[][] };
@@ -30,13 +32,14 @@ const PANEL = 2;
 const INNER = 85.2;
 const PCB = 1.0;
 // Hauteurs dans le panneau (mm depuis le bas), d'apres les rainures et les trous du DXF :
-// les cales d'angle de 3 mm passent dans les rainures basse (34,7) et haute (217,7),
-// la carte de base et le couvercle sont visses dessus.
+// les cales d'angle de 3 mm passent dans les rainures basse (34,7) et haute (217,7) ;
+// la carte de base est vissee dessous (ses composants du dessous tombent alors pile
+// dans les decoupes arriere : micro-USB du Photon, interrupteur, prise), le couvercle dessus.
 const GROOVE_LOW = 34.7;
 const GROOVE_HIGH = 217.7;
 const CORNER_T = 3;
-const BOARD_Y = GROOVE_LOW + CORNER_T;
 const BOARD_T = 1.6;
+const BOARD_Y = GROOVE_LOW - BOARD_T;
 const COMB_TOP = 217.9;
 const COMB_T = 4;
 const LID_Y = GROOVE_HIGH + CORNER_T;
@@ -48,6 +51,8 @@ export type CubeModel = {
   group: THREE.Group;
   // Couleurs des 512 LED en RGB 0 a 255, ordre (y, x, z), telles que le firmware les envoie.
   setLeds(rgb: Uint8Array): void;
+  // LED d'etat du Photon, composantes de 0 a 1.
+  setStatusLed(r: number, g: number, b: number): void;
 };
 
 const grid = (i: number) => (-((N - 1) * PITCH) / 2 + i * PITCH) * MM;
@@ -173,14 +178,14 @@ export function buildCube(): CubeModel {
   for (let k = 0; k < 4; k += 1) {
     const holder = new THREE.Group();
     holder.rotation.y = (k * Math.PI) / 2;
-    for (const [y, screwY] of [[GROOVE_LOW * MM, boardTop], [GROOVE_HIGH * MM, lidTop]] as const) {
+    for (const [y, screwY, below] of [[GROOVE_LOW * MM, BOARD_Y * MM, true], [GROOVE_HIGH * MM, lidTop, false]] as const) {
       const block = new THREE.Mesh(cornerGeometry, m.acrylic);
       block.position.set(81 * MM, y, 81 * MM);
       holder.add(block);
-      // Vis M3 x 6 : la tete porte sur la carte ou le couvercle, la tige traverse la cale.
+      // Vis M3 x 6 : la tete porte sous la carte ou sur le couvercle, la tige traverse la cale.
       const fixing = screw.clone();
       fixing.position.set(81 * MM, screwY, 81 * MM);
-      fixing.rotation.y = k * 0.7 + (screwY === lidTop ? 0.3 : 0);
+      fixing.rotation.set(below ? Math.PI : 0, k * 0.7 + (below ? 0 : 0.3), 0);
       holder.add(fixing);
     }
     group.add(holder);
@@ -188,13 +193,33 @@ export function buildCube(): CubeModel {
   // Connectique sous la carte, face aux decoupes du panneau arriere.
   const parts: [number, number, number, number, number, number, THREE.Material][] = [
     [51.2, 27.7, 12, 11, 15, 0, m.steel],
-    [-50.1, 19.3, 9, 11, 13, 0, m.plastic],
     [0, 30.4, 8, 3, 4, 0, m.plastic],
   ];
   for (const [x, y, w, h, d, , material] of parts) {
     const part = new THREE.Mesh(new THREE.BoxGeometry(w * MM, h * MM, d * MM), material);
     part.position.set(x * MM, y * MM, -(INNER - d / 2) * MM);
     group.add(part);
+  }
+
+  // ------------------------------------------------------------ Photon
+  // Enfiche a l'envers sous la carte dans deux barrettes femelles de 8,5 mm (JP1, JP2 du
+  // fichier de la carte de base) : VIN contre le bord arriere, micro-USB dans sa decoupe.
+  const photonData = data.photon as unknown as PhotonData & { socket: { pin1: Point; rowSpacing: number; board: number } };
+  const photon = buildPhoton(photonData);
+  const socket = photonData.socket;
+  const leftRow = Math.min(...photonData.pins.map((q) => q[0]));
+  const vinY = Math.max(...photonData.pins.filter((q) => q[0] === leftRow).map((q) => q[1]));
+  const femaleH = 8.5;
+  const faceY = BOARD_Y - femaleH - PHOTON_SPACER - PHOTON_PCB;
+  // Carte de base tournee de 180 degres dans le boitier : x = 85 - x carte, z = y carte - 85.
+  // Retourne (rotation de 180 degres autour de z), le Photon montre ses composants vers le bas.
+  photon.group.rotation.z = Math.PI;
+  photon.group.position.set((socket.board / 2 - socket.pin1[0] + leftRow) * MM, faceY * MM, (socket.pin1[1] + vinY - socket.board / 2) * MM);
+  group.add(photon.group);
+  for (const row of [0, socket.rowSpacing]) {
+    const female = new THREE.Mesh(new THREE.BoxGeometry(2.54 * MM, femaleH * MM, 12 * 2.54 * MM), m.plastic);
+    female.position.set((socket.board / 2 - socket.pin1[0] - row) * MM, (BOARD_Y - femaleH / 2) * MM, (socket.pin1[1] + 5.5 * 2.54 - socket.board / 2) * MM);
+    group.add(female);
   }
 
   // ------------------------------------------------------------ barrettes
@@ -289,6 +314,9 @@ export function buildCube(): CubeModel {
       const target = colours.array as Float32Array;
       for (let k = 0; k < target.length; k += 1) target[k] = level[rgb[k] ?? 0] ?? 0;
       colours.needsUpdate = true;
+    },
+    setStatusLed(r, g, b) {
+      photon.setStatus(r, g, b);
     },
   };
 }

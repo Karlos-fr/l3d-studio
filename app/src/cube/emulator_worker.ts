@@ -34,10 +34,23 @@ type Emulator = {
 type StudioRequest = { kind: 'l3d-request'; id: string; method: string; path: string; contentType: string | null; body: ArrayBuffer | null };
 type Pending = { request: StudioRequest; reply: (message: unknown) => void };
 export type WorkerInit = { kind: 'init'; emulatorUrl: string; eeprom: Uint8Array | null; autostart?: boolean };
+// Signaux de la LED d'etat de Device OS, dans l'ordre d'un demarrage.
+export type PhotonSignal = 'off' | 'power-on' | 'network-connecting' | 'cloud-connecting' | 'cloud-handshake' | 'cloud-connected';
 export type WorkerOut =
   | { kind: 'frame'; rgb: Uint8Array }
   | { kind: 'eeprom'; bytes: Uint8Array }
-  | { kind: 'status'; running: boolean };
+  | { kind: 'status'; running: boolean }
+  | { kind: 'led'; signal: PhotonSignal };
+
+// Demarrage du vrai cube (Device OS en mode AUTOMATIC, sans fil systeme) : setup()
+// ne s'execute qu'une fois connecte au cloud. Le Photon virtuel rejoue la meme
+// sequence de la LED d'etat ; seules ces durees de connexion sont choisies ici.
+const BOOT_SEQUENCE: [PhotonSignal, number][] = [
+  ['power-on', 300],
+  ['network-connecting', 1600],
+  ['cloud-connecting', 1000],
+  ['cloud-handshake', 500],
+];
 
 const scope = self as unknown as { postMessage(message: WorkerOut, transfer?: Transferable[]): void; onmessage: ((event: MessageEvent<WorkerInit>) => void) | null };
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -55,11 +68,19 @@ let generation = 0;
 // ----------------------------------------------------------------------------
 async function boot(): Promise<Emulator> {
   const run = ++generation;
-  const module = await import(/* @vite-ignore */ emulatorUrl) as { default: () => Promise<Emulator> };
-  const emulator = await module.default();
+  const loading = (async () => {
+    const module = await import(/* @vite-ignore */ emulatorUrl) as { default: () => Promise<Emulator> };
+    return module.default();
+  })();
+  for (const [signal, ms] of BOOT_SEQUENCE) {
+    scope.postMessage({ kind: 'led', signal });
+    await sleep(ms);
+  }
+  const emulator = await loading;
   if (eeprom !== null) emulator.HEAPU8.set(eeprom, emulator._emu_eeprom());
   const setup = emulator.cwrap('emu_setup', null, [], { async: true });
   const tick = emulator.cwrap('emu_tick', null, [], { async: true });
+  scope.postMessage({ kind: 'led', signal: 'cloud-connected' });
   await setup();
   scope.postMessage({ kind: 'status', running: true });
   void (async () => {
@@ -78,7 +99,8 @@ async function boot(): Promise<Emulator> {
 function restart(): void {
   booting = null;
   serving = false;
-  void ensure().then(() => serve());
+  scope.postMessage({ kind: 'led', signal: 'off' });
+  void sleep(150).then(() => ensure()).then(() => serve());
 }
 
 function ensure(): Promise<Emulator> {

@@ -14,7 +14,8 @@ import { bloom } from "three/addons/tsl/display/BloomNode.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { buildCube } from "./cube_model";
-import type { WorkerInit, WorkerOut } from "./emulator_worker";
+import type { PhotonSignal, WorkerInit, WorkerOut } from "./emulator_worker";
+import { photonLedColour } from "./photon_led";
 
 const EEPROM_KEY = "l3d-studio:cube-eeprom";
 const ROOM_LIGHT_KEY = "l3d-studio:cube-room-light";
@@ -22,11 +23,12 @@ const ROOM_LIGHT_KEY = "l3d-studio:cube-room-light";
 // ----------------------------------------------------------------------------
 // Demarre le Photon virtuel et transmet chaque image de LED.
 // ----------------------------------------------------------------------------
-function startEmulator(onFrame: (rgb: Uint8Array) => void): void {
+function startEmulator(onFrame: (rgb: Uint8Array) => void, onSignal: (signal: PhotonSignal) => void): void {
   const worker = new Worker(new URL("./emulator_worker.ts", import.meta.url), { type: "module", name: "l3d-virtual-cube" });
   worker.onmessage = (event: MessageEvent<WorkerOut>) => {
     const message = event.data;
     if (message.kind === "frame") onFrame(message.rgb);
+    else if (message.kind === "led") onSignal(message.signal);
     else if (message.kind === "eeprom") {
       try { localStorage.setItem(EEPROM_KEY, btoa(String.fromCharCode(...message.bytes))); } catch { /* stockage indisponible */ }
     }
@@ -120,7 +122,13 @@ async function main(): Promise<void> {
 
   const cube = buildCube();
   scene.add(cube.group);
-  startEmulator((rgb) => cube.setLeds(rgb));
+  // LED d'etat du Photon : motif du signal en cours, rejoue a chaque image.
+  let signal: PhotonSignal = "off";
+  let signalStart = performance.now();
+  startEmulator((rgb) => cube.setLeds(rgb), (next) => {
+    signal = next;
+    signalStart = performance.now();
+  });
 
   // Rendu multi-echantillonne puis halo des LED.
   const pipeline = new THREE.RenderPipeline(renderer);
@@ -139,6 +147,8 @@ async function main(): Promise<void> {
   resize();
   renderer.setAnimationLoop(() => {
     controls.update();
+    const [r, g, b] = photonLedColour(signal, performance.now() - signalStart);
+    cube.setStatusLed(r, g, b);
     pipeline.render();
   });
   document.body.dataset.state = "ready";
